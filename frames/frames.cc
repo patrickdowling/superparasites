@@ -138,7 +138,6 @@ int main(void) {
   ui.TryCalibration();
   
   bool trigger_detector_armed = false;
-  uint8_t sequencer_step = 0;
   int32_t dc_offset_frame_modulation = keyframer.dc_offset_frame_modulation();
 
   while (1) {
@@ -170,12 +169,12 @@ int main(void) {
           }
           if (frame_modulation > 43690 && trigger_detector_armed) {
             trigger_detector_armed = false;
-            ++sequencer_step;
+            ++ui.sequencer_step;
           }
-          if (sequencer_step >= keyframer.num_keyframes()) {
-            sequencer_step = 0;
+          if (ui.sequencer_step >= keyframer.num_keyframes()) {
+            ui.sequencer_step = 0;
           }
-          frame = keyframer.keyframe(sequencer_step).timestamp;
+          frame = keyframer.keyframe(ui.sequencer_step).timestamp;
         }
         
         keyframer.Evaluate(frame);

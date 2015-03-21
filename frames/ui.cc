@@ -67,6 +67,8 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   poly_lfo_mode_ = ui_flags & 1;
   sequencer_mode_= ui_flags & 2;
   secret_handshake_counter_ = 0;
+
+  sequencer_step = 0;
 }
 
 void Ui::TryCalibration() {
@@ -216,6 +218,23 @@ void Ui::Poll() {
       break;
       
     case UI_MODE_EDIT_RESPONSE:
+      {
+        if (sequencer_mode_) {
+          // the controls directly edit the value of the current step
+          animation_counter_ += 256;
+          channel_leds_.set_channel(0, keyframer_->level(0) >> 8);
+          channel_leds_.set_channel(1, keyframer_->level(1) >> 8);
+          channel_leds_.set_channel(2, keyframer_->level(2) >> 8);
+          channel_leds_.set_channel(3, keyframer_->level(3) >> 8);
+          rgb_led_.set_color(keyframer_->color());
+          if (animation_counter_ & 0x8000) {
+            keyframe_led_.High();
+          } else {
+            keyframe_led_.Low();
+          }
+          break;
+        }
+      }
     case UI_MODE_EDIT_EASING:
       {
         animation_counter_ += 48;
@@ -371,8 +390,14 @@ void Ui::OnPotChanged(const Event& e) {
             keyframer_->set_immediate(e.control_id, e.data);
           }
         } else if (mode_ == UI_MODE_EDIT_RESPONSE) {
-          active_channel_ = e.control_id;
-          keyframer_->mutable_settings(e.control_id)->response = e.data >> 8;
+          if (sequencer_mode_) {
+            // the controls directly edit the value of the current step
+            Keyframe* k = keyframer_->mutable_keyframe(sequencer_step);
+            k->values[e.control_id] = e.data;
+          } else {
+            active_channel_ = e.control_id;
+            keyframer_->mutable_settings(e.control_id)->response = e.data >> 8;
+          }
         } else if (mode_ == UI_MODE_EDIT_EASING) {
           active_channel_ = e.control_id;
           keyframer_->mutable_settings(e.control_id)->easing_curve = \

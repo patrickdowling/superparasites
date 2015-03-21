@@ -90,7 +90,9 @@ class Ui {
   inline bool poly_lfo_mode() const {
     return poly_lfo_mode_;
   }
-  
+
+  uint8_t sequencer_step;
+
  private:
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
@@ -132,7 +134,7 @@ class Ui {
   uint16_t keyframe_led_pwm_counter_;
   
   bool test_led_;
-  
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 
