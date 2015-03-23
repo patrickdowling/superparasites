@@ -42,6 +42,7 @@ const uint16_t kAdcThreshold = 1 << (16 - 10);  // 10 bits
 const int32_t kLongPressDuration = 800;
 const int32_t kVeryLongPressDuration = 3000;
 const uint16_t kKeyframeGridTolerance = 2048;
+const uint8_t dividers_steps = 9;
 
 void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   factory_testing_switch_.Init();
@@ -69,6 +70,10 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   secret_handshake_counter_ = 0;
 
   sequencer_step = 0;
+  step_divider = 1;
+  shift_divider = 1;
+  feedback_level = 0;
+  shift_register[0] = shift_register[1] = shift_register[2] = shift_register[3] = 0;
 }
 
 void Ui::TryCalibration() {
@@ -220,7 +225,7 @@ void Ui::Poll() {
     case UI_MODE_EDIT_RESPONSE:
       {
         if (sequencer_mode_) {
-          // the controls directly edit the value of the current step
+          // sequence edit steps
           channel_leds_.set_channel(0, keyframer_->level(0) >> 8);
           channel_leds_.set_channel(1, keyframer_->level(1) >> 8);
           channel_leds_.set_channel(2, keyframer_->level(2) >> 8);
@@ -228,7 +233,8 @@ void Ui::Poll() {
           rgb_led_.set_color(keyframer_->color());
 
           ++keyframe_led_pwm_counter_;
-          if ((keyframe_led_pwm_counter_ & 15) >= 14) {
+          if ((keyframe_led_pwm_counter_ & 15) >=
+              (mode_ == UI_MODE_EDIT_RESPONSE ? 14 : 8)) {
             keyframe_led_.High();
           } else {
             keyframe_led_.Low();
@@ -238,23 +244,55 @@ void Ui::Poll() {
       }
     case UI_MODE_EDIT_EASING:
       {
-        animation_counter_ += 48;
-        for (uint8_t i = 0; i < 4; ++i) {
-          channel_leds_.set_channel(i, active_channel_ == i ? 255 : 0);
-        }
-        if (mode_ == UI_MODE_EDIT_EASING) {
-          rgb_led_.set_color(255, 16, 32);
+        if (sequencer_mode_) {
+          // shift register mode
+          channel_leds_.set_channel(0, shift_register[0] >> 8);
+          channel_leds_.set_channel(1, shift_register[1] >> 8);
+          channel_leds_.set_channel(2, shift_register[2] >> 8);
+          channel_leds_.set_channel(3, shift_register[3] >> 8);
+          rgb_led_.set_color(keyframer_->color());
+
+          if (active_keyframe_ == -1) {
+            keyframe_led_.Low();
+          } else {
+            animation_counter_ += 256;
+            int32_t distance = frame() - \
+              keyframer_->keyframe(active_keyframe_).timestamp;
+            distance = min(distance * distance >> 18, int32_t(15));
+            ++keyframe_led_pwm_counter_;
+            if ((keyframe_led_pwm_counter_ & 15) >= distance) {
+              keyframe_led_.High();
+            } else {
+              keyframe_led_.Low();
+            }
+            if (active_keyframe_lock_) {
+              if (animation_counter_ & 0x8000) {
+                keyframe_led_.High();
+              } else {
+                keyframe_led_.Low();
+              }
+            }
+          }
         } else {
-          rgb_led_.set_color(16, 192, 32);
-        }
-        uint16_t brightness = active_channel_ == -1
+          // edit easing and response
+          animation_counter_ += 48;
+          for (uint8_t i = 0; i < 4; ++i) {
+            channel_leds_.set_channel(i, active_channel_ == i ? 255 : 0);
+          }
+          if (mode_ == UI_MODE_EDIT_EASING) {
+            rgb_led_.set_color(255, 16, 32);
+          } else {
+            rgb_led_.set_color(16, 192, 32);
+          }
+          uint16_t brightness = active_channel_ == -1
             ? 65535
             : keyframer_->SampleAnimation(active_channel_,
                                           animation_counter_,
                                           mode_ == UI_MODE_EDIT_EASING);
-        rgb_led_.Dim(brightness);
+          rgb_led_.Dim(brightness);
+        }
+        break;
       }
-      break;
   }
   
   rgb_led_.Write();
@@ -400,9 +438,32 @@ void Ui::OnPotChanged(const Event& e) {
             keyframer_->mutable_settings(e.control_id)->response = e.data >> 8;
           }
         } else if (mode_ == UI_MODE_EDIT_EASING) {
-          active_channel_ = e.control_id;
-          keyframer_->mutable_settings(e.control_id)->easing_curve = \
+          if (sequencer_mode_) {
+            // knob 1 edits step value, knobs 2 and 3 are divisors for
+            // the shift register
+            switch (e.control_id) {
+            case 0:
+              if (active_keyframe_ != -1) {
+                Keyframe* k = keyframer_->mutable_keyframe(active_keyframe_);
+                k->values[e.control_id] = e.data;
+              } else {
+                keyframer_->set_immediate(e.control_id, e.data);
+              }
+              break;
+            case 1:
+              step_divider = ((e.data * dividers_steps >> 16) + 1) % dividers_steps;
+              break;
+            case 2:
+              shift_divider = ((e.data * dividers_steps >> 16) + 1) % dividers_steps;
+              break;
+            case 3:
+              feedback_level = (e.data * 255 >> 16);
+            }
+          } else {
+            active_channel_ = e.control_id;
+            keyframer_->mutable_settings(e.control_id)->easing_curve =  \
               static_cast<EasingCurve>(e.data * 6 >> 16);
+          }
         }
         break;
       

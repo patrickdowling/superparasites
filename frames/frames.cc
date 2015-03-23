@@ -142,6 +142,7 @@ int main(void) {
   
   bool trigger_detector_armed = false;
   int32_t dc_offset_frame_modulation = keyframer.dc_offset_frame_modulation();
+  int32_t clock_counter = 0;
 
   while (1) {
     ui.DoEvents();
@@ -171,13 +172,36 @@ int main(void) {
             trigger_detector_armed = true;
           }
 
+          // on clock
           if (frame_modulation > 43690 && trigger_detector_armed) {
             trigger_detector_armed = false;
-            // go to next sequencer step
-            int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
-              (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
-              keyframer.num_keyframes();
-            ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+            clock_counter++;
+
+            // shift the register and feed it back
+            if (ui.shift_divider > 0 &&
+                clock_counter % ui.shift_divider == 0) {
+              uint16_t t = ui.shift_register[3];
+              ui.shift_register[3] = ui.shift_register[2];
+              ui.shift_register[2] = ui.shift_register[1];
+              ui.shift_register[1] = ui.shift_register[0];
+              int16_t z = (ui.shift_register[3]
+                           ^ ui.shift_register[2]
+                           ^ ui.shift_register[1]
+                           ^ ui.shift_register[0]) - ui.shift_register[0];
+              ui.shift_register[0] = t + (z * ui.feedback_level / 255);
+            }
+
+            // place in register and go to next sequencer step
+            if (ui.mode() != UI_MODE_EDIT_EASING ||
+                (ui.step_divider > 0 &&
+                 clock_counter % ui.step_divider == 0)) {
+              ui.shift_register[0] = keyframer.level(0);
+              int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
+                (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
+                keyframer.num_keyframes();
+              ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+            }
+
             // output a trigger when sequence resets
             if (ui.sequencer_step == 0) {
               pulse_counter = kPulseDuration;
@@ -187,12 +211,22 @@ int main(void) {
 
           frame = keyframer.keyframe(ui.sequencer_step).timestamp;
         }
-        
+
         keyframer.Evaluate(frame);
-        dac.Write(0, keyframer.dac_code(0));
-        dac.Write(1, keyframer.dac_code(1));
-        dac.Write(2, keyframer.dac_code(2));
-        dac.Write(3, keyframer.dac_code(3));
+
+        if (ui.sequencer_mode() && ui.mode() == UI_MODE_EDIT_EASING) {
+          // shift register mode
+          dac.Write(0, Keyframer::ConvertToDacCode(ui.shift_register[0], 0));
+          dac.Write(1, Keyframer::ConvertToDacCode(ui.shift_register[1], 0));
+          dac.Write(2, Keyframer::ConvertToDacCode(ui.shift_register[2], 0));
+          dac.Write(3, Keyframer::ConvertToDacCode(ui.shift_register[3], 0));
+        } else {
+          // sequencer or keyframer mode
+          dac.Write(0, keyframer.dac_code(0));
+          dac.Write(1, keyframer.dac_code(1));
+          dac.Write(2, keyframer.dac_code(2));
+          dac.Write(3, keyframer.dac_code(3));
+        }
       }
     }
   }
