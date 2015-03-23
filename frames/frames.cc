@@ -83,15 +83,18 @@ void TIM1_UP_IRQHandler(void) {
     ++refresh;
   }
   
-  int16_t position = keyframer.position();
-  if (previous_position != position) {
-    previous_position = position;
-    if (can_fire_trigger) {
-      pulse_counter = kPulseDuration;
-      trigger_output.High();
-      can_fire_trigger = false;
+  if (!ui.sequencer_mode()) {
+    int16_t position = keyframer.position();
+    if (previous_position != position) {
+      previous_position = position;
+      if (can_fire_trigger) {
+        pulse_counter = kPulseDuration;
+        trigger_output.High();
+        can_fire_trigger = false;
+      }
     }
   }
+  
   int16_t nearest_keyframe = keyframer.nearest_keyframe();
   if (previous_nearest_keyframe != nearest_keyframe) {
     previous_nearest_keyframe = nearest_keyframe;
@@ -167,13 +170,21 @@ int main(void) {
           if (frame_modulation < 21845) {
             trigger_detector_armed = true;
           }
+
           if (frame_modulation > 43690 && trigger_detector_armed) {
             trigger_detector_armed = false;
-            ++ui.sequencer_step;
+            // go to next sequencer step
+            int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
+              (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
+              keyframer.num_keyframes();
+            ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+            // output a trigger when sequence resets
+            if (ui.sequencer_step == 0) {
+              pulse_counter = kPulseDuration;
+              trigger_output.High();
+            }
           }
-          if (ui.sequencer_step >= keyframer.num_keyframes()) {
-            ui.sequencer_step = 0;
-          }
+
           frame = keyframer.keyframe(ui.sequencer_step).timestamp;
         }
         
