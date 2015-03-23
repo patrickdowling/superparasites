@@ -132,7 +132,7 @@ class Ui {
   
   uint16_t animation_counter_;
   uint16_t keyframe_led_pwm_counter_;
-  
+
   bool test_led_;
 
   DISALLOW_COPY_AND_ASSIGN(Ui);

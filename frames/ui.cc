@@ -59,7 +59,7 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
       ? UI_MODE_SPLASH
       : UI_MODE_FACTORY_TESTING;
   animation_counter_ = 0;
-  
+
   FindNearestKeyframe();
   active_keyframe_lock_ = false;
   
@@ -216,18 +216,19 @@ void Ui::Poll() {
         }
       }
       break;
-      
+
     case UI_MODE_EDIT_RESPONSE:
       {
         if (sequencer_mode_) {
           // the controls directly edit the value of the current step
-          animation_counter_ += 256;
           channel_leds_.set_channel(0, keyframer_->level(0) >> 8);
           channel_leds_.set_channel(1, keyframer_->level(1) >> 8);
           channel_leds_.set_channel(2, keyframer_->level(2) >> 8);
           channel_leds_.set_channel(3, keyframer_->level(3) >> 8);
           rgb_led_.set_color(keyframer_->color());
-          if (animation_counter_ & 0x8000) {
+
+          ++keyframe_led_pwm_counter_;
+          if ((keyframe_led_pwm_counter_ & 15) >= 14) {
             keyframe_led_.High();
           } else {
             keyframe_led_.Low();
