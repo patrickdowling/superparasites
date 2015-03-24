@@ -94,7 +94,7 @@ class Ui {
   uint8_t sequencer_step;
   uint8_t step_divider;
   uint8_t shift_divider;
-  uint8_t feedback_level;
+  uint8_t random_level;
   uint16_t shift_register[4];
 
  private:

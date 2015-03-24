@@ -72,7 +72,7 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   sequencer_step = 0;
   step_divider = 1;
   shift_divider = 1;
-  feedback_level = 0;
+  random_level = 0;
   shift_register[0] = shift_register[1] = shift_register[2] = shift_register[3] = 0;
 }
 
@@ -457,7 +457,7 @@ void Ui::OnPotChanged(const Event& e) {
               shift_divider = ((e.data * dividers_steps >> 16) + 1) % dividers_steps;
               break;
             case 3:
-              feedback_level = (e.data * 255 >> 16);
+              random_level = (e.data * 255 >> 16);
             }
           } else {
             active_channel_ = e.control_id;

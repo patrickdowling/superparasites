@@ -25,6 +25,7 @@
 #include <stm32f10x_conf.h>
 
 #include "stmlib/system/system_clock.h"
+#include "stmlib/utils/random.h"
 
 #include "frames/drivers/dac.h"
 #include "frames/drivers/system.h"
@@ -131,6 +132,16 @@ void Init() {
   sys.StartTimers();
 }
 
+inline uint16_t fold_add(uint16_t a, int16_t b) {
+  if (a > 0 && b > 65535 - a) {
+    return 65535 - a - b - 1;
+  } else if (b < 0 && a < - b) {
+    return 65535 - a - b + 1;
+  } else {
+    return a + b;
+  }
+}
+
 int main(void) {
   Init();
   
@@ -184,11 +195,9 @@ int main(void) {
               ui.shift_register[3] = ui.shift_register[2];
               ui.shift_register[2] = ui.shift_register[1];
               ui.shift_register[1] = ui.shift_register[0];
-              int16_t z = (ui.shift_register[3]
-                           ^ ui.shift_register[2]
-                           ^ ui.shift_register[1]
-                           ^ ui.shift_register[0]) - ui.shift_register[0];
-              ui.shift_register[0] = t + (z * ui.feedback_level / 255);
+              ui.shift_register[0] = static_cast<uint8_t>(Random::GetWord()) > ui.random_level ?
+                t : fold_add(t,
+                             static_cast<int16_t>(Random::GetWord()) / 255 * ui.random_level);
             }
 
             // place in register and go to next sequencer step
