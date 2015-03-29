@@ -62,7 +62,7 @@ void Ui::Init(
       static_cast<BlendParameter>(state.blend_parameter & 3));
   processor_->set_quality(state.quality & 3);
   processor_->set_playback_mode(
-      static_cast<PlaybackMode>(state.playback_mode & 3));
+      static_cast<PlaybackMode>(state.playback_mode % PLAYBACK_MODE_LAST));
   for (int32_t i = 0; i < BLEND_PARAMETER_LAST; ++i) {
     cv_scaler_->set_blend_value(
         static_cast<BlendParameter>(i),
@@ -154,10 +154,15 @@ void Ui::PaintLeds() {
       break;
       
     case UI_MODE_PLAYBACK_MODE:
-      leds_.set_status(
-          processor_->playback_mode(),
-          128 + (fade >> 1),
-          255 - (fade >> 1));
+      if (processor_->playback_mode() < 4)
+        leds_.set_status(processor_->playback_mode(),
+                         128 + (fade >> 1),
+                         255 - (fade >> 1));
+      else {
+        for (int i=0; i<4; i++)
+          leds_.set_status(i, 128 + (fade >> 1), 255 - (fade >> 1));
+        leds_.set_status(processor_->playback_mode() & 3, 0, 0);
+      }
       break;
       
     case UI_MODE_LOAD:
@@ -260,7 +265,7 @@ void Ui::OnSwitchReleased(const Event& e) {
         processor_->set_quality((processor_->quality() + 1) & 3);
         SaveState();
       } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
-        uint8_t mode = (processor_->playback_mode() + 1) & 3;
+        uint8_t mode = (processor_->playback_mode() + 1) % PLAYBACK_MODE_LAST;
         processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
         SaveState();
       } else if (mode_ == UI_MODE_SAVE || mode_ == UI_MODE_LOAD) {

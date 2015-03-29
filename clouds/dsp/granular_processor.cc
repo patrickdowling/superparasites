@@ -150,6 +150,35 @@ void GranularProcessor::ProcessGranular(
       }
       break;
 
+    case PLAYBACK_MODE_REVERB:
+      {
+
+        // Pre-delay, controlled by the Position knob
+        Parameters p = parameters_;
+        p.position = parameters_.position * 0.25;
+        p.size = 0.1f;
+        p.density = 0.0f;
+        p.texture = 0.5f;
+        p.dry_wet = 1.0f;
+        p.stereo_spread = 0.0f;
+        p.feedback = 0.0f;
+        p.reverb = 0.0f;
+
+        if (resolution() == 8) {
+          ws_player_.Play(buffer_8_, p, &output[0].l, size);
+        } else {
+          ws_player_.Play(buffer_16_, p, &output[0].l, size);
+        }
+
+        reverb_.set_amount(1.0f);
+        reverb_.set_diffusion(0.3f + 0.50 * parameters_.density);
+        reverb_.set_time(parameters_.size * 1.1f);
+        reverb_.set_input_gain(0.2f);
+        reverb_.set_lp(0.05f + 0.6f * parameters_.texture);
+        reverb_.Process(output, size);
+      }
+      break;
+
     default:
       break;
   }
@@ -259,16 +288,18 @@ void GranularProcessor::Process(
   copy(&out_[0], &out_[size], &fb_[0]);
   
   // Apply reverb.
-  float reverb_amount = parameters_.reverb * 0.95f;
-  reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
-  CONSTRAIN(reverb_amount, 0.0f, 1.0f);
-  
-  reverb_.set_amount(reverb_amount * 0.53f);
-  reverb_.set_diffusion(0.7f);
-  reverb_.set_time(0.35f + 0.6f * reverb_amount);
-  reverb_.set_input_gain(0.2f);
-  reverb_.set_lp(0.6f + 0.35f * feedback);
-  reverb_.Process(out_, size);
+  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
+    float reverb_amount = parameters_.reverb * 0.95f;
+    reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
+    CONSTRAIN(reverb_amount, 0.0f, 1.0f);
+
+    reverb_.set_amount(reverb_amount * 0.53f);
+    reverb_.set_diffusion(0.7f);
+    reverb_.set_time(0.35f + 0.6f * reverb_amount);
+    reverb_.set_input_gain(0.2f);
+    reverb_.set_lp(0.6f + 0.35f * feedback);
+    reverb_.Process(out_, size);
+  }
   
   const float post_gain = 1.2f;
   float dry_wet = dry_wet_;
@@ -451,7 +482,8 @@ void GranularProcessor::Prepare() {
   
   if (playback_mode_ == PLAYBACK_MODE_SPECTRAL) {
     phase_vocoder_.Buffer();
-  } else if (playback_mode_ == PLAYBACK_MODE_STRETCH) {
+  } else if (playback_mode_ == PLAYBACK_MODE_STRETCH ||
+             playback_mode_ == PLAYBACK_MODE_REVERB) {
     if (resolution() == 8) {
       ws_player_.LoadCorrelator(buffer_8_);
     } else {
