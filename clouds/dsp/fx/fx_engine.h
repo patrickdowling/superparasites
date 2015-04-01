@@ -213,6 +213,15 @@ class FxEngine {
     inline void Read(D& d, float scale) {
       Read(d, 0, scale);
     }
+
+    template<typename D>
+    inline void ReadFrom(D& d, float pos, float scale) {
+      STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
+      T r = buffer_[(write_ptr_ + D::base + (int)((float)D::length * pos) - 1) & MASK];
+      float r_f = DataType<format>::Decompress(r);
+      previous_read_ = r_f;
+      accumulator_ += r_f * scale;
+    }
     
     inline void Lp(float& state, float coefficient) {
       state += coefficient * (accumulator_ - state);
