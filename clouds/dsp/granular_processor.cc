@@ -175,6 +175,7 @@ void GranularProcessor::ProcessGranular(
           ws_player_.Play(buffer_16_, p, &output[0].l, size);
         }
 
+        // The reverb
         reverb_.set_amount(1.0f);
         reverb_.set_diffusion(0.3f + 0.50 * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);

@@ -47,6 +47,7 @@ class Reverb {
     lp_ = 0.7f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
+    smoothed_size_ = size_;
   }
   
   void Process(FloatFrame* in_out, size_t size) {
@@ -81,7 +82,6 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
-    const float ksz = size_;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -89,32 +89,36 @@ class Reverb {
     while (size--) {
       float wet;
       float apout = 0.0f;
+
+      // Smooth the size to avoid glitch
+      smoothed_size_ = smoothed_size_ + 0.0005f * (size_ - smoothed_size_);
+
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
-      c.Interpolate(ap1, 10.0f * ksz, LFO_1, 60.0f, 1.0f);
-      c.Write(ap1, 100 * ksz, 0.0f);
+      c.Interpolate(ap1, 10.0f * smoothed_size_, LFO_1, 60.0f, 1.0f);
+      c.Write(ap1, 100 * smoothed_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
 
       // Diffuse through 4 allpasses.
-      c.ReadFrom(ap1, ksz, kap);
+      c.ReadFrom(ap1, smoothed_size_, kap);
       c.WriteAllPass(ap1, -kap);
-      c.ReadFrom(ap2, ksz, kap);
+      c.ReadFrom(ap2, smoothed_size_, kap);
       c.WriteAllPass(ap2, -kap);
-      c.ReadFrom(ap3, ksz, kap);
+      c.ReadFrom(ap3, smoothed_size_, kap);
       c.WriteAllPass(ap3, -kap);
-      c.ReadFrom(ap4, ksz, kap);
+      c.ReadFrom(ap4, smoothed_size_, kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 4683.0f * ksz, LFO_2, 100.0f, krt);
+      c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f, krt);
       c.Lp(lp_1, klp);
-      c.ReadFrom(dap1a, ksz, -kap);
+      c.ReadFrom(dap1a, smoothed_size_, -kap);
       c.WriteAllPass(dap1a, kap);
-      c.ReadFrom(dap1b, ksz, kap);
+      c.ReadFrom(dap1b, smoothed_size_, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
@@ -122,11 +126,11 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      c.ReadFrom(del1, ksz, krt);
+      c.ReadFrom(del1, smoothed_size_, krt);
       c.Lp(lp_2, klp);
-      c.ReadFrom(dap2a, ksz, kap);
+      c.ReadFrom(dap2a, smoothed_size_, kap);
       c.WriteAllPass(dap2a, -kap);
-      c.ReadFrom(dap2b, ksz, -kap);
+      c.ReadFrom(dap2b, smoothed_size_, -kap);
       c.WriteAllPass(dap2b, kap);
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
@@ -177,7 +181,8 @@ class Reverb {
 
   float lp_decay_1_;
   float lp_decay_2_;
-  
+  float smoothed_size_;
+
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };
 
