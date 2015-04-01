@@ -154,15 +154,20 @@ void GranularProcessor::ProcessGranular(
       {
 
         // Pre-delay, controlled by the Position knob
-        Parameters p = parameters_;
-        p.position = parameters_.position * 0.25;
-        p.size = 0.1f;
-        p.density = 0.0f;
-        p.texture = 0.5f;
-        p.dry_wet = 1.0f;
-        p.stereo_spread = 0.0f;
-        p.feedback = 0.0f;
-        p.reverb = 0.0f;
+        Parameters p = {
+          parameters_.position * 0.25f, // position;
+          0.1f, // size;
+          0.5f, // pitch;
+          0.0f, // density;
+          0.5f, // texture;
+          1.0f, // dry_wet;
+          0.0f, // stereo_spread;
+          0.0f, // feedback;
+          0.0f, // reverb;
+          0.0f, // freeze;
+          parameters_.trigger, // trigger;
+          parameters_.gate // gate;
+        };
 
         if (resolution() == 8) {
           ws_player_.Play(buffer_8_, p, &output[0].l, size);
@@ -172,9 +177,15 @@ void GranularProcessor::ProcessGranular(
 
         reverb_.set_amount(1.0f);
         reverb_.set_diffusion(0.3f + 0.50 * parameters_.density);
-        reverb_.set_time(parameters_.size * 1.1f);
-        reverb_.set_input_gain(0.2f);
-        reverb_.set_lp(0.05f + 0.6f * parameters_.texture);
+        if (parameters_.freeze) {
+          reverb_.set_time(1.0f);
+          reverb_.set_input_gain(0.0f);
+          reverb_.set_lp(1.0f);
+        } else {
+          reverb_.set_time(parameters_.size * 1.1f);
+          reverb_.set_input_gain(0.5f);
+          reverb_.set_lp(0.05f + 0.6f * parameters_.texture);
+        }
         reverb_.Process(output, size);
       }
       break;
