@@ -46,6 +46,7 @@ class Reverb {
     engine_.SetLFOFrequency(LFO_2, 0.3f / 32000.0f);
     lp_ = 0.7f;
     diffusion_ = 0.625f;
+    size_ = 1.0f;
   }
   
   void Process(FloatFrame* in_out, size_t size) {
@@ -80,6 +81,7 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
+    const float ksz = size_;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -90,29 +92,29 @@ class Reverb {
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
-      c.Interpolate(ap1, 10.0f, LFO_1, 60.0f, 1.0f);
-      c.Write(ap1, 100, 0.0f);
+      c.Interpolate(ap1, 10.0f * ksz, LFO_1, 60.0f, 1.0f);
+      c.Write(ap1, 100 * ksz, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
 
       // Diffuse through 4 allpasses.
-      c.Read(ap1 TAIL, kap);
+      c.ReadFrom(ap1, ksz, kap);
       c.WriteAllPass(ap1, -kap);
-      c.Read(ap2 TAIL, kap);
+      c.ReadFrom(ap2, ksz, kap);
       c.WriteAllPass(ap2, -kap);
-      c.Read(ap3 TAIL, kap);
+      c.ReadFrom(ap3, ksz, kap);
       c.WriteAllPass(ap3, -kap);
-      c.Read(ap4 TAIL, kap);
+      c.ReadFrom(ap4, ksz, kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 4683.0f, LFO_2, 100.0f, krt);
+      c.Interpolate(del2, 4683.0f * ksz, LFO_2, 100.0f, krt);
       c.Lp(lp_1, klp);
-      c.Read(dap1a TAIL, -kap);
+      c.ReadFrom(dap1a, ksz, -kap);
       c.WriteAllPass(dap1a, kap);
-      c.Read(dap1b TAIL, kap);
+      c.ReadFrom(dap1b, ksz, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
@@ -120,12 +122,11 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      // c.Interpolate(del1, 4450.0f, LFO_1, 50.0f, krt);
-      c.Read(del1 TAIL, krt);
+      c.ReadFrom(del1, ksz, krt);
       c.Lp(lp_2, klp);
-      c.Read(dap2a TAIL, kap);
+      c.ReadFrom(dap2a, ksz, kap);
       c.WriteAllPass(dap2a, -kap);
-      c.Read(dap2b TAIL, -kap);
+      c.ReadFrom(dap2b, ksz, -kap);
       c.WriteAllPass(dap2b, kap);
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
@@ -158,6 +159,10 @@ class Reverb {
   inline void set_lp(float lp) {
     lp_ = lp;
   }
+
+  inline void set_size(float size) {
+    size_ = size;
+  }
   
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
@@ -168,7 +173,8 @@ class Reverb {
   float reverb_time_;
   float diffusion_;
   float lp_;
-  
+  float size_;
+
   float lp_decay_1_;
   float lp_decay_2_;
   

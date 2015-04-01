@@ -176,15 +176,16 @@ void GranularProcessor::ProcessGranular(
         }
 
         reverb_.set_amount(1.0f);
-        reverb_.set_diffusion(0.3f + 0.50 * parameters_.density);
+        reverb_.set_diffusion(0.3f + 0.50 * parameters_.texture);
+        reverb_.set_size(0.05f + 0.94f * parameters_.size);
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
           reverb_.set_input_gain(0.0f);
           reverb_.set_lp(1.0f);
         } else {
-          reverb_.set_time(parameters_.size * 1.1f);
+          reverb_.set_time(parameters_.density * 1.1f);
           reverb_.set_input_gain(0.5f);
-          reverb_.set_lp(0.05f + 0.6f * parameters_.texture);
+          reverb_.set_lp(0.05f + 0.6f * (1.0f-parameters_.stereo_spread));
         }
         reverb_.Process(output, size);
       }
