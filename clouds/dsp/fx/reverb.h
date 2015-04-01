@@ -102,13 +102,13 @@ class Reverb {
       c.Read(in_out->l + in_out->r, gain);
 
       // Diffuse through 4 allpasses.
-      c.ReadFrom(ap1, smoothed_size_, kap);
+      c.InterpolateFrom(ap1, smoothed_size_, kap);
       c.WriteAllPass(ap1, -kap);
-      c.ReadFrom(ap2, smoothed_size_, kap);
+      c.InterpolateFrom(ap2, smoothed_size_, kap);
       c.WriteAllPass(ap2, -kap);
-      c.ReadFrom(ap3, smoothed_size_, kap);
+      c.InterpolateFrom(ap3, smoothed_size_, kap);
       c.WriteAllPass(ap3, -kap);
-      c.ReadFrom(ap4, smoothed_size_, kap);
+      c.InterpolateFrom(ap4, smoothed_size_, kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
       
@@ -116,9 +116,9 @@ class Reverb {
       c.Load(apout);
       c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f, krt);
       c.Lp(lp_1, klp);
-      c.ReadFrom(dap1a, smoothed_size_, -kap);
+      c.InterpolateFrom(dap1a, smoothed_size_, -kap);
       c.WriteAllPass(dap1a, kap);
-      c.ReadFrom(dap1b, smoothed_size_, kap);
+      c.InterpolateFrom(dap1b, smoothed_size_, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
@@ -126,11 +126,11 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      c.ReadFrom(del1, smoothed_size_, krt);
+      c.InterpolateFrom(del1, smoothed_size_, krt);
       c.Lp(lp_2, klp);
-      c.ReadFrom(dap2a, smoothed_size_, kap);
+      c.InterpolateFrom(dap2a, smoothed_size_, kap);
       c.WriteAllPass(dap2a, -kap);
-      c.ReadFrom(dap2b, smoothed_size_, -kap);
+      c.InterpolateFrom(dap2b, smoothed_size_, -kap);
       c.WriteAllPass(dap2b, kap);
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
