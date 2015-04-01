@@ -251,7 +251,8 @@ void GranularProcessor::Process(
   }
   
   // Diffusion and pitch-shifting post-processings.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL) {
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+      playback_mode_ != PLAYBACK_MODE_REVERB) {
     float texture = parameters_.texture;
     float diffusion = playback_mode_ == PLAYBACK_MODE_GRANULAR 
         ? texture > 0.75f ? (texture - 0.75f) * 4.0f : 0.0f
