@@ -292,7 +292,7 @@ class FxEngine {
   };
   
   inline void SetLFOFrequency(LFOIndex index, float frequency) {
-    lfo_[index].Init<stmlib::COSINE_OSCILLATOR_EXACT>(frequency * 32.0f);
+    lfo_[index].Init<stmlib::COSINE_OSCILLATOR_EXACT>(frequency);
   }
   
   inline void Start(Context* c) {
@@ -304,13 +304,8 @@ class FxEngine {
     c->previous_read_ = 0.0f;
     c->buffer_ = buffer_;
     c->write_ptr_ = write_ptr_;
-    if ((write_ptr_ & 31) == 0) {
-      for (int i=0; i<LFO_LAST; i++)
-        c->lfo_value_[i] = lfo_[i].Next();
-    } else {
-      for (int i=0; i<LFO_LAST; i++)
-        c->lfo_value_[i] = lfo_[i].value();
-    }
+    for (int i=0; i<LFO_LAST; i++)
+      c->lfo_value_[i] = lfo_[i].Next();
   }
   
  private:
