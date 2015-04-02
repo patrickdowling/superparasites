@@ -48,7 +48,22 @@ enum Format {
 
 enum LFOIndex {
   LFO_1,
-  LFO_2
+  LFO_2,
+  LFO_3,
+  LFO_4,
+  LFO_5,
+  LFO_6,
+  LFO_7,
+  LFO_8,
+  LFO_9,
+  LFO_10,
+  LFO_11,
+  LFO_12,
+  LFO_13,
+  LFO_14,
+  LFO_15,
+  LFO_16,
+  LFO_LAST,
 };
 
 template<Format format>
@@ -248,6 +263,7 @@ class FxEngine {
         D& d, float offset, LFOIndex index, float amplitude, float scale) {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
       offset += amplitude * lfo_value_[index];
+      CONSTRAIN(offset, 0.0f, D::length);
       MAKE_INTEGRAL_FRACTIONAL(offset);
       float a = DataType<format>::Decompress(
           buffer_[(write_ptr_ + offset_integral + D::base) & MASK]);
@@ -257,11 +273,18 @@ class FxEngine {
       previous_read_ = x;
       accumulator_ += x * scale;
     }
+
+    template<typename D>
+    inline void InterpolateFrom(
+        D& d, float position, LFOIndex index, float amplitude, float scale) {
+      STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
+      Interpolate(d, position * D::length, index, amplitude, scale);
+    }
     
    private:
     float accumulator_;
     float previous_read_;
-    float lfo_value_[2];
+    float lfo_value_[LFO_LAST];
     T* buffer_;
     int32_t write_ptr_;
 
@@ -282,11 +305,11 @@ class FxEngine {
     c->buffer_ = buffer_;
     c->write_ptr_ = write_ptr_;
     if ((write_ptr_ & 31) == 0) {
-      c->lfo_value_[0] = lfo_[0].Next();
-      c->lfo_value_[1] = lfo_[1].Next();
+      for (int i=0; i<LFO_LAST; i++)
+        c->lfo_value_[i] = lfo_[i].Next();
     } else {
-      c->lfo_value_[0] = lfo_[0].value();
-      c->lfo_value_[1] = lfo_[1].value();
+      for (int i=0; i<LFO_LAST; i++)
+        c->lfo_value_[i] = lfo_[i].value();
     }
   }
   
@@ -297,7 +320,7 @@ class FxEngine {
   
   int32_t write_ptr_;
   T* buffer_;
-  stmlib::CosineOscillator lfo_[2];
+  stmlib::CosineOscillator lfo_[LFO_LAST];
   
   DISALLOW_COPY_AND_ASSIGN(FxEngine);
 };
