@@ -48,6 +48,7 @@ class Reverb {
     hp_ = 0.0f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
+    modulation_ = 0.0f;
     smoothed_size_ = size_;
   }
   
@@ -101,7 +102,7 @@ class Reverb {
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
-      c.Interpolate(ap1, 10.0f * smoothed_size_, LFO_1, 60.0f, 1.0f);
+      c.Interpolate(ap1, 10.0f * smoothed_size_, LFO_1, 60.0f * modulation, 1.0f);
       c.Write(ap1, 100 * smoothed_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
@@ -119,7 +120,7 @@ class Reverb {
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f, krt);
+      c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f * modulation, krt);
       c.Lp(lp_1, klp);
       c.Hp(hp_1, khp);
       c.InterpolateFrom(dap1a, smoothed_size_, -kap);
