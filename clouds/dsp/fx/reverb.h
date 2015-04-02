@@ -33,6 +33,8 @@
 
 #include "clouds/dsp/fx/fx_engine.h"
 
+using namespace stmlib;
+
 namespace clouds {
 
 class Reverb {
@@ -102,7 +104,7 @@ class Reverb {
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
-      c.Interpolate(ap1, 10.0f * smoothed_size_, LFO_1, 60.0f * modulation, 1.0f);
+      c.Interpolate(ap1, 30.0f * smoothed_size_, LFO_1, 80.0f * modulation, 1.0f);
       c.Write(ap1, 100 * smoothed_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
@@ -120,7 +122,7 @@ class Reverb {
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f * modulation, krt);
+      c.Interpolate(del2, 4403.0f * smoothed_size_, LFO_2, 300.0f * modulation, krt);
       c.Lp(lp_1, klp);
       c.Hp(hp_1, khp);
       c.InterpolateFrom(dap1a, smoothed_size_, -kap);
@@ -130,7 +132,7 @@ class Reverb {
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->l += (wet - in_out->l) * amount;
+      in_out->l += SoftLimit(wet - in_out->l * amount);
 
       c.Load(apout);
       c.InterpolateFrom(del1, smoothed_size_, krt);
@@ -143,7 +145,7 @@ class Reverb {
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->r += (wet - in_out->r) * amount;
+      in_out->r += SoftLimit(wet - in_out->r * amount);
       
       ++in_out;
     }
