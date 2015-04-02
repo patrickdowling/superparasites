@@ -179,6 +179,7 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_amount(1.0f);
         reverb_.set_diffusion(0.3f + 0.50 * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
+        reverb_.set_modulation(parameters_.feedback);
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
           reverb_.set_input_gain(0.0f);
@@ -229,7 +230,8 @@ void GranularProcessor::Process(
   // Apply feedback, with high-pass filtering to prevent build-ups at very
   // low frequencies (causing large DC swings).
   ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
-  float feedback = parameters_.feedback;
+  float feedback = playback_mode_ != PLAYBACK_MODE_REVERB ?
+    parameters_.feedback : 0.0f;
   float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
   fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 1.0f);
   fb_filter_[1].set(fb_filter_[0]);

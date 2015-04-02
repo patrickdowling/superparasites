@@ -82,6 +82,7 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
+    const float modulation = modulation_;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -167,6 +168,10 @@ class Reverb {
   inline void set_size(float size) {
     size_ = size;
   }
+
+  inline void set_modulation(float modulation) {
+    modulation_ = modulation;
+  }
   
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
@@ -182,6 +187,7 @@ class Reverb {
   float lp_decay_1_;
   float lp_decay_2_;
   float smoothed_size_;
+  float modulation_;
 
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };
