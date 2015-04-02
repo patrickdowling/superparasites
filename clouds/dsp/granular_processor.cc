@@ -156,8 +156,8 @@ void GranularProcessor::ProcessGranular(
         // Pre-delay, controlled by the Position knob
         Parameters p = {
           parameters_.position * 0.25f, // position;
-          0.1f, // size;
-          0.5f, // pitch;
+          0.3f, // size;
+          parameters_.pitch, // pitch;
           0.0f, // density;
           0.5f, // texture;
           1.0f, // dry_wet;
@@ -176,8 +176,8 @@ void GranularProcessor::ProcessGranular(
         }
 
         // The reverb
-        reverb_.set_amount(1.0f);
-        reverb_.set_diffusion(0.3f + 0.50 * parameters_.texture);
+        reverb_.set_amount(0.53f);
+        reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
         reverb_.set_modulation(parameters_.reverb);
         if (parameters_.freeze) {
