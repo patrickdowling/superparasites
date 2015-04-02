@@ -63,6 +63,7 @@ class Reverb {
     size_ = 1.0f;
     modulation_ = 0.0f;
     smoothed_size_ = size_;
+    mod_rate_ = 0.0f;
   }
   
   void Process(FloatFrame* in_out, size_t size) {
@@ -199,6 +200,10 @@ class Reverb {
   inline void set_modulation(float modulation) {
     modulation_ = modulation;
   }
+
+  inline void set_mod_rate(float mod_rate) {
+    mod_rate_ = mod_rate;
+  }
   
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
@@ -218,6 +223,7 @@ class Reverb {
   float hp_decay_2_;
   float smoothed_size_;
   float modulation_;
+  float mod_rate_;
 
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };
