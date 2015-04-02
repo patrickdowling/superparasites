@@ -145,7 +145,7 @@ class Reverb {
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->l += SoftLimit(wet - in_out->l * amount);
+      in_out->l += wet - in_out->l * amount;
 
       c.Load(apout);
       c.InterpolateFrom(del1, smoothed_size_, LFO_5, modulation_max * modulation, krt);
@@ -158,7 +158,7 @@ class Reverb {
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->r += SoftLimit(wet - in_out->r * amount);
+      in_out->r += wet - in_out->r * amount;
       
       ++in_out;
     }
