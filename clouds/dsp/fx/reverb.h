@@ -45,6 +45,7 @@ class Reverb {
     engine_.SetLFOFrequency(LFO_1, 0.5f / 32000.0f);
     engine_.SetLFOFrequency(LFO_2, 0.3f / 32000.0f);
     lp_ = 0.7f;
+    hp_ = 0.0f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
     smoothed_size_ = size_;
@@ -79,6 +80,7 @@ class Reverb {
 
     const float kap = diffusion_;
     const float klp = lp_;
+    const float khp = hp_;
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
@@ -86,6 +88,8 @@ class Reverb {
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
+    float hp_1 = hp_decay_1_;
+    float hp_2 = hp_decay_2_;
 
     while (size--) {
       float wet;
@@ -117,6 +121,7 @@ class Reverb {
       c.Load(apout);
       c.Interpolate(del2, 4683.0f * smoothed_size_, LFO_2, 100.0f, krt);
       c.Lp(lp_1, klp);
+      c.Hp(hp_1, khp);
       c.InterpolateFrom(dap1a, smoothed_size_, -kap);
       c.WriteAllPass(dap1a, kap);
       c.InterpolateFrom(dap1b, smoothed_size_, kap);
@@ -129,6 +134,7 @@ class Reverb {
       c.Load(apout);
       c.InterpolateFrom(del1, smoothed_size_, krt);
       c.Lp(lp_2, klp);
+      c.Hp(hp_2, khp);
       c.InterpolateFrom(dap2a, smoothed_size_, kap);
       c.WriteAllPass(dap2a, -kap);
       c.InterpolateFrom(dap2b, smoothed_size_, -kap);
@@ -143,6 +149,8 @@ class Reverb {
     
     lp_decay_1_ = lp_1;
     lp_decay_2_ = lp_2;
+    hp_decay_1_ = hp_1;
+    hp_decay_2_ = hp_2;
   }
   
   inline void set_amount(float amount) {
@@ -165,6 +173,10 @@ class Reverb {
     lp_ = lp;
   }
 
+  inline void set_hp(float hp) {
+    hp_ = hp;
+  }
+
   inline void set_size(float size) {
     size_ = size;
   }
@@ -182,10 +194,13 @@ class Reverb {
   float reverb_time_;
   float diffusion_;
   float lp_;
+  float hp_;
   float size_;
 
   float lp_decay_1_;
   float lp_decay_2_;
+  float hp_decay_1_;
+  float hp_decay_2_;
   float smoothed_size_;
   float modulation_;
 
