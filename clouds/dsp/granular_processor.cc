@@ -191,7 +191,7 @@ void GranularProcessor::ProcessGranular(
           float lp = parameters_.stereo_spread < 0.5f ? parameters_.stereo_spread * 2 : 1;
           float hp = parameters_.stereo_spread > 0.5f ? (parameters_.stereo_spread - 0.5) * 2 : 0;
           reverb_.set_lp(0.05f + 0.6f * lp);
-          reverb_.set_hp(hp);
+          reverb_.set_hp(0.4f * hp);
         }
         reverb_.Process(output, size);
       }
