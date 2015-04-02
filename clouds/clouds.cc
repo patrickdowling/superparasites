@@ -82,7 +82,8 @@ void SysTick_Handler() {
 void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t n) {
   cv_scaler.Read(processor.mutable_parameters());
   processor.Process((ShortFrame*)input, (ShortFrame*)output, n);
-  meter.Process(processor.parameters().freeze ? output : input, n);
+  meter.Process(processor.parameters().freeze
+                || processor.playback_mode() == PLAYBACK_MODE_REVERB ? output : input, n);
 }
 
 void Init() {
