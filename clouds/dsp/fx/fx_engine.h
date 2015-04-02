@@ -269,7 +269,7 @@ class FxEngine {
   };
   
   inline void SetLFOFrequency(LFOIndex index, float frequency) {
-    lfo_[index].InitApproximate(frequency * 32.0f);
+    lfo_[index].Init<stmlib::COSINE_OSCILLATOR_EXACT>(frequency * 32.0f);
   }
   
   inline void Start(Context* c) {
