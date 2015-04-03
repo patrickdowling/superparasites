@@ -228,7 +228,6 @@ class FxEngine {
       accumulator_ = stmlib::SoftLimit(accumulator_);
     }
 
-
     template<typename D>
     inline void Interpolate(D& d, float offset, float scale) {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);

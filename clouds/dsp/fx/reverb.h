@@ -52,8 +52,8 @@ class Reverb {
     size_ = 1.0f;
     mod_amount_ = 0.0f;
     mod_rate_ = 0.0f;
-    smoothed_size_ = size_;
-    smoothed_mod_amount_ = mod_amount_;
+    smooth_size_ = size_;
+    smooth_mod_amount_ = mod_amount_;
     for (int i=0; i<12; i++)
         lfo_[i].Init(0);
   }
@@ -101,17 +101,18 @@ class Reverb {
         lfo_[i].set_period(1 / mod_rate_ * 32000);
     }
 
-#define INTERPOLATE_LFO(del, lfo, gain)                                     \
-    {                                                                       \
-        float lfo_val = lfo.Next() * smoothed_mod_amount_; \
-        float offset = (del.length - 1) * smoothed_size_ + lfo_val;     \
+#define INTERPOLATE_LFO(del, lfo, gain)                                 \
+    {                                                                   \
+        float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :               \
+            lfo.Next() * smooth_mod_amount_;                            \
+        float offset = (del.length - 1) * smooth_size_ + lfo_val;       \
         CONSTRAIN(offset, 0, del.length - 1);                           \
         c.Interpolate(del, offset, gain);                               \
     }
 
 #define INTERPOLATE(del, gain)                                          \
     {                                                                   \
-        c.Interpolate(del, (del.length - 1) * smoothed_size_, gain);                       \
+        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);                       \
     }
 
     while (size--) {
@@ -119,14 +120,14 @@ class Reverb {
       float apout = 0.0f;
 
       // Smooth size and mod_amount to avoid delay glitches
-      smoothed_size_ = smoothed_size_ + 0.05f * (size_ - smoothed_size_);
-      smoothed_mod_amount_ = smoothed_mod_amount_ + 0.0005f * (mod_amount_ - smoothed_mod_amount_);
+      smooth_size_ = smooth_size_ + 0.05f * (size_ - smooth_size_);
+      smooth_mod_amount_ = smooth_mod_amount_ + 0.0005f * (mod_amount_ - smooth_mod_amount_);
 
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
       INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
-      c.Write(ap1, 100 * smoothed_size_, 0.0f);
+      c.Write(ap1, 100 * smooth_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
 
@@ -229,9 +230,9 @@ class Reverb {
   float lp_;
   float hp_;
   float size_;
-  float smoothed_size_;
+  float smooth_size_;
   float mod_amount_;
-  float smoothed_mod_amount_;
+  float smooth_mod_amount_;
   float mod_rate_;
 
   float lp_decay_1_;
