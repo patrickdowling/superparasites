@@ -154,7 +154,7 @@ class Reverb {
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->l += wet - in_out->l * amount;
+      in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
       INTERPOLATE_LFO(del1, lfo_[8], krt);
@@ -168,7 +168,7 @@ class Reverb {
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
 
-      in_out->r += wet - in_out->r * amount;
+      in_out->r += (wet - in_out->r) * amount;
 
       /* if(in_out->r > 1.0f || in_out->r < 1.0f || in_out->l > 1.0f || in_out->l < 1.0f) */
       /*     printf("clip!\n"); */
