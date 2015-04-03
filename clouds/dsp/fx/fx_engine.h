@@ -238,12 +238,6 @@ class FxEngine {
     }
 
     template<typename D>
-    inline void InterpolateFrom(D& d, float position, float scale) {
-      STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
-      Interpolate(d, position * D::length, scale);
-    }
-
-    template<typename D>
     inline void Interpolate(
         D& d, float offset, LFOIndex index, float amplitude, float scale) {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
