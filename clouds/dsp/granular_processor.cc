@@ -175,12 +175,12 @@ void GranularProcessor::ProcessGranular(
           ws_player_.Play(buffer_16_, p, &output[0].l, size);
         }
 
-        // The reverb
+        // Settings of the reverb
         reverb_.set_amount(0.53f);
         reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
-        reverb_.set_mod_amount(parameters_.reverb);
-        reverb_.set_mod_rate(parameters_.feedback * 30.0f);
+        reverb_.set_mod_amount(parameters_.feedback * 300.0f);
+        reverb_.set_mod_rate(0.2f + parameters_.feedback * 5.0f);
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
           reverb_.set_input_gain(0.0f);
@@ -189,10 +189,14 @@ void GranularProcessor::ProcessGranular(
         } else {
           reverb_.set_time(parameters_.density * 1.1f);
           reverb_.set_input_gain(0.5f);
-          float lp = parameters_.stereo_spread < 0.5f ? parameters_.stereo_spread * 2 : 1;
-          float hp = parameters_.stereo_spread > 0.5f ? (parameters_.stereo_spread - 0.5) * 2 : 0;
+          float lp = parameters_.stereo_spread < 0.5f ?
+            parameters_.stereo_spread * 2 : 1;
+          float hp = parameters_.stereo_spread > 0.5f ?
+            (parameters_.stereo_spread - 0.5) * 2 : 0;
           reverb_.set_lp(0.05f + 0.6f * lp);
-          reverb_.set_hp(0.4f * hp);
+          reverb_.set_hp(0.01f + 0.3f * hp); // the small offset gets
+                                             // rid of feedback of
+                                             // large DC offset.
         }
         reverb_.Process(output, size);
       }

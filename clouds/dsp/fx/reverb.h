@@ -91,7 +91,6 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
-    const float mod_amount_max = 600.0f;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -104,7 +103,7 @@ class Reverb {
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                     \
     {                                                                       \
-        float lfo_val = lfo.Next() * mod_amount_max * smoothed_mod_amount_; \
+        float lfo_val = lfo.Next() * smoothed_mod_amount_; \
         float offset = (del.length - 1) * smoothed_size_ + lfo_val;     \
         CONSTRAIN(offset, 0, del.length - 1);                           \
         c.Interpolate(del, offset, gain);                               \
@@ -120,7 +119,7 @@ class Reverb {
       float apout = 0.0f;
 
       // Smooth size and mod_amount to avoid delay glitches
-      smoothed_size_ = smoothed_size_ + 0.0005f * (size_ - smoothed_size_);
+      smoothed_size_ = smoothed_size_ + 0.05f * (size_ - smoothed_size_);
       smoothed_mod_amount_ = smoothed_mod_amount_ + 0.0005f * (mod_amount_ - smoothed_mod_amount_);
 
       engine_.Start(&c);
