@@ -223,7 +223,12 @@ class FxEngine {
       state += coefficient * (accumulator_ - state);
       accumulator_ -= state;
     }
-    
+
+    inline void SoftLimit() {
+      accumulator_ = stmlib::SoftLimit(accumulator_);
+    }
+
+
     template<typename D>
     inline void Interpolate(D& d, float offset, float scale) {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);

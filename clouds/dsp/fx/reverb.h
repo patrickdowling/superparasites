@@ -146,6 +146,7 @@ class Reverb {
       INTERPOLATE_LFO(del2, lfo_[5], krt);
       c.Lp(lp_1, klp);
       c.Hp(hp_1, khp);
+      c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
@@ -159,6 +160,7 @@ class Reverb {
       INTERPOLATE_LFO(del1, lfo_[8], krt);
       c.Lp(lp_2, klp);
       c.Hp(hp_2, khp);
+      c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[9], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
