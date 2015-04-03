@@ -111,7 +111,7 @@ class Reverb {
 
 #define INTERPOLATE(del, gain)                                          \
     {                                                                   \
-        c.Interpolate(del, del.length - 1, gain);                       \
+        c.Interpolate(del, (del.length - 1) * smoothed_size_, gain);                       \
     }
 
     while (size--) {
