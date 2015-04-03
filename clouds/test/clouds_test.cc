@@ -73,10 +73,10 @@ void write_wav_header(FILE* fp, int num_samples, int num_channels) {
 }
 
 void TestDSP() {
-  size_t duration = 19;
+  size_t duration = 29;
 
+  FILE* fp_in = fopen("audio_samples/ericderr.wav", "rb");
   FILE* fp_out = fopen("clouds.wav", "wb");
-  FILE* fp_in = fopen("audio_samples/kettel_32k.wav", "rb");
 
   size_t remaining_samples = kSampleRate * duration;
   write_wav_header(fp_out, remaining_samples, 2);
@@ -92,13 +92,13 @@ void TestDSP() {
 
   processor.set_num_channels(2);
   processor.set_low_fidelity(false);
-  processor.set_playback_mode(PLAYBACK_MODE_LOOPING_DELAY);
+  processor.set_playback_mode(PLAYBACK_MODE_REVERB);
   
   Parameters* p = processor.mutable_parameters();
   
   size_t block_counter = 0;
   float phase_ = 0.0f;
-  bool synthetic = true;
+  bool synthetic = false;
   processor.Prepare();
   float pot_noise = 0.0f;
   while (remaining_samples) {
@@ -108,18 +108,18 @@ void TestDSP() {
     
     p->gate = false;
     p->trigger = false;
-    p->freeze = true && (block_counter & 2047) > 1024;
-    pot_noise += 0.05f * ((Random::GetSample() / 32768.0f) * 0.00f - pot_noise);
-    p->position = triangle * 0.0f + 0.00f;
+    p->freeze = false; // || (block_counter & 2047) > 1024;
+    pot_noise += 0.05f * ((Random::GetSample() / 32768.0f) * 0.05f - pot_noise);
+    p->position = triangle * 0.0f + 0.0f;
     p->size = 0.5f;
-    p->pitch = -7.0f + (triangle > 0.5f ? 1.0f : 0.0f) * 0.0f;
-    p->density = 0.0f;
-    p->texture = 0.5f;
-    p->feedback = 0.0f;
+    p->pitch = 0.0f + (triangle > 0.5f ? 1.0f : 0.0f) * 0.0f;
+    p->density = 0.7f;
+    p->texture = 1.0f;
     p->dry_wet = 1.0f;
-    p->reverb = 0.0f;
-    p->stereo_spread = 0.0f;
-    
+    p->stereo_spread = 0.5f;
+    p->feedback = 1.0f;
+    p->reverb = 1.0f;
+
     ++block_counter;
     ShortFrame input[kBlockSize];
     ShortFrame output[kBlockSize];
@@ -151,76 +151,6 @@ void TestDSP() {
   }
   fclose(fp_out);
   fclose(fp_in);
-}
-
-void TestGrainSize() {
-  for (int32_t _p = 0; _p < 3; _p++) {
-    for (int32_t _s = 0; _s < 3; _s++) {
-      for (int32_t _pi = 0; _pi < 3; _pi++) {
-  size_t duration = 19;
-  char name[80];
-  sprintf(name, "clouds_%d%d%d.wav", _p, _s, _pi);
-  FILE* fp_out = fopen(name, "wb");
-  FILE* fp_in = fopen("audio_samples/kettel_32k.wav", "rb");
-
-  size_t remaining_samples = kSampleRate * duration;
-  write_wav_header(fp_out, remaining_samples, 2);
-  fseek(fp_in, 48, SEEK_SET);
-  
-  uint8_t large_buffer[118784];
-  uint8_t small_buffer[65536]; 
-  
-  GranularProcessor processor;
-  processor.Init(
-      &large_buffer[0], sizeof(large_buffer),
-      &small_buffer[0],sizeof(small_buffer));
-
-  processor.set_num_channels(2);
-  processor.set_low_fidelity(false);
-  processor.set_playback_mode(PLAYBACK_MODE_GRANULAR);
-  
-  Parameters* p = processor.mutable_parameters();
-  
-  size_t block_counter = 0;
-  processor.Prepare();
-  while (remaining_samples) {
-    p->trigger = false;
-    p->freeze = (block_counter & 1023) > 512;
-    p->position = _p * 0.5f;
-    p->size = _s * 0.5f;
-    p->pitch = _pi * 24.0f - 24.0f;
-    p->density = 0.75f;
-    p->texture = 0.5f;
-    p->feedback = 0.0f;
-    p->dry_wet = 1.0f;
-    p->reverb = 0.0f;
-    p->stereo_spread = 0.0f;
-
-    ++block_counter;
-    ShortFrame input[kBlockSize];
-    ShortFrame output[kBlockSize];
-    
-    uint16_t tri = (remaining_samples / 4);
-    tri = tri > 32767 ? 65535 - tri : tri;
-    
-    if (fread(
-            input,
-            sizeof(ShortFrame),
-            kBlockSize,
-            fp_in) != kBlockSize) {
-      break;
-    }
-    remaining_samples -= kBlockSize;
-    processor.Process(input, output, kBlockSize);
-    processor.Prepare();
-    fwrite(output, sizeof(ShortFrame), kBlockSize, fp_out);
-  }
-  
-  fclose(fp_out);
-  fclose(fp_in);
-  }
-  }
-  }
 }
 
 int main(void) {
