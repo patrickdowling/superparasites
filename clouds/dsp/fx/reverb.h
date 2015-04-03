@@ -32,6 +32,7 @@
 #include "stmlib/stmlib.h"
 
 #include "clouds/dsp/fx/fx_engine.h"
+#include "clouds/dsp/random_oscillator.h"
 
 using namespace stmlib;
 
@@ -45,27 +46,18 @@ class Reverb {
 
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
-    const float freq = 2.0f;
-    engine_.SetLFOFrequency(LFO_1, 0.5f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_2, 0.3f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_3, 0.17f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_4, 0.89f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_5, 1.12f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_6, 0.45f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_7, 0.62f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_8, 0.99f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_9, 1.45f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_10, 1.78f * freq / 32000.0f);
-    engine_.SetLFOFrequency(LFO_11, 0.78f * freq / 32000.0f);
     lp_ = 0.7f;
     hp_ = 0.0f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
-    modulation_ = 0.0f;
-    smoothed_size_ = size_;
+    mod_amount_ = 0.0f;
     mod_rate_ = 0.0f;
+    smoothed_size_ = size_;
+    smoothed_mod_amount_ = mod_amount_;
+    for (int i=0; i<12; i++)
+        lfo_[i].Init(0);
   }
-  
+
   void Process(FloatFrame* in_out, size_t size) {
     // This is the Griesinger topology described in the Dattorro paper
     // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
@@ -99,48 +91,65 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
-    const float modulation = modulation_;
-    const float modulation_max = 600.0f;
+    const float mod_amount_max = 600.0f;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
     float hp_1 = hp_decay_1_;
     float hp_2 = hp_decay_2_;
 
+    for (int i=0; i<12; i++) {
+        lfo_[i].set_period(1 / mod_rate_ * 32000);
+    }
+
+#define INTERPOLATE_LFO(del, lfo, gain)                                     \
+    {                                                                       \
+        float lfo_val = lfo.Next() * mod_amount_max * smoothed_mod_amount_; \
+        float offset = (del.length - 1) * smoothed_size_ + lfo_val;     \
+        CONSTRAIN(offset, 0, del.length - 1);                           \
+        c.Interpolate(del, offset, gain);                               \
+    }
+
+#define INTERPOLATE(del, gain)                                          \
+    {                                                                   \
+        c.Interpolate(del, del.length - 1, gain);                       \
+    }
+
     while (size--) {
       float wet;
       float apout = 0.0f;
 
-      // Smooth the size to avoid glitch
+      // Smooth size and mod_amount to avoid delay glitches
       smoothed_size_ = smoothed_size_ + 0.0005f * (size_ - smoothed_size_);
+      smoothed_mod_amount_ = smoothed_mod_amount_ + 0.0005f * (mod_amount_ - smoothed_mod_amount_);
 
       engine_.Start(&c);
       
       // Smear AP1 inside the loop.
-      c.Interpolate(ap1, 30.0f * smoothed_size_, LFO_1, modulation_max * modulation, 1.0f);
+      INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
       c.Write(ap1, 100 * smoothed_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, gain);
 
       // Diffuse through 4 allpasses.
-      c.InterpolateFrom(ap1, smoothed_size_, LFO_8, modulation_max * modulation, kap);
+      INTERPOLATE_LFO(ap1, lfo_[1], kap);
       c.WriteAllPass(ap1, -kap);
-      c.InterpolateFrom(ap2, smoothed_size_, LFO_9, modulation_max * modulation, kap);
+      INTERPOLATE_LFO(ap2, lfo_[2], kap);
       c.WriteAllPass(ap2, -kap);
-      c.InterpolateFrom(ap3, smoothed_size_, LFO_10, modulation_max * modulation, kap);
+      INTERPOLATE_LFO(ap3, lfo_[3], kap);
       c.WriteAllPass(ap3, -kap);
-      c.InterpolateFrom(ap4, smoothed_size_, LFO_11, modulation_max * modulation, kap);
+      INTERPOLATE_LFO(ap4, lfo_[4], kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
       
       // Main reverb loop.
       c.Load(apout);
-      c.Interpolate(del2, 4403.0f * smoothed_size_, LFO_2, modulation_max * modulation, krt);
+      INTERPOLATE_LFO(del2, lfo_[5], krt);
       c.Lp(lp_1, klp);
       c.Hp(hp_1, khp);
-      c.InterpolateFrom(dap1a, smoothed_size_, LFO_3, modulation_max * modulation, -kap);
+      INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
-      c.InterpolateFrom(dap1b, smoothed_size_, LFO_4, modulation_max * modulation, kap);
+      INTERPOLATE(dap1b, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 2.0f);
       c.Write(wet, 0.0f);
@@ -148,18 +157,21 @@ class Reverb {
       in_out->l += wet - in_out->l * amount;
 
       c.Load(apout);
-      c.InterpolateFrom(del1, smoothed_size_, LFO_5, modulation_max * modulation, krt);
+      INTERPOLATE_LFO(del1, lfo_[8], krt);
       c.Lp(lp_2, klp);
       c.Hp(hp_2, khp);
-      c.InterpolateFrom(dap2a, smoothed_size_, LFO_6, modulation_max * modulation, kap);
+      INTERPOLATE_LFO(dap2a, lfo_[9], kap);
       c.WriteAllPass(dap2a, -kap);
-      c.InterpolateFrom(dap2b, smoothed_size_, LFO_7, modulation_max * modulation, -kap);
+      INTERPOLATE(dap2b, -kap);
       c.WriteAllPass(dap2b, kap);
       c.Write(del2, 2.0f);
       c.Write(wet, 0.0f);
 
       in_out->r += wet - in_out->r * amount;
-      
+
+      /* if(in_out->r > 1.0f || in_out->r < 1.0f || in_out->l > 1.0f || in_out->l < 1.0f) */
+      /*     printf("clip!\n"); */
+
       ++in_out;
     }
     
@@ -197,8 +209,8 @@ class Reverb {
     size_ = size;
   }
 
-  inline void set_modulation(float modulation) {
-    modulation_ = modulation;
+  inline void set_mod_amount(float mod_amount) {
+    mod_amount_ = mod_amount;
   }
 
   inline void set_mod_rate(float mod_rate) {
@@ -216,14 +228,17 @@ class Reverb {
   float lp_;
   float hp_;
   float size_;
+  float smoothed_size_;
+  float mod_amount_;
+  float smoothed_mod_amount_;
+  float mod_rate_;
 
   float lp_decay_1_;
   float lp_decay_2_;
   float hp_decay_1_;
   float hp_decay_2_;
-  float smoothed_size_;
-  float modulation_;
-  float mod_rate_;
+
+  RandomOscillator lfo_[12];
 
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };
