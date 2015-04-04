@@ -50,10 +50,10 @@ class Reverb {
     hp_ = 0.0f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
-    mod_amount_ = 0.0f;
-    mod_rate_ = 0.0f;
+    smooth_mod_amount_ = mod_amount_ = 0.0f;
+    smooth_mod_rate_ = mod_rate_ = 0.0f;
     smooth_size_ = size_;
-    smooth_mod_amount_ = mod_amount_;
+
     for (int i=0; i<12; i++)
       lfo_[i].Init();
   }
@@ -97,17 +97,17 @@ class Reverb {
     float hp_1 = hp_decay_1_;
     float hp_2 = hp_decay_2_;
 
-    for (int i=0; i<12; i++) {
-        lfo_[i].set_period(1 / mod_rate_ * 32000);
-    }
+    float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
+    for (int i=0; i<12; i++)
+      lfo_[i].set_period((uint32_t)period);
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \
     {                                                                   \
-        float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :               \
-            lfo.Next() * smooth_mod_amount_;                            \
-        float offset = (del.length - 1) * smooth_size_ + lfo_val;       \
-        CONSTRAIN(offset, 0, del.length - 1);                           \
-        c.Interpolate(del, offset, gain);                               \
+            float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :           \
+                lfo.Next() * smooth_mod_amount_;                        \
+            float offset = (del.length - 1) * smooth_size_ + lfo_val;   \
+            CONSTRAIN(offset, 0, del.length - 1);                       \
+            c.Interpolate(del, offset, gain);                           \
     }
 
 #define INTERPOLATE(del, gain)                                          \
@@ -119,9 +119,10 @@ class Reverb {
       float wet;
       float apout = 0.0f;
 
-      // Smooth size and mod_amount to avoid delay glitches
-      smooth_size_ = smooth_size_ + 0.05f * (size_ - smooth_size_);
-      smooth_mod_amount_ = smooth_mod_amount_ + 0.0005f * (mod_amount_ - smooth_mod_amount_);
+      // Smooth parameters to avoid delay glitches
+      smooth_size_ += + 0.005f * (size_ - smooth_size_);
+      smooth_mod_amount_ += 0.0005f * (mod_amount_ - smooth_mod_amount_);
+      smooth_mod_rate_ += 0.00005f * (mod_rate_ - smooth_mod_rate_);
 
       engine_.Start(&c);
       
@@ -170,9 +171,6 @@ class Reverb {
       c.Write(wet, 0.0f);
 
       in_out->r += (wet - in_out->r) * amount;
-
-      /* if(in_out->r > 1.0f || in_out->r < 1.0f || in_out->l > 1.0f || in_out->l < 1.0f) */
-      /*     printf("clip!\n"); */
 
       ++in_out;
     }
@@ -234,6 +232,7 @@ class Reverb {
   float mod_amount_;
   float smooth_mod_amount_;
   float mod_rate_;
+  float smooth_mod_rate_;
 
   float lp_decay_1_;
   float lp_decay_2_;

@@ -179,8 +179,10 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_amount(0.53f);
         reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
-        reverb_.set_mod_amount(parameters_.feedback * 300.0f);
-        reverb_.set_mod_rate(0.2f + parameters_.feedback * 5.0f);
+        reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
+                             parameters_.feedback * parameters_.feedback * 70.0f);
+        reverb_.set_mod_amount(parameters_.reverb * 200.0f);
+
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
           reverb_.set_input_gain(0.0f);
