@@ -82,10 +82,12 @@ void GranularProcessor::ProcessGranular(
     for (int32_t i = 0; i < num_channels_; ++i) {
       if (resolution() == 8) {
         buffer_8_[i].WriteFade(
-            &input_samples[i], size, 2, !parameters_.freeze);
+            &input_samples[i], size, 2,
+            playback_mode_ == PLAYBACK_MODE_REVERB || !parameters_.freeze);
       } else {
         buffer_16_[i].WriteFade(
-            &input_samples[i], size, 2, !parameters_.freeze);
+            &input_samples[i], size, 2,
+            playback_mode_ == PLAYBACK_MODE_REVERB || !parameters_.freeze);
       }
     }
   }
@@ -166,7 +168,7 @@ void GranularProcessor::ProcessGranular(
           0.0f, // reverb;
           0.0f, // freeze;
           parameters_.trigger, // trigger;
-          parameters_.gate // gate;
+          0.0f // gate;
         };
 
         if (resolution() == 8) {
@@ -176,13 +178,13 @@ void GranularProcessor::ProcessGranular(
         }
 
         // Settings of the reverb
-        reverb_.set_amount(0.53f);
+        reverb_.set_amount(1.0f); //100% wet
         reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
         reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
         reverb_.set_mod_amount(parameters_.reverb * 200.0f);
-        reverb_.set_ratio(SemitonesToRatio(parameters_.pitch));
+        reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
 
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
@@ -190,7 +192,7 @@ void GranularProcessor::ProcessGranular(
           reverb_.set_lp(1.0f);
           reverb_.set_hp(0.0f);
         } else {
-          reverb_.set_time(parameters_.density * 1.2f);
+          reverb_.set_time(parameters_.density * 1.3f + 0.15f * abs(parameters_.pitch) / 24.0f);
           reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2 : 1;
