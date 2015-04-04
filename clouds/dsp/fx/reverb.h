@@ -55,7 +55,7 @@ class Reverb {
     smooth_size_ = size_;
     smooth_mod_amount_ = mod_amount_;
     for (int i=0; i<12; i++)
-        lfo_[i].Init(0);
+      lfo_[i].Init();
   }
 
   void Process(FloatFrame* in_out, size_t size) {

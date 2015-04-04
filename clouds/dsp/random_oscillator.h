@@ -1,5 +1,8 @@
+#include "clouds/resources.h"
 #include "stmlib/utils/random.h"
+#include "stmlib/utils/dsp.h"
 
+using namespace clouds;
 using namespace stmlib;
 
 /* Smoothed random generator, outputs values between -1 and 1 */
@@ -7,30 +10,29 @@ class RandomOscillator
 {
 public:
 
-  inline void Init(int period) {
-    smoothed_ = Random::GetSample();
-    val_ = Random::GetSample();
-    period_ = period;
+  void Init() {
+    value_ = Random::GetSample();
+    next_value_ = Random::GetSample();
   }
 
-  inline void set_period(int period) {
-    period_ = period;
+  inline void set_period(uint32_t period) {
+    phase_increment_ = UINT32_MAX / period;
   }
 
-  inline float Next() {
-    if (period_ != 0) {
-        if (phase_ % period_ == 0)
-            val_ = Random::GetSample();
-        smoothed_ += (val_ - smoothed_) * (1.0f / period_);
+  float Next() {
+    phase_ += phase_increment_;
+    if (phase_ < phase_increment_) {
+      value_ = next_value_;
+      next_value_ = Random::GetSample();
     }
-    phase_++;
-    return smoothed_ / 32768.0f;
+    int16_t raised_cosine = Interpolate824(clouds::lut_raised_cosine, phase_) >> 1;
+    return (value_ + ((next_value_ - value_) * raised_cosine >> 15)) / 32767.0f;
   }
 
 private:
-  int period_;
-  float smoothed_;
-  float val_;
-  int phase_;
+  uint32_t phase_;
+  uint32_t phase_increment_;
+  int32_t value_;
+  int32_t next_value_;
 
 };
