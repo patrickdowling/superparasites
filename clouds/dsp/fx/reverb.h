@@ -55,6 +55,7 @@ class Reverb {
     smooth_size_ = size_;
     phase_ = 0.0f;
     ratio_ = 0.0f;
+    pitch_shift_amount_ = 1.0f;
 
     for (int i=0; i<12; i++)
       lfo_[i].Init();
@@ -93,6 +94,7 @@ class Reverb {
     const float krt = reverb_time_;
     const float amount = amount_;
     const float gain = input_gain_;
+    const float pitch_shift = pitch_shift_amount_;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -165,7 +167,8 @@ class Reverb {
       c.Load(apout);
       INTERPOLATE_LFO(del2, lfo_[5], krt);
       c.Lp(lp_1, klp);
-      c.Hp(hp_1, khp);
+      if (khp > 0.001f) c.Hp(hp_1, khp); /* somehow energy is lost
+                                         * when khp=0.0f */
       c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
@@ -177,11 +180,15 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      INTERPOLATE_LFO(del1, lfo_[8], krt * 0.5f);
-      c.Interpolate(del1, phase, tri * krt * 0.5f);
-      c.Interpolate(del1, half, (1.0f - tri) * krt * 0.5f);
+      INTERPOLATE_LFO(del1, lfo_[7], krt * (1.0f - pitch_shift));
+      if (pitch_shift >= 0.01f) {
+        /* blend in the pitch shifted feedback
+         * the small amplitude push compensates for the energy loss */
+        c.Interpolate(del1, phase, tri * krt * pitch_shift * 1.01f);
+        c.Interpolate(del1, half, (1.0f - tri) * krt * pitch_shift * 1.01f);
+      }
       c.Lp(lp_2, klp);
-      c.Hp(hp_2, khp);
+      if (khp > 0.001f) c.Hp(hp_2, khp);
       c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[9], kap);
       c.WriteAllPass(dap2a, -kap);
@@ -240,6 +247,10 @@ class Reverb {
   inline void set_ratio(float ratio) {
     ratio_ = ratio;
   }
+
+  inline void set_pitch_shift_amount(float pitch_shift) {
+    pitch_shift_amount_ = pitch_shift;
+  }
   
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
@@ -257,6 +268,7 @@ class Reverb {
   float smooth_mod_amount_;
   float mod_rate_;
   float smooth_mod_rate_;
+  float pitch_shift_amount_;
 
   float lp_decay_1_;
   float lp_decay_2_;
