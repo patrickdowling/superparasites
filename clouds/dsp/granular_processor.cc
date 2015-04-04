@@ -157,7 +157,7 @@ void GranularProcessor::ProcessGranular(
         Parameters p = {
           parameters_.position * 0.25f, // position;
           0.3f, // size;
-          parameters_.pitch, // pitch;
+          0.0f, // pitch;
           0.0f, // density;
           0.5f, // texture;
           1.0f, // dry_wet;
@@ -182,6 +182,7 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
         reverb_.set_mod_amount(parameters_.reverb * 200.0f);
+        reverb_.set_ratio(SemitonesToRatio(parameters_.pitch));
 
         if (parameters_.freeze) {
           reverb_.set_time(1.0f);
@@ -189,7 +190,7 @@ void GranularProcessor::ProcessGranular(
           reverb_.set_lp(1.0f);
           reverb_.set_hp(0.0f);
         } else {
-          reverb_.set_time(parameters_.density * 1.1f);
+          reverb_.set_time(parameters_.density * 1.2f);
           reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2 : 1;
@@ -329,6 +330,7 @@ void GranularProcessor::Process(
     reverb_.set_size(1.0f);
     reverb_.set_mod_amount(0.0f);
     reverb_.set_mod_rate(0.0f);
+    reverb_.set_ratio(0.0f);
     reverb_.Process(out_, size);
   }
   

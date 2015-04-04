@@ -53,6 +53,8 @@ class Reverb {
     smooth_mod_amount_ = mod_amount_ = 0.0f;
     smooth_mod_rate_ = mod_rate_ = 0.0f;
     smooth_size_ = size_;
+    phase_ = 0.0f;
+    ratio_ = 0.0f;
 
     for (int i=0; i<12; i++)
       lfo_[i].Init();
@@ -125,7 +127,23 @@ class Reverb {
       smooth_mod_rate_ += 0.00005f * (mod_rate_ - smooth_mod_rate_);
 
       engine_.Start(&c);
-      
+
+      float ps_size = 128.0f + (3410.0f - 128.0f) *
+        smooth_size_ * smooth_size_ * smooth_size_;
+      phase_ += (1.0f - ratio_) / ps_size;
+      if (phase_ >= 1.0f) {
+        phase_ -= 1.0f;
+      }
+      if (phase_ <= 0.0f) {
+        phase_ += 1.0f;
+      }
+      float tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
+      float phase = phase_ * ps_size;
+      float half = phase + ps_size * 0.5f;
+      if (half >= ps_size) {
+        half -= ps_size;
+      }
+
       // Smear AP1 inside the loop.
       INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
       c.Write(ap1, 100 * smooth_size_, 0.0f);
@@ -142,7 +160,7 @@ class Reverb {
       INTERPOLATE_LFO(ap4, lfo_[4], kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
-      
+
       // Main reverb loop.
       c.Load(apout);
       INTERPOLATE_LFO(del2, lfo_[5], krt);
@@ -159,7 +177,9 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      INTERPOLATE_LFO(del1, lfo_[8], krt);
+      INTERPOLATE_LFO(del1, lfo_[8], krt * 0.5f);
+      c.Interpolate(del1, phase, tri * krt * 0.5f);
+      c.Interpolate(del1, half, (1.0f - tri) * krt * 0.5f);
       c.Lp(lp_2, klp);
       c.Hp(hp_2, khp);
       c.SoftLimit();
@@ -216,6 +236,10 @@ class Reverb {
   inline void set_mod_rate(float mod_rate) {
     mod_rate_ = mod_rate;
   }
+
+  inline void set_ratio(float ratio) {
+    ratio_ = ratio;
+  }
   
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
@@ -238,6 +262,9 @@ class Reverb {
   float lp_decay_2_;
   float hp_decay_1_;
   float hp_decay_2_;
+
+  float phase_;
+  float ratio_;
 
   RandomOscillator lfo_[12];
 
