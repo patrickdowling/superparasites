@@ -52,10 +52,14 @@ class Reverb {
     size_ = 1.0f;
     smooth_mod_amount_ = mod_amount_ = 0.0f;
     smooth_mod_rate_ = mod_rate_ = 0.0f;
-    smooth_size_ = size_;
+    smooth_size_ = size_ = 0.5f;
+    smooth_input_gain_ = input_gain_ = 1.0f;
+    smooth_time_ = reverb_time_ = 0.5f;
+    smooth_lp_ = lp_ = 1.0f;
+    smooth_hp_ = hp_= 0.0f;
     phase_ = 0.0f;
     ratio_ = 0.0f;
-    pitch_shift_amount_ = 1.0f;
+    pitch_shift_amount_ = smooth_pitch_shift_amount_ = 1.0f;
 
     for (int i=0; i<12; i++)
       lfo_[i].Init();
@@ -89,12 +93,7 @@ class Reverb {
     E::Context c;
 
     const float kap = diffusion_;
-    const float klp = lp_;
-    const float khp = hp_;
-    const float krt = reverb_time_;
     const float amount = amount_;
-    const float gain = input_gain_;
-    const float pitch_shift = pitch_shift_amount_;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -105,28 +104,24 @@ class Reverb {
     for (int i=0; i<12; i++)
       lfo_[i].set_period((uint32_t)period);
 
-#define INTERPOLATE_LFO(del, lfo, gain)                                 \
-    {                                                                   \
-            float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :           \
-                lfo.Next() * smooth_mod_amount_;                        \
-            float offset = (del.length - 1) * smooth_size_ + lfo_val;   \
-            CONSTRAIN(offset, 0, del.length - 1);                       \
-            c.Interpolate(del, offset, gain);                           \
-    }
-
-#define INTERPOLATE(del, gain)                                          \
-    {                                                                   \
-        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);                       \
-    }
-
     while (size--) {
       float wet;
       float apout = 0.0f;
 
       // Smooth parameters to avoid delay glitches
       smooth_size_ += + 0.005f * (size_ - smooth_size_);
-      smooth_mod_amount_ += 0.0005f * (mod_amount_ - smooth_mod_amount_);
-      smooth_mod_rate_ += 0.00005f * (mod_rate_ - smooth_mod_rate_);
+      smooth_mod_amount_ += 0.005f * (mod_amount_ - smooth_mod_amount_);
+      smooth_mod_rate_ += 0.005f * (mod_rate_ - smooth_mod_rate_);
+      smooth_input_gain_ += 0.05f * (input_gain_ - smooth_input_gain_);
+      smooth_time_ += 0.005f * (reverb_time_ - smooth_time_);
+      smooth_lp_ += 0.005f * (lp_ - smooth_lp_);
+      smooth_hp_ += 0.005f * (hp_ - smooth_hp_);
+      const float ps_amount =
+        /* disables pitch shifter when pitch is unchanged, to avoid
+         * weird chorus effects */
+        ratio_ <= 1.0001 && ratio_ >= 0.999 ? 0.0 :
+        pitch_shift_amount_;
+      smooth_pitch_shift_amount_ += 0.05f * (ps_amount - smooth_pitch_shift_amount_);
 
       engine_.Start(&c);
 
@@ -146,11 +141,27 @@ class Reverb {
         half -= ps_size;
       }
 
+      /* printf("%f, %f, %f\n", tri, phase, half); */
+
+#define INTERPOLATE_LFO(del, lfo, gain)                                 \
+    {                                                                   \
+            float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :           \
+                lfo.Next() * smooth_mod_amount_;                        \
+            float offset = (del.length - 1) * smooth_size_ + lfo_val;   \
+            CONSTRAIN(offset, 0, del.length - 1);                       \
+            c.Interpolate(del, offset, gain);                           \
+    }
+
+#define INTERPOLATE(del, gain)                                          \
+    {                                                                   \
+        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);                       \
+    }
+
       // Smear AP1 inside the loop.
       INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
       c.Write(ap1, 100 * smooth_size_, 0.0f);
       
-      c.Read(in_out->l + in_out->r, gain);
+      c.Read(in_out->l + in_out->r, smooth_input_gain_);
 
       // Diffuse through 4 allpasses.
       INTERPOLATE_LFO(ap1, lfo_[1], kap);
@@ -165,36 +176,36 @@ class Reverb {
 
       // Main reverb loop.
       c.Load(apout);
-      INTERPOLATE_LFO(del2, lfo_[5], krt);
-      c.Lp(lp_1, klp);
-      if (khp > 0.001f) c.Hp(hp_1, khp); /* somehow energy is lost
-                                         * when khp=0.0f */
+      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
+      c.Lp(lp_1, smooth_lp_);
+      if (smooth_hp_ > 0.001f) c.Hp(hp_1, smooth_hp_); /* somehow energy is lost
+                                          * when smooth_hp_=0.0f */
       c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
       c.WriteAllPass(dap1b, -kap);
-      c.Write(del1, 2.0f);
+      c.Write(del1, 1.0f);
+      c.SoftLimit();
       c.Write(wet, 0.0f);
 
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      INTERPOLATE_LFO(del1, lfo_[7], krt * (1.0f - pitch_shift));
-      if (pitch_shift >= 0.01f) {
-        /* blend in the pitch shifted feedback
-         * the small amplitude push compensates for the energy loss */
-        c.Interpolate(del1, phase, tri * krt * pitch_shift * 1.01f);
-        c.Interpolate(del1, half, (1.0f - tri) * krt * pitch_shift * 1.01f);
-      }
-      c.Lp(lp_2, klp);
-      if (khp > 0.001f) c.Hp(hp_2, khp);
+      INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
+      /* blend in the pitch shifted feedback
+       * the small amplitude push compensates for the energy loss */
+      c.Interpolate(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_ * 1.01f);
+      c.Interpolate(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_ * 1.01f);
+      c.Lp(lp_2, smooth_lp_);
+      if (smooth_hp_ > 0.001f) c.Hp(hp_2, smooth_hp_);
       c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[9], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
       c.WriteAllPass(dap2b, kap);
-      c.Write(del2, 2.0f);
+      c.Write(del2, 1.0f);
+      c.SoftLimit();
       c.Write(wet, 0.0f);
 
       in_out->r += (wet - in_out->r) * amount;
@@ -258,10 +269,14 @@ class Reverb {
   
   float amount_;
   float input_gain_;
+  float smooth_input_gain_;
   float reverb_time_;
+  float smooth_time_;
   float diffusion_;
   float lp_;
   float hp_;
+  float smooth_lp_;
+  float smooth_hp_;
   float size_;
   float smooth_size_;
   float mod_amount_;
@@ -269,6 +284,7 @@ class Reverb {
   float mod_rate_;
   float smooth_mod_rate_;
   float pitch_shift_amount_;
+  float smooth_pitch_shift_amount_;
 
   float lp_decay_1_;
   float lp_decay_2_;
