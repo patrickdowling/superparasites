@@ -61,9 +61,7 @@ class Reverb {
     ratio_ = 0.0f;
     pitch_shift_amount_ = smooth_pitch_shift_amount_ = 1.0f;
     envelope_1_ = envelope_2_ = 0.0f;
-    freeze_ = previous_freeze_ = false;
     level_ = 0.0f;
-    smooth_scaler_ = 1.0f;
     for (int i=0; i<9; i++)
       lfo_[i].Init();
   }
@@ -97,9 +95,6 @@ class Reverb {
 
     const float kap = diffusion_;
     const float amount = amount_;
-    const float limiter_value = 1.0f;
-    const float limiter_attack = 0.005f;
-    const float limiter_release = 0.0005f;
 
     float lp_1 = lp_decay_1_;
     float lp_2 = lp_decay_2_;
@@ -110,14 +105,6 @@ class Reverb {
     float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
     for (int i=0; i<9; i++)
       lfo_[i].set_period((uint32_t)period);
-
-    /* On freeze, track and hold the envelope level */
-    if (freeze_ && !previous_freeze_) {
-      level_ = envelope_1_ + envelope_2_;
-      previous_freeze_ = freeze_;
-    } else if (!freeze_) {
-      level_ = envelope_1_ + envelope_2_;
-    }
 
     while (size--) {
       float wet;
@@ -133,8 +120,6 @@ class Reverb {
       ONE_POLE(smooth_time_, reverb_time_, 0.005f);
       ONE_POLE(smooth_lp_, lp_, 0.05f);
       ONE_POLE(smooth_hp_, hp_, 0.05f);
-      const float scaler = level_ / (envelope_1_ + envelope_2_ + 0.001f) * 2.0f;
-      ONE_POLE(smooth_scaler_, scaler, 0.0005f);
         /* disables pitch shifter when pitch is unchanged, to avoid
          * weird chorus effects */
       const float pitch_shift_amount =
@@ -193,9 +178,7 @@ class Reverb {
       INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
       c.Lp(lp_1, smooth_lp_);
       c.Hp(hp_1, smooth_hp_);
-      if (freeze_) c.Scale(smooth_scaler_);
-      c.Follower(envelope_1_, limiter_attack, limiter_release);
-      c.Limiter(envelope_1_, limiter_value);
+      c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
@@ -212,9 +195,7 @@ class Reverb {
       c.Interpolate(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
       c.Lp(lp_2, smooth_lp_);
       c.Hp(hp_2, smooth_hp_);
-      if (freeze_) c.Scale(smooth_scaler_);
-      c.Follower(envelope_2_, limiter_attack, limiter_release);
-      c.Limiter(envelope_2_, limiter_value);
+      c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
@@ -277,11 +258,6 @@ class Reverb {
     pitch_shift_amount_ = pitch_shift;
   }
 
-  inline void set_freeze(bool freeze) {
-    previous_freeze_ = freeze_;
-    freeze_ = freeze;
-  }
-  
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
@@ -304,7 +280,6 @@ class Reverb {
   float smooth_mod_rate_;
   float pitch_shift_amount_;
   float smooth_pitch_shift_amount_;
-  float smooth_scaler_;
 
   float lp_decay_1_;
   float lp_decay_2_;
@@ -316,9 +291,6 @@ class Reverb {
   float envelope_1_;
   float envelope_2_;
   float level_;
-
-  bool freeze_;
-  bool previous_freeze_;
 
   RandomOscillator lfo_[9];
 

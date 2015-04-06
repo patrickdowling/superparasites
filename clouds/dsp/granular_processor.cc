@@ -186,15 +186,14 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_mod_amount(parameters_.reverb * 200.0f);
         reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
         reverb_.set_pitch_shift_amount(0.5f);
-        reverb_.set_freeze(parameters_.freeze);
 
         if (parameters_.freeze) {
           reverb_.set_input_gain(0.0f);
-          reverb_.set_time(1.0f);
+          reverb_.set_time(1.05f);
           reverb_.set_lp(1.0f);
           reverb_.set_hp(0.0f);
         } else {
-          reverb_.set_time(parameters_.density * 1.5f
+          reverb_.set_time(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
           reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?

@@ -158,10 +158,6 @@ class FxEngine {
       accumulator_ += value;
     }
 
-    inline void Scale(float scale) {
-      accumulator_ *= scale;
-    }
-
     inline void Write(float& value) {
       value = accumulator_;
     }
@@ -228,13 +224,8 @@ class FxEngine {
       accumulator_ -= state;
     }
 
-    inline void Follower(float& envelope, float att, float rel) {
-      float abs = accumulator_ * accumulator_;
-      envelope += (envelope < abs ? att : rel) * (abs - envelope);
-    }
-
-    inline void Limiter(float envelope, float value) {
-      accumulator_ *= value + stmlib::SoftLimit(envelope) - envelope;
+    inline void SoftLimit() {
+      accumulator_ = stmlib::SoftLimit(accumulator_);
     }
 
     template<typename D>
