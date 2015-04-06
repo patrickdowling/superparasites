@@ -64,7 +64,7 @@ class Reverb {
     freeze_ = previous_freeze_ = false;
     level_ = 0.0f;
     smooth_scaler_ = 1.0f;
-    for (int i=0; i<12; i++)
+    for (int i=0; i<9; i++)
       lfo_[i].Init();
   }
 
@@ -108,7 +108,7 @@ class Reverb {
 
     /* Set frequency of LFOs */
     float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
-    for (int i=0; i<12; i++)
+    for (int i=0; i<9; i++)
       lfo_[i].set_period((uint32_t)period);
 
     /* On freeze, track and hold the envelope level */
@@ -123,6 +123,8 @@ class Reverb {
       float wet;
       float apout = 0.0f;
 
+      engine_.Start(&c);
+
       // Smooth parameters to avoid delay glitches
       ONE_POLE(smooth_size_, size_, 0.005f);
       ONE_POLE(smooth_mod_amount_, mod_amount_, 0.005f);
@@ -131,15 +133,13 @@ class Reverb {
       ONE_POLE(smooth_time_, reverb_time_, 0.005f);
       ONE_POLE(smooth_lp_, lp_, 0.05f);
       ONE_POLE(smooth_hp_, hp_, 0.05f);
-      const float scaler = level_ / (envelope_1_ + envelope_2_ + 0.001f);
+      const float scaler = level_ / (envelope_1_ + envelope_2_ + 0.001f) * 2.0f;
       ONE_POLE(smooth_scaler_, scaler, 0.0005f);
         /* disables pitch shifter when pitch is unchanged, to avoid
          * weird chorus effects */
       const float pitch_shift_amount =
         ratio_ <= 1.0001 && ratio_ >= 0.999 ? 0.0 : pitch_shift_amount_;
       ONE_POLE(smooth_pitch_shift_amount_, pitch_shift_amount, 0.05f);
-
-      engine_.Start(&c);
 
       float ps_size = 128.0f + (3410.0f - 128.0f) *
         smooth_size_ * smooth_size_ * smooth_size_;
@@ -215,7 +215,7 @@ class Reverb {
       if (freeze_) c.Scale(smooth_scaler_);
       c.Follower(envelope_2_, limiter_attack, limiter_release);
       c.Limiter(envelope_2_, limiter_value);
-      INTERPOLATE_LFO(dap2a, lfo_[9], kap);
+      INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
       c.WriteAllPass(dap2b, kap);
@@ -320,7 +320,7 @@ class Reverb {
   bool freeze_;
   bool previous_freeze_;
 
-  RandomOscillator lfo_[12];
+  RandomOscillator lfo_[9];
 
   DISALLOW_COPY_AND_ASSIGN(Reverb);
 };
