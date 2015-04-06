@@ -186,14 +186,16 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_mod_amount(parameters_.reverb * 200.0f);
         reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
         reverb_.set_pitch_shift_amount(0.5f);
+        reverb_.set_freeze(parameters_.freeze);
 
         if (parameters_.freeze) {
-          reverb_.set_time(1.01f);
           reverb_.set_input_gain(0.0f);
+          reverb_.set_time(1.0f);
           reverb_.set_lp(1.0f);
           reverb_.set_hp(0.0f);
         } else {
-          reverb_.set_time(parameters_.density * 1.3f + 0.15f * abs(parameters_.pitch) / 24.0f);
+          reverb_.set_time(parameters_.density * 1.5f
+                           + 0.15f * abs(parameters_.pitch) / 24.0f);
           reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2 : 1;
@@ -244,20 +246,22 @@ void GranularProcessor::Process(
   
   // Apply feedback, with high-pass filtering to prevent build-ups at very
   // low frequencies (causing large DC swings).
-  ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
-  float feedback = playback_mode_ != PLAYBACK_MODE_REVERB ?
-    parameters_.feedback : 0.0f;
-  float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
-  fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 1.0f);
-  fb_filter_[1].set(fb_filter_[0]);
-  fb_filter_[0].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].l, &fb_[0].l, size, 2);
-  fb_filter_[1].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].r, &fb_[0].r, size, 2);
-  float fb_gain = feedback * (1.0f - freeze_lp_);
-  for (size_t i = 0; i < size; ++i) {
-    in_[i].l += fb_gain * (
-        SoftLimit(fb_gain * 1.4f * fb_[i].l + in_[i].l) - in_[i].l);
-    in_[i].r += fb_gain * (
-        SoftLimit(fb_gain * 1.4f * fb_[i].r + in_[i].r) - in_[i].r);
+  float feedback = parameters_.feedback;
+
+  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
+    ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
+    float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
+    fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 1.0f);
+    fb_filter_[1].set(fb_filter_[0]);
+    fb_filter_[0].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].l, &fb_[0].l, size, 2);
+    fb_filter_[1].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].r, &fb_[0].r, size, 2);
+    float fb_gain = feedback * (1.0f - freeze_lp_);
+    for (size_t i = 0; i < size; ++i) {
+      in_[i].l += fb_gain * (
+                             SoftLimit(fb_gain * 1.4f * fb_[i].l + in_[i].l) - in_[i].l);
+      in_[i].r += fb_gain * (
+                             SoftLimit(fb_gain * 1.4f * fb_[i].r + in_[i].r) - in_[i].r);
+    }
   }
   
   if (low_fidelity_) {
@@ -318,7 +322,7 @@ void GranularProcessor::Process(
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
   
-  // Apply reverb.
+  // Apply the simple post-processing reverb.
   if (playback_mode_ != PLAYBACK_MODE_REVERB) {
     float reverb_amount = parameters_.reverb * 0.95f;
     reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
