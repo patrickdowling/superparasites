@@ -142,6 +142,8 @@ inline uint16_t fold_add(uint16_t a, int16_t b) {
   }
 }
 
+int32_t lp_frame = 0;
+
 int main(void) {
   Init();
   
@@ -219,6 +221,9 @@ int main(void) {
           }
 
           frame = keyframer.keyframe(ui.sequencer_step).timestamp;
+        } else {
+          lp_frame += (frame - lp_frame) >> 6;
+          frame = lp_frame;
         }
 
         keyframer.Evaluate(frame);
