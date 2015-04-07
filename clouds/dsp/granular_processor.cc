@@ -254,7 +254,7 @@ void GranularProcessor::Process(
     fb_filter_[1].set(fb_filter_[0]);
     fb_filter_[0].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].l, &fb_[0].l, size, 2);
     fb_filter_[1].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].r, &fb_[0].r, size, 2);
-    float fb_gain = feedback * (1.0f - freeze_lp_);
+    float fb_gain = feedback * (2.0f - feedback) * (1.0f - freeze_lp_);
     for (size_t i = 0; i < size; ++i) {
       in_[i].l += fb_gain * (
                              SoftLimit(fb_gain * 1.4f * fb_[i].l + in_[i].l) - in_[i].l);
