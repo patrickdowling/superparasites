@@ -183,7 +183,7 @@ void GranularProcessor::ProcessGranular(
         reverb_.set_size(0.05f + 0.94f * parameters_.size);
         reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
-        reverb_.set_mod_amount(parameters_.reverb * 200.0f);
+        reverb_.set_mod_amount(parameters_.reverb * 300.0f);
         reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
         reverb_.set_pitch_shift_amount(0.5f);
 
