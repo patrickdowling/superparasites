@@ -143,18 +143,19 @@ class Reverb {
       }
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \
-    {                                                                   \
-            float lfo_val = smooth_mod_amount_ <= 0.001 ? 0 :           \
-                lfo.Next() * smooth_mod_amount_;                        \
-            float offset = (del.length - 1) * smooth_size_ + lfo_val;   \
-            CONSTRAIN(offset, 0, del.length - 1);                       \
-            c.Interpolate(del, offset, gain);                           \
-    }
+      {                                                                 \
+        float offset = (del.length - 1) * smooth_size_;                 \
+        if (smooth_mod_amount_ >= 0.001) {                              \
+          offset += lfo.Next() * smooth_mod_amount_;                    \
+          CONSTRAIN(offset, 0, del.length - 1);                         \
+        }                                                               \
+        c.Interpolate(del, offset, gain);                               \
+      }
 
 #define INTERPOLATE(del, gain)                                          \
-    {                                                                   \
-        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);                       \
-    }
+      {                                                                 \
+        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);      \
+      }
 
       // Smear AP1 inside the loop.
       INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
