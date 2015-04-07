@@ -37,7 +37,7 @@
 namespace clouds {
 
 const int32_t kLongPressDuration = 1000;
-const int32_t kVeryLongPressDuration = 4000;
+const int32_t kVeryLongPressDuration = 2500;
 
 using namespace stmlib;
 
