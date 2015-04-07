@@ -77,6 +77,8 @@ resources = [
    'src_filter', 'SRC', 'float', float, False),
   (lookup_tables.int16_lookup_tables,
    'lookup_table_int16', 'LUT', 'int16_t', int, False),
+  (lookup_tables.uint16_lookup_tables,
+   'lookup_table_uint16', 'LUT', 'uint16_t', int, False),
   (lookup_tables.lookup_tables,
    'lookup_table', 'LUT', 'float', float, False),
 ]
