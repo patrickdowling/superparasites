@@ -72,40 +72,44 @@ class Grain {
     phase_ = 0;
     envelope_phase_ = 0.0f;
     envelope_phase_increment_ = 2.0f / static_cast<float>(width);
-    if (window_shape >= 0.5f) {
-      envelope_smoothness_ = (window_shape - 0.5f) * 2.0f;
-      envelope_slope_ = 0.0f;
-    } else {
-      envelope_smoothness_ = 0.0f;
-      envelope_slope_ = 0.5f / (window_shape + 0.01f);
-    }
+
+    if (window_shape >= 0.333f)
+      envelope_slope_ = 1.0f;
+    else
+      envelope_slope_ = 0.333f / (window_shape + 0.0001f);
+
+    if (window_shape < 0.333f)
+      envelope_bias_ = - 3.0f * window_shape;
+    else if (window_shape < 0.666f)
+      envelope_bias_ = 6.0f * window_shape - 3.0f;
+    else
+      envelope_bias_ = 3.0f - 3.0 * window_shape;
+
     active_ = true;
     gain_l_ = gain_l;
     gain_r_ = gain_r;
     recommended_quality_ = recommended_quality;
   }
   
-  template<bool use_lut_for_envelope, GrainQuality quality>
+  template<GrainQuality quality>
   inline void RenderEnvelope(float* destination, size_t size) {
     const float increment = envelope_phase_increment_;
-    const float smoothness = envelope_smoothness_;
     const float slope = envelope_slope_;
+
+    float bias = envelope_bias_ + 1.0f;
+    CONSTRAIN(bias, 0.001f, 1.999f);
 
     float phase = envelope_phase_;
     while (size--) {
       float gain = phase;
-      gain = gain >= 1.0f ? 2.0f - gain : gain;
-      if (use_lut_for_envelope) {
-        if (quality == GRAIN_QUALITY_HIGH) {
-          float window = 0.0f;
-          window = stmlib::Interpolate(lut_window, gain, 4096.0f);
-          gain += smoothness * (window - gain);
-        }
-      } else {
-        if (quality >= GRAIN_QUALITY_MEDIUM) {
-          gain *= slope;
-          if (gain >= 1.0f) gain = 1.0f;
-        }
+      gain = gain <= bias ? gain / bias :
+              - gain / (2.0 - bias) + 2.0f / (2.0f - bias);
+      if (quality >= GRAIN_QUALITY_MEDIUM) {
+        gain *= slope;
+        if (gain >= 1.0f) gain = 1.0f;
+      }
+      if (quality >= GRAIN_QUALITY_HIGH) {
+        gain = stmlib::Interpolate(lut_window, gain, 4096.0f);
       }
       phase += increment;
       if (phase >= 2.0f) {
@@ -136,12 +140,8 @@ class Grain {
     }
     
     // Pre-render the envelope in one pass.
-    if (envelope_smoothness_ == 0.0f) {
-      RenderEnvelope<false, quality>(envelope, size);
-    } else {
-      RenderEnvelope<true, quality>(envelope, size);
-    }
-    
+    RenderEnvelope<quality>(envelope, size);
+
     const int32_t phase_increment = phase_increment_;
     const int32_t first_sample = first_sample_;
     const float gain_l = gain_l_;
@@ -185,8 +185,8 @@ class Grain {
   int32_t phase_increment_;
   int32_t pre_delay_;
 
-  float envelope_smoothness_;
   float envelope_slope_;
+  float envelope_bias_;         /* asymetry of envelope: -1..1 */
   float envelope_phase_;
   float envelope_phase_increment_;
 
