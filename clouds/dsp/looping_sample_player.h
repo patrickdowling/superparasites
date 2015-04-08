@@ -79,7 +79,7 @@ class LoopingSamplePlayer {
       const AudioBuffer<resolution>* buffer,
       const Parameters& parameters,
       float* out, size_t size) {
-      
+
     int32_t max_delay = buffer->size() - kCrossfadeDuration;
     tap_delay_counter_ += size;
     if (tap_delay_counter_ > max_delay) {
@@ -88,11 +88,13 @@ class LoopingSamplePlayer {
       synchronized_ = false;
     }
     if (parameters.trigger) {
-      tap_delay_ = tap_delay_counter_;
+      if(tap_delay_counter_ > 128) {
+        synchronized_ = true;
+        tap_delay_ = tap_delay_counter_;
+        loop_reset_ = phase_;
+        phase_ = 0.0f;
+      }
       tap_delay_counter_ = 0;
-      synchronized_ = tap_delay_ > 128;
-      loop_reset_ = phase_;
-      phase_ = 0.0f;
     }
 
     if (!parameters.freeze) {
@@ -103,6 +105,7 @@ class LoopingSamplePlayer {
           do target_delay = kMultDivs[index--] * (float)tap_delay_;
           while (target_delay > max_delay);
         }
+
         float error = (target_delay - current_delay_);
         float delay = current_delay_ + 0.00005f * error;
         current_delay_ = delay;
