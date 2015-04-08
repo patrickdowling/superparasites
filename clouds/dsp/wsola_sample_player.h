@@ -77,7 +77,10 @@ class WSOLASamplePlayer {
     window_size_ = 4096;
     env_phase_ = 0.0f;
     env_phase_increment_ = 0.5f;
-    elapsed_ = 0;
+
+    tap_delay_ = 0;
+    tap_delay_counter_ = 0;
+    synchronized_ = false;
   }
   
   template<Resolution resolution>
@@ -86,20 +89,29 @@ class WSOLASamplePlayer {
       const Parameters& parameters,
       float* out,
       size_t size) {
-    elapsed_++;
-    if (parameters.trigger) {
-      env_phase_ = 0.0f;
-      env_phase_increment_ = 1.0f / static_cast<float>(elapsed_);
-      CONSTRAIN(env_phase_increment_, 0.0001f, 0.1f);
-      elapsed_ = 0;
+
+    int32_t max_delay = buffer->size() - 2 * window_size_;
+    tap_delay_counter_ += size;
+    if (tap_delay_counter_ > max_delay) {
+      tap_delay_ = 0;
+      tap_delay_counter_ = 0;
+      synchronized_ = false;
     }
+    if (parameters.trigger && !parameters.freeze) {
+      if(tap_delay_counter_ > 128) {
+        synchronized_ = true;
+        tap_delay_ = tap_delay_counter_;
+      }
+      tap_delay_counter_ = 0;
+    }
+
     env_phase_ += env_phase_increment_;
     if (env_phase_ >= 1.0f) {
       env_phase_ = 1.0;
     }
     position_ = parameters.position;
     position_ += (1.0f - env_phase_) * (1.0f - position_);
-    
+
     pitch_ = parameters.pitch;
     size_factor_ = parameters.size;
     
@@ -107,7 +119,7 @@ class WSOLASamplePlayer {
       windows_[1].MarkAsRegenerated();
       ScheduleAlignedWindow(buffer, &windows_[0]);
     }
-    
+
     while (size--) {
       // Sum the two windows.
       std::fill(&out[0], &out[kMaxNumChannels], 0);
@@ -218,6 +230,10 @@ class WSOLASamplePlayer {
         increment);
     correlator_loaded_ = true;
   }
+
+
+  inline bool synchronized() const { return synchronized_; }
+
  private:
   template<Resolution resolution>
   void ScheduleAlignedWindow(
@@ -247,15 +263,26 @@ class WSOLASamplePlayer {
     limit -= static_cast<int32_t>(2.0f * window_size_ * inv_pitch_ratio);
     limit -= 2 * window_size_;
     
-    float position = position_;
+    float position = limit * position_;
+
+    if (synchronized_) {
+      int index = round(position_ * (float)kMultDivSteps);
+      do position = kMultDivs[index--] * (float)tap_delay_;
+      while (position > limit);
+      /* to compensate partially for the size of the windows.
+       * TODO: this is still not completely right... */
+      position -= window_size_ * 2;
+      if (position < 0) position = 0;
+    }
+
     int32_t target_position = buffer->head();
-    target_position -= static_cast<int32_t>(limit * position);
+    target_position -= static_cast<int32_t>(position);
     target_position -= window_size_;
-    
+
     search_source_ = next_window_position;
     search_target_ = target_position;
   }
-  
+
   Correlator* correlator_;
 
   Window windows_[2];
@@ -275,7 +302,10 @@ class WSOLASamplePlayer {
   
   float env_phase_;
   float env_phase_increment_;
-  int32_t elapsed_;
+
+  int32_t tap_delay_;
+  int32_t tap_delay_counter_;
+  bool synchronized_;
   
   DISALLOW_COPY_AND_ASSIGN(WSOLASamplePlayer);
 };

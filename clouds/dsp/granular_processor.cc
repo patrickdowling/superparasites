@@ -155,10 +155,12 @@ void GranularProcessor::ProcessGranular(
     case PLAYBACK_MODE_REVERB:
       {
 
-        // Pre-delay, controlled by the Position knob
+        // Pre-delay, controlled by position or tap tempo sync
         Parameters p = {
+          ws_player_.synchronized() ?
+          parameters_.position :
           parameters_.position * 0.25f, // position;
-          0.3f, // size;
+          0.1f, // size;
           0.0f, // pitch;
           0.0f, // density;
           0.5f, // texture;
@@ -453,7 +455,7 @@ void GranularProcessor::Prepare() {
   if ((playback_mode_changed && !benign_change) || reset_buffers_) {
     parameters_.freeze = false;
   }
-  
+
   if (reset_buffers_ || (playback_mode_changed && !benign_change)) {
     void* buffer[2];
     size_t buffer_size[2];
