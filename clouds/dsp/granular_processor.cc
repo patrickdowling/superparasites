@@ -207,7 +207,7 @@ void GranularProcessor::ProcessGranular(
                                              // rid of feedback of
                                              // large DC offset.
         }
-        reverb_.Process(output, size);
+        reverb_.Process<Reverb::REVERB_FULL>(output, size);
       }
       break;
 
@@ -334,14 +334,8 @@ void GranularProcessor::Process(
     reverb_.set_time(0.35f + 0.6f * reverb_amount);
     reverb_.set_input_gain(0.2f);
     reverb_.set_lp(0.6f + 0.35f * feedback);
-    reverb_.set_hp(0.0f);
-    reverb_.set_size(1.0f);
-    reverb_.set_mod_amount(0.0f);
-    reverb_.set_mod_rate(0.0f);
-    reverb_.set_ratio(0.0f);
-    reverb_.set_pitch_shift_amount(0.0f);
 
-    reverb_.Process(out_, size);
+    reverb_.Process<Reverb::REVERB_LIGHT>(out_, size);
   }
   
   const float post_gain = 1.2f;

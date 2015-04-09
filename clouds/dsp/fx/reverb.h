@@ -43,11 +43,13 @@ class Reverb {
   Reverb() { }
   ~Reverb() { }
 
+  enum ReverbFeature {
+    REVERB_LIGHT,
+    REVERB_FULL,
+  };
 
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
-    lp_ = 0.7f;
-    hp_ = 0.0f;
     diffusion_ = 0.625f;
     size_ = 1.0f;
     smooth_mod_amount_ = mod_amount_ = 0.0f;
@@ -60,12 +62,12 @@ class Reverb {
     phase_ = 0.0f;
     ratio_ = 0.0f;
     pitch_shift_amount_ = smooth_pitch_shift_amount_ = 1.0f;
-    envelope_1_ = envelope_2_ = 0.0f;
     level_ = 0.0f;
     for (int i=0; i<9; i++)
       lfo_[i].Init();
   }
 
+  template<ReverbFeature feature>
   void Process(FloatFrame* in_out, size_t size) {
     // This is the Griesinger topology described in the Dattorro paper
     // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
@@ -101,10 +103,12 @@ class Reverb {
     float hp_1 = hp_decay_1_;
     float hp_2 = hp_decay_2_;
 
-    /* Set frequency of LFOs */
-    float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
-    for (int i=0; i<9; i++)
-      lfo_[i].set_period((uint32_t)period);
+    if (feature == REVERB_FULL) {
+      /* Set frequency of LFOs */
+      float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
+      for (int i=0; i<9; i++)
+        lfo_[i].set_period((uint32_t)period);
+    }
 
     while (size--) {
       float wet;
@@ -112,49 +116,69 @@ class Reverb {
 
       engine_.Start(&c);
 
-      // Smooth parameters to avoid delay glitches
-      ONE_POLE(smooth_size_, size_, 0.005f);
-      ONE_POLE(smooth_mod_amount_, mod_amount_, 0.005f);
-      ONE_POLE(smooth_mod_rate_, mod_rate_, 0.005f);
-      ONE_POLE(smooth_input_gain_, input_gain_, 0.05f);
-      ONE_POLE(smooth_time_, reverb_time_, 0.005f);
-      ONE_POLE(smooth_lp_, lp_, 0.05f);
-      ONE_POLE(smooth_hp_, hp_, 0.05f);
+      if (feature == REVERB_FULL) {
+        // Smooth parameters to avoid delay glitches
+        ONE_POLE(smooth_size_, size_, 0.005f);
+        ONE_POLE(smooth_mod_amount_, mod_amount_, 0.005f);
+        ONE_POLE(smooth_mod_rate_, mod_rate_, 0.005f);
+        ONE_POLE(smooth_input_gain_, input_gain_, 0.05f);
+        ONE_POLE(smooth_time_, reverb_time_, 0.005f);
+        ONE_POLE(smooth_lp_, lp_, 0.05f);
+        ONE_POLE(smooth_hp_, hp_, 0.05f);
         /* disables pitch shifter when pitch is unchanged, to avoid
          * weird chorus effects */
-      const float pitch_shift_amount =
-        ratio_ <= 1.0001 && ratio_ >= 0.999 ? 0.0 : pitch_shift_amount_;
-      ONE_POLE(smooth_pitch_shift_amount_, pitch_shift_amount, 0.05f);
+        const float pitch_shift_amount =
+          ratio_ <= 1.0001 && ratio_ >= 0.999 ? 0.0 : pitch_shift_amount_;
+        ONE_POLE(smooth_pitch_shift_amount_, pitch_shift_amount, 0.05f);
+      } else {
+        smooth_size_ = size_;
+        smooth_input_gain_ = input_gain_;
+        smooth_time_ = reverb_time_;
+        smooth_lp_ = lp_;
+      }
 
-      float ps_size = 128.0f + (3410.0f - 128.0f) *
-        smooth_size_ * smooth_size_ * smooth_size_;
-      phase_ += (1.0f - ratio_) / ps_size;
-      if (phase_ >= 1.0f) {
-        phase_ -= 1.0f;
-      }
-      if (phase_ <= 0.0f) {
-        phase_ += 1.0f;
-      }
-      float tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
-      float phase = phase_ * ps_size;
-      float half = phase + ps_size * 0.5f;
-      if (half >= ps_size) {
-        half -= ps_size;
+      float tri;
+      float phase;
+      float half;
+
+      if (feature == REVERB_FULL) {
+        // compute windowing info for the pitch shifter
+        float ps_size = 128.0f + (3410.0f - 128.0f) *
+          smooth_size_ * smooth_size_ * smooth_size_;
+        phase_ += (1.0f - ratio_) / ps_size;
+        if (phase_ >= 1.0f) {
+          phase_ -= 1.0f;
+        }
+        if (phase_ <= 0.0f) {
+          phase_ += 1.0f;
+        }
+        tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
+        phase = phase_ * ps_size;
+        half = phase + ps_size * 0.5f;
+        if (half >= ps_size) {
+          half -= ps_size;
+        }
       }
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \
       {                                                                 \
-        float offset = (del.length - 1) * smooth_size_;                 \
-        if (smooth_mod_amount_ >= 0.001) {                              \
+        if (feature == REVERB_FULL) {                                   \
+          float offset = (del.length - 1) * smooth_size_;               \
           offset += lfo.Next() * smooth_mod_amount_;                    \
           CONSTRAIN(offset, 0, del.length - 1);                         \
+          c.Interpolate(del, offset, gain);                             \
+        } else {                                                        \
+          c.Read(del TAIL, gain);                                       \
         }                                                               \
-        c.Interpolate(del, offset, gain);                               \
       }
 
 #define INTERPOLATE(del, gain)                                          \
       {                                                                 \
-        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);      \
+        if (feature == REVERB_FULL) {                                   \
+          c.Interpolate(del, (del.length - 1) * smooth_size_, gain);    \
+        } else {                                                        \
+          c.Read(del TAIL, gain);                                       \
+        }                                                               \
       }
 
       // Smear AP1 inside the loop.
@@ -177,9 +201,13 @@ class Reverb {
       // Main reverb loop.
       c.Load(apout);
       INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
+
       c.Lp(lp_1, smooth_lp_);
-      c.Hp(hp_1, smooth_hp_);
-      c.SoftLimit();
+      if (feature == REVERB_FULL) {
+        c.Hp(hp_1, smooth_hp_);
+        c.SoftLimit();
+      }
+      
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
@@ -190,13 +218,21 @@ class Reverb {
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
-      INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
-      /* blend in the pitch shifted feedback */
-      c.Interpolate(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
-      c.Interpolate(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
+      if (feature == REVERB_FULL) {
+        INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
+        /* blend in the pitch shifted feedback */
+        c.Interpolate(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
+        c.Interpolate(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
+      } else {
+        INTERPOLATE_LFO(del1, lfo_[7], smooth_time_);
+      }
+
       c.Lp(lp_2, smooth_lp_);
-      c.Hp(hp_2, smooth_hp_);
-      c.SoftLimit();
+      if (feature == REVERB_FULL) {
+        c.Hp(hp_2, smooth_hp_);
+        c.SoftLimit();
+      }
+      
       INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
@@ -211,8 +247,10 @@ class Reverb {
     
     lp_decay_1_ = lp_1;
     lp_decay_2_ = lp_2;
-    hp_decay_1_ = hp_1;
-    hp_decay_2_ = hp_2;
+    if (feature == REVERB_FULL) {
+      hp_decay_1_ = hp_1;
+      hp_decay_2_ = hp_2;
+    }
   }
   
   inline void set_amount(float amount) {
@@ -289,8 +327,6 @@ class Reverb {
 
   float phase_;
   float ratio_;
-  float envelope_1_;
-  float envelope_2_;
   float level_;
 
   RandomOscillator lfo_[9];
