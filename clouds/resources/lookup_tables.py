@@ -120,8 +120,8 @@ lookup_tables.append(('cutoff', 0.49 * 2 ** (-6 * (1 - cutoff))))
 Grain size table
 ----------------------------------------------------------------------------"""
 
-size = numpy.arange(0.0, TABLE_SIZE + 1) / TABLE_SIZE * 6
-lookup_tables.append(('grain_size', numpy.floor(512 * (2 ** size))))
+size = numpy.arange(0.0, TABLE_SIZE + 1) / TABLE_SIZE * 7
+lookup_tables.append(('grain_size', numpy.floor(256 * (2 ** size))))
 
 
 

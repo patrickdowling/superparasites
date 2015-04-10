@@ -197,7 +197,7 @@ void GranularProcessor::ProcessGranular(
         } else {
           reverb_.set_time(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
-          reverb_.set_input_gain(0.5f);
+          reverb_.set_input_gain(1.0f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2 : 1;
           float hp = parameters_.stereo_spread > 0.5f ?
@@ -332,7 +332,7 @@ void GranularProcessor::Process(
     reverb_.set_amount(reverb_amount * 0.53f);
     reverb_.set_diffusion(0.7f);
     reverb_.set_time(0.35f + 0.6f * reverb_amount);
-    reverb_.set_input_gain(0.2f);
+    reverb_.set_input_gain(0.5f);
     reverb_.set_lp(0.6f + 0.35f * feedback);
 
     reverb_.Process<Reverb::REVERB_LIGHT>(out_, size);
@@ -507,7 +507,7 @@ void GranularProcessor::Prepare() {
               tail_buffer_[i]);
         }
       }
-      int32_t num_grains = (num_channels_ == 1 ? 40 : 32) * \
+      int32_t num_grains = (num_channels_ == 1 ? 34 : 26) * \
           (low_fidelity_ ? 23 : 16) >> 4;
       player_.Init(num_channels_, num_grains);
       ws_player_.Init(&correlator_, num_channels_);
