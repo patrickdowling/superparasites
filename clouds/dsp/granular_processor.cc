@@ -323,7 +323,7 @@ void GranularProcessor::Process(
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
   
-  // Apply the simple post-processing reverb.
+// Apply the simple post-processing reverb.
   if (playback_mode_ != PLAYBACK_MODE_REVERB) {
     float reverb_amount = parameters_.reverb * 0.95f;
     reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;

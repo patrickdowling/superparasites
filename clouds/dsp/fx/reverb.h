@@ -115,7 +115,7 @@ class Reverb {
 
       if (feature == REVERB_FULL) {
         // Smooth parameters to avoid delay glitches
-        ONE_POLE(smooth_size_, size_, 0.005f);
+        ONE_POLE(smooth_size_, size_, 0.01f);
         ONE_POLE(smooth_mod_amount_, mod_amount_, 0.005f);
         ONE_POLE(smooth_mod_rate_, mod_rate_, 0.005f);
         ONE_POLE(smooth_input_gain_, input_gain_, 0.05f);
