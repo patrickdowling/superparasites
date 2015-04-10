@@ -34,8 +34,6 @@
 #include "clouds/dsp/fx/fx_engine.h"
 #include "clouds/dsp/random_oscillator.h"
 
-using namespace stmlib;
-
 namespace clouds {
 
 class Reverb {
@@ -47,7 +45,7 @@ class Reverb {
     REVERB_LIGHT,
     REVERB_FULL,
   };
-
+  
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
     diffusion_ = 0.625f;
@@ -66,7 +64,7 @@ class Reverb {
     for (int i=0; i<9; i++)
       lfo_[i].Init();
   }
-
+  
   template<ReverbFeature feature>
   void Process(FloatFrame* in_out, size_t size) {
     // This is the Griesinger topology described in the Dattorro paper
@@ -113,7 +111,6 @@ class Reverb {
     while (size--) {
       float wet;
       float apout = 0.0f;
-
       engine_.Start(&c);
 
       if (feature == REVERB_FULL) {
@@ -180,14 +177,27 @@ class Reverb {
           c.Read(del TAIL, gain);                                       \
         }                                                               \
       }
-
+      
       // Smear AP1 inside the loop.
+      /* c.Interpolate(ap1, 10.0f, LFO_1, 60.0f, 1.0f); */
+      /* c.Write(ap1, 100, 0.0f); */
       INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
       c.Write(ap1, 100 * smooth_size_, 0.0f);
       
       c.Read(in_out->l + in_out->r, smooth_input_gain_);
 
       // Diffuse through 4 allpasses.
+
+      /* c.Read(ap1 TAIL, kap); */
+      /* c.WriteAllPass(ap1, -kap); */
+      /* c.Read(ap2 TAIL, kap); */
+      /* c.WriteAllPass(ap2, -kap); */
+      /* c.Read(ap3 TAIL, kap); */
+      /* c.WriteAllPass(ap3, -kap); */
+      /* c.Read(ap4 TAIL, kap); */
+      /* c.WriteAllPass(ap4, -kap); */
+      /* c.Write(apout); */
+
       INTERPOLATE_LFO(ap1, lfo_[1], kap);
       c.WriteAllPass(ap1, -kap);
       INTERPOLATE_LFO(ap2, lfo_[2], kap);
@@ -197,27 +207,45 @@ class Reverb {
       INTERPOLATE_LFO(ap4, lfo_[4], kap);
       c.WriteAllPass(ap4, -kap);
       c.Write(apout);
-
+      
       // Main reverb loop.
       c.Load(apout);
-      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
 
+      /* c.Interpolate(del2, 4683.0f, LFO_2, 100.0f, smooth_time_); */
+      /* c.Lp(lp_1, smooth_lp_); */
+      /* c.Read(dap1a TAIL, -kap); */
+      /* c.WriteAllPass(dap1a, kap); */
+      /* c.Read(dap1b TAIL, kap); */
+      /* c.WriteAllPass(dap1b, -kap); */
+      /* c.Write(del1, 2.0f); */
+      /* c.Write(wet, 0.0f); */
+
+      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
       c.Lp(lp_1, smooth_lp_);
       if (feature == REVERB_FULL) {
         c.Hp(hp_1, smooth_hp_);
         c.SoftLimit();
       }
-      
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
       c.WriteAllPass(dap1b, -kap);
       c.Write(del1, 1.0f);
       c.Write(wet, 0.0f);
-
+      
       in_out->l += (wet - in_out->l) * amount;
 
       c.Load(apout);
+
+      /* c.Read(del1 TAIL, smooth_time_); */
+      /* c.Lp(lp_2, smooth_lp_); */
+      /* c.Read(dap2a TAIL, kap); */
+      /* c.WriteAllPass(dap2a, -kap); */
+      /* c.Read(dap2b TAIL, -kap); */
+      /* c.WriteAllPass(dap2b, kap); */
+      /* c.Write(del2, 2.0f); */
+      /* c.Write(wet, 0.0f); */
+
       if (feature == REVERB_FULL) {
         INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
         /* blend in the pitch shifted feedback */
@@ -226,13 +254,11 @@ class Reverb {
       } else {
         INTERPOLATE_LFO(del1, lfo_[7], smooth_time_);
       }
-
       c.Lp(lp_2, smooth_lp_);
       if (feature == REVERB_FULL) {
         c.Hp(hp_2, smooth_hp_);
         c.SoftLimit();
       }
-      
       INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
@@ -241,7 +267,7 @@ class Reverb {
       c.Write(wet, 0.0f);
 
       in_out->r += (wet - in_out->r) * amount;
-
+      
       ++in_out;
     }
     
@@ -296,7 +322,7 @@ class Reverb {
   inline void set_pitch_shift_amount(float pitch_shift) {
     pitch_shift_amount_ = pitch_shift;
   }
-
+  
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
