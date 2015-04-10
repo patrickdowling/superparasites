@@ -79,11 +79,13 @@ class Grain {
       envelope_slope_ = 0.333f / (window_shape + 0.0001f);
 
     if (window_shape < 0.333f)
-      envelope_bias_ = - 3.0f * window_shape;
+      envelope_bias_ = - 2.0f * window_shape + 1.0f;
     else if (window_shape < 0.666f)
-      envelope_bias_ = 6.0f * window_shape - 3.0f;
+      envelope_bias_ = 6.0f * window_shape - 2.0f;
     else
-      envelope_bias_ = 3.0f - 3.0 * window_shape;
+      envelope_bias_ = 4.0f - 3.0f * window_shape;
+    /* smooth out the response of bias: */
+    envelope_bias_ = SoftCurve(envelope_bias_ * 2.0f / 1.971f - 0.015f);
 
     active_ = true;
     gain_l_ = gain_l;
@@ -91,26 +93,17 @@ class Grain {
     recommended_quality_ = recommended_quality;
   }
   
-  template<GrainQuality quality>
   inline void RenderEnvelope(float* destination, size_t size) {
     const float increment = envelope_phase_increment_;
     const float slope = envelope_slope_;
-
-    float bias = envelope_bias_ + 1.0f;
-    CONSTRAIN(bias, 0.001f, 1.999f);
+    const float bias = envelope_bias_;
 
     float phase = envelope_phase_;
     while (size--) {
-      float gain = phase;
-      gain = gain <= bias ? gain / bias :
-              - gain / (2.0 - bias) + 2.0f / (2.0f - bias);
-      if (quality >= GRAIN_QUALITY_MEDIUM) {
-        gain *= slope;
-        if (gain >= 1.0f) gain = 1.0f;
-      }
-      if (quality >= GRAIN_QUALITY_HIGH) {
-        gain = stmlib::Interpolate(lut_window, gain, 4096.0f);
-      }
+      float gain = phase <= bias ?
+        phase * slope / bias :
+        (2.0f - phase) * slope / (2.0f - bias);
+      if (gain > 1.0f) gain = 1.0f;
       phase += increment;
       if (phase >= 2.0f) {
         *destination = -1.0f;
@@ -140,7 +133,7 @@ class Grain {
     }
     
     // Pre-render the envelope in one pass.
-    RenderEnvelope<quality>(envelope, size);
+    RenderEnvelope(envelope, size);
 
     const int32_t phase_increment = phase_increment_;
     const int32_t first_sample = first_sample_;
@@ -149,7 +142,7 @@ class Grain {
     int32_t phase = phase_;
     while (size--) {
       int32_t sample_index = first_sample + (phase >> 16);
-      
+
       float gain = *envelope++;
       if (gain == -1.0f) {
         active_ = false;
@@ -176,6 +169,13 @@ class Grain {
   
   inline GrainQuality recommended_quality() const {
     return recommended_quality_;
+  }
+
+  inline float SoftCurve (float x) {
+  /* (2x + 1) ^ 3 / (9 (4 (x-2) x + 7)) */
+    float a = 2 * x + 1;
+    float b = 9 * (4 * (x - 2) * x + 7);
+    return a * a * a / b;
   }
 
  private:
