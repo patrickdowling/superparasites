@@ -197,12 +197,12 @@ void GranularProcessor::ProcessGranular(
         } else {
           reverb_.set_time(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
-          reverb_.set_input_gain(1.0f);
+          reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2.0f : 1.0f;
           float hp = parameters_.stereo_spread > 0.5f ?
             (parameters_.stereo_spread - 0.5f) * 2.0f : 0.0f;
-          reverb_.set_lp(0.03f + 1.0f * lp);
+          reverb_.set_lp(0.03f + 0.9f * lp);
           reverb_.set_hp(0.01f + 0.2f * hp); // the small offset gets
                                              // rid of feedback of
                                              // large DC offset.
