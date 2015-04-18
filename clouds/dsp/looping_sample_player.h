@@ -46,11 +46,11 @@ namespace clouds {
 const float kCrossfadeDuration = 64.0f;
 const int kMultDivSteps = 16;
 const float kMultDivs[kMultDivSteps] = {
-        1.0f/16.0f, 3.0f/32.0f, 1.0f/8.0f, 3.0f/16.0f,
-        1.0f/4.0f, 3.0f/8.0f, 1.0f/2.0f, 3.0f/4.0f,
-        1.0f,
-        3.0f/2.0f, 2.0f/1.0f, 3.0f/1.0f, 4.0f/1.0f,
-        6.0f/1.0f, 8.0f/1.0f, 12.0f/1.0f
+  1.0f/16.0f, 3.0f/32.0f, 1.0f/8.0f, 3.0f/16.0f,
+  1.0f/4.0f, 3.0f/8.0f, 1.0f/2.0f, 3.0f/4.0f,
+  1.0f,
+  3.0f/2.0f, 2.0f/1.0f, 3.0f/1.0f, 4.0f/1.0f,
+  6.0f/1.0f, 8.0f/1.0f, 12.0f/1.0f
 };
 
 using namespace stmlib;
@@ -97,15 +97,19 @@ class LoopingSamplePlayer {
       tap_delay_counter_ = 0;
     }
 
+    float target_delay = parameters.position * max_delay;
+    if (synchronized_) {
+      int index = roundf(parameters.position *
+                         static_cast<float>(kMultDivSteps));
+      CONSTRAIN(index, 0, kMultDivSteps-1);
+      do {
+        target_delay = kMultDivs[index] * static_cast<float>(tap_delay_);
+        index--;
+      } while (target_delay > max_delay && index >= 0);
+    }
+
     if (!parameters.freeze) {
       while (size--) {
-        float target_delay = parameters.position * max_delay;
-        if (synchronized_) {
-          int index = round(parameters.position * (float)kMultDivSteps);
-          do target_delay = kMultDivs[index--] * (float)tap_delay_;
-          while (target_delay > max_delay);
-        }
-
         float error = (target_delay - current_delay_);
         float delay = current_delay_ + 0.00005f * error;
         current_delay_ = delay;
