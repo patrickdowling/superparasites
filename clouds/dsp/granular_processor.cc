@@ -180,34 +180,34 @@ void GranularProcessor::ProcessGranular(
         }
 
         // Settings of the reverb
-        reverb_.set_amount(1.0f); //100% wet
-        reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
-        reverb_.set_size(0.05f + 0.94f * parameters_.size);
-        reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
+        full_reverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
+        full_reverb_.set_size(0.05f + 0.94f * parameters_.size);
+        full_reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
-        reverb_.set_mod_amount(parameters_.reverb * 300.0f);
-        reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
-        reverb_.set_pitch_shift_amount(0.5f);
+        full_reverb_.set_mod_amount(parameters_.reverb * 300.0f);
+        full_reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
+        full_reverb_.set_pitch_shift_amount(0.5f);
 
         if (parameters_.freeze) {
-          reverb_.set_input_gain(0.0f);
-          reverb_.set_time(1.05f);
-          reverb_.set_lp(1.0f);
-          reverb_.set_hp(0.0f);
+          full_reverb_.set_input_gain(0.0f);
+          full_reverb_.set_time(1.0f);
+          full_reverb_.set_lp(1.0f);
+          full_reverb_.set_hp(0.0f);
         } else {
-          reverb_.set_time(parameters_.density * 1.3f
+          full_reverb_.set_time(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
-          reverb_.set_input_gain(0.5f);
+          full_reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
             parameters_.stereo_spread * 2.0f : 1.0f;
           float hp = parameters_.stereo_spread > 0.5f ?
             (parameters_.stereo_spread - 0.5f) * 2.0f : 0.0f;
-          reverb_.set_lp(0.03f + 0.9f * lp);
-          reverb_.set_hp(0.01f + 0.2f * hp); // the small offset gets
-                                             // rid of feedback of
-                                             // large DC offset.
+          full_reverb_.set_lp(0.03f + 0.9f * lp);
+          full_reverb_.set_hp(0.01f + 0.2f * hp); // the small offset
+                                                  // gets rid of
+                                                  // feedback of large
+                                                  // DC offset.
         }
-        reverb_.Process<Reverb::REVERB_FULL>(output, size);
+        full_reverb_.Process(output, size);
       }
       break;
 
@@ -332,10 +332,10 @@ void GranularProcessor::Process(
     reverb_.set_amount(reverb_amount * 0.53f);
     reverb_.set_diffusion(0.7f);
     reverb_.set_time(0.35f + 0.6f * reverb_amount);
-    reverb_.set_input_gain(0.5f);
+    reverb_.set_input_gain(0.2f);
     reverb_.set_lp(0.6f + 0.35f * feedback);
 
-    reverb_.Process<Reverb::REVERB_LIGHT>(out_, size);
+    reverb_.Process(out_, size);
   }
   
   const float post_gain = 1.2f;
@@ -478,8 +478,13 @@ void GranularProcessor::Prepare() {
 
     BufferAllocator allocator(workspace, workspace_size);
     diffuser_.Init(allocator.Allocate<float>(2048));
-    reverb_.Init(allocator.Allocate<uint16_t>(16384));
-    
+
+    uint16_t* buf = allocator.Allocate<uint16_t>(16384);
+    if (playback_mode_ == PLAYBACK_MODE_REVERB)
+      full_reverb_.Init(buf);
+    else
+      reverb_.Init(buf);
+
     size_t correlator_block_size = (kMaxWSOLASize / 32) + 2;
     uint32_t* correlator_data = allocator.Allocate<uint32_t>(
         correlator_block_size * 3);

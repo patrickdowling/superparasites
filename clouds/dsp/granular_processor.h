@@ -37,6 +37,7 @@
 #include "clouds/dsp/fx/diffuser.h"
 #include "clouds/dsp/fx/pitch_shifter.h"
 #include "clouds/dsp/fx/reverb.h"
+#include "clouds/dsp/fx/full_reverb.h"
 #include "clouds/dsp/granular_processor.h"
 #include "clouds/dsp/granular_sample_player.h"
 #include "clouds/dsp/looping_sample_player.h"
@@ -185,6 +186,7 @@ class GranularProcessor {
   
   Diffuser diffuser_;
   Reverb reverb_;
+  FullReverb full_reverb_;
   PitchShifter pitch_shifter_;
   stmlib::Svf fb_filter_[2];
   stmlib::Svf hp_filter_[2];
