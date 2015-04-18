@@ -266,9 +266,10 @@ class WSOLASamplePlayer {
     float position = limit * position_;
 
     if (synchronized_) {
-      int index = round(position_ * (float)kMultDivSteps);
-      do position = kMultDivs[index--] * (float)tap_delay_;
-      while (position > limit);
+      int index = roundf(position_ * static_cast<float>(kMultDivSteps));
+      CONSTRAIN(index, 0, kMultDivSteps-1);
+      do position = kMultDivs[index--] * static_cast<float>(tap_delay_);
+      while (position > limit && index >= 0);
       /* to compensate partially for the size of the windows.
        * TODO: this is still not completely right... */
       position -= window_size_ * 2;

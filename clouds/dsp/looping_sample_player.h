@@ -102,10 +102,8 @@ class LoopingSamplePlayer {
       int index = roundf(parameters.position *
                          static_cast<float>(kMultDivSteps));
       CONSTRAIN(index, 0, kMultDivSteps-1);
-      do {
-        target_delay = kMultDivs[index] * static_cast<float>(tap_delay_);
-        index--;
-      } while (target_delay > max_delay && index >= 0);
+      do target_delay = kMultDivs[index--] * static_cast<float>(tap_delay_);
+      while (target_delay > max_delay && index >= 0);
     }
 
     if (!parameters.freeze) {
