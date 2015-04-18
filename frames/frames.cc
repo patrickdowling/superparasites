@@ -200,6 +200,9 @@ int main(void) {
               ui.shift_register[0] = static_cast<uint8_t>(Random::GetWord()) > ui.random_level ?
                 t : fold_add(t,
                              static_cast<int16_t>(Random::GetWord()) / 255 * ui.random_level);
+              // trigger
+              pulse_counter = kPulseDuration;
+              trigger_output.High();
             }
 
             // place in register and go to next sequencer step
@@ -211,10 +214,14 @@ int main(void) {
                 (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
                 keyframer.num_keyframes();
               ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+              // trigger
+              pulse_counter = kPulseDuration;
+              trigger_output.High();
             }
 
             // output a trigger when sequence resets
-            if (ui.sequencer_step == 0) {
+            if (ui.mode() != UI_MODE_EDIT_EASING &&
+                ui.sequencer_step == 0) {
               pulse_counter = kPulseDuration;
               trigger_output.High();
             }
