@@ -122,8 +122,7 @@ class FullReverb {
       float half;
 
       // compute windowing info for the pitch shifter
-      float ps_size = 128.0f + (3410.0f - 128.0f) *
-        smooth_size_ * smooth_size_ * smooth_size_;
+      float ps_size = 128.0f + (3410.0f - 128.0f) * smooth_size_;
       phase_ += (1.0f - ratio_) / ps_size;
       if (phase_ >= 1.0f) {
         phase_ -= 1.0f;
