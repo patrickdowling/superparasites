@@ -143,12 +143,12 @@ class FullReverb {
         float offset = (del.length - 1) * smooth_size_;                 \
         offset += lfo.Next() * smooth_mod_amount_;                      \
         CONSTRAIN(offset, 0, del.length - 1);                           \
-        c.Interpolate(del, offset, gain);                               \
+        c.InterpolateHermite(del, offset, gain);                               \
       }
 
 #define INTERPOLATE(del, gain)                                          \
       {                                                                 \
-        c.Interpolate(del, (del.length - 1) * smooth_size_, gain);      \
+        c.InterpolateHermite(del, (del.length - 1) * smooth_size_, gain);      \
       }
 
       // Smear AP1 inside the loop.
@@ -186,8 +186,8 @@ class FullReverb {
 
       INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
-      c.Interpolate(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
-      c.Interpolate(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
+      c.InterpolateHermite(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
+      c.InterpolateHermite(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
       c.Lp(lp_2, smooth_lp_);
       c.Hp(hp_2, smooth_hp_);
       c.SoftLimit();
