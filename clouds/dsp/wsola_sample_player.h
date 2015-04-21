@@ -262,6 +262,10 @@ class WSOLASamplePlayer {
     int32_t limit = buffer->size();
     limit -= static_cast<int32_t>(2.0f * window_size_ * inv_pitch_ratio);
     limit -= 2 * window_size_;
+
+    if (limit < 0) {
+      limit = 0;
+    }
     
     float position = limit * position_;
 
