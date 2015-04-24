@@ -70,7 +70,9 @@ class Keyframer {
   ~Keyframer() { }
   
   void Init();
-  void Save(uint32_t extra_settings);
+  void Save(uint32_t extra_settings, uint16_t slot);
+  void Load(uint32_t &extra_settings, uint16_t slot);
+
   void Calibrate(int32_t dc_offset_frame_modulation);
   
   bool AddKeyframe(uint16_t timestamp, uint16_t* values);
@@ -154,6 +156,8 @@ class Keyframer {
         sizeof(dc_offset_frame_modulation_)
   };
 #endif  // TEST
+
+  size_t persistent_mem_[SETTINGS_SIZE * 5];
 
   uint16_t version_token_;
 

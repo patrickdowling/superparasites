@@ -144,19 +144,31 @@ void Ui::Poll() {
     
     case UI_MODE_SAVE_CONFIRMATION:
       animation_counter_ -= 256;
-      channel_leds_.set_channel(0, (animation_counter_ + 0) >> 8);
-      channel_leds_.set_channel(1, (animation_counter_ + 16384) >> 8);
-      channel_leds_.set_channel(2, (animation_counter_ + 32768) >> 8);
-      channel_leds_.set_channel(3, (animation_counter_ + 49152) >> 8);
+      if (active_slot_ == 0) {
+        channel_leds_.set_channel(0, (animation_counter_ + 0) >> 8);
+        channel_leds_.set_channel(1, (animation_counter_ + 16384) >> 8);
+        channel_leds_.set_channel(2, (animation_counter_ + 32768) >> 8);
+        channel_leds_.set_channel(3, (animation_counter_ + 49152) >> 8);
+      } else {
+        for (int i=0; i<4; i++)
+          channel_leds_.set_channel(i, active_slot_ == i+1 ?
+                                    animation_counter_ >> 8 : 0);
+      }
       rgb_led_.set_color(0, 255, 0);
       break;
 
     case UI_MODE_ERASE_CONFIRMATION:
       animation_counter_ -= 256;
-      channel_leds_.set_channel(0, (animation_counter_ + 0) >> 8);
-      channel_leds_.set_channel(1, (animation_counter_ + 16384) >> 8);
-      channel_leds_.set_channel(2, (animation_counter_ + 32768) >> 8);
-      channel_leds_.set_channel(3, (animation_counter_ + 49152) >> 8);
+      if (active_slot_ == 0) {
+        channel_leds_.set_channel(0, (animation_counter_ + 0) >> 8);
+        channel_leds_.set_channel(1, (animation_counter_ + 16384) >> 8);
+        channel_leds_.set_channel(2, (animation_counter_ + 32768) >> 8);
+        channel_leds_.set_channel(3, (animation_counter_ + 49152) >> 8);
+      } else {
+        for (int i=0; i<4; i++)
+          channel_leds_.set_channel(i, active_slot_ == i+1 ?
+                                    animation_counter_ >> 8 : 0);
+      }
       rgb_led_.set_color(255, 0, 0);
       break;
 
@@ -320,11 +332,9 @@ void Ui::OnSwitchReleased(const Event& e) {
     switch (e.control_id) {
       case SWITCH_ADD_FRAME:
         if (e.data > kVeryLongPressDuration) {
-          uint32_t ui_flags = 0;
-          ui_flags |= poly_lfo_mode_ ? 1 : 0;
-          ui_flags |= sequencer_mode_ ? 2 : 0;
-          keyframer_->Save(ui_flags);
           mode_ = UI_MODE_SAVE_CONFIRMATION;
+          active_slot_ = 0;
+
         } else if (e.data > kLongPressDuration) {
           if (!poly_lfo_mode_) {
             mode_ = UI_MODE_EDIT_EASING;
@@ -347,6 +357,13 @@ void Ui::OnSwitchReleased(const Event& e) {
               //active_keyframe_lock_ = true;
             }
             FindNearestKeyframe();
+          } else if (mode_ == UI_MODE_SAVE_CONFIRMATION) {
+            // confirming save -> write to active slot
+            uint32_t ui_flags = 0;
+            ui_flags |= poly_lfo_mode_ ? 1 : 0;
+            ui_flags |= sequencer_mode_ ? 2 : 0;
+            keyframer_->Save(ui_flags, active_slot_);
+            mode_ = UI_MODE_SPLASH;
           } else {
             mode_ = UI_MODE_NORMAL;
           }
@@ -362,16 +379,26 @@ void Ui::OnSwitchReleased(const Event& e) {
           }
         }
         if (e.data > kVeryLongPressDuration) {
-          keyframer_->Clear();
-          FindNearestKeyframe();
-          SyncWithPots();
-          poly_lfo_mode_ = false;
           mode_ = UI_MODE_ERASE_CONFIRMATION;
+          active_slot_ = 0;
         } else if (e.data > kLongPressDuration) {
           if (!poly_lfo_mode_) {
             mode_ = UI_MODE_EDIT_RESPONSE;
             active_channel_ = -1;
           }
+        } else if (mode_ == UI_MODE_ERASE_CONFIRMATION) {
+          if (active_slot_ == 0) {
+            keyframer_->Clear();
+            FindNearestKeyframe();
+            SyncWithPots();
+            poly_lfo_mode_ = false;
+          } else {
+            uint32_t ui_flags = 0;
+            keyframer_->Load(ui_flags, active_slot_);
+            poly_lfo_mode_ = ui_flags & 1;
+            sequencer_mode_ = ui_flags & 2;
+          }
+          mode_ = UI_MODE_SPLASH;
         } else {
           if (mode_ == UI_MODE_NORMAL && !poly_lfo_mode_) {
             if (active_keyframe_ != -1) {
@@ -464,11 +491,17 @@ void Ui::OnPotChanged(const Event& e) {
             keyframer_->mutable_settings(e.control_id)->easing_curve =  \
               static_cast<EasingCurve>(e.data * 6 >> 16);
           }
+        } else if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
+                   mode_ == UI_MODE_ERASE_CONFIRMATION) {
+          active_slot_ = e.control_id + 1;
         }
         break;
       
       case kFrameAdcChannel:
-        if (!active_keyframe_lock_) {
+        if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
+            mode_ == UI_MODE_ERASE_CONFIRMATION) {
+          active_slot_ = 0;
+        } else if (!active_keyframe_lock_) {
           FindNearestKeyframe();
         }
         break;
@@ -508,9 +541,7 @@ void Ui::DoEvents() {
   }
   if (queue_.idle_time() > 500) {
     queue_.Touch();
-    if (mode_ == UI_MODE_SPLASH
-        || mode_ == UI_MODE_SAVE_CONFIRMATION
-        || mode_ == UI_MODE_ERASE_CONFIRMATION) {
+    if (mode_ == UI_MODE_SPLASH) {
       mode_ = UI_MODE_NORMAL;
     }
     secret_handshake_counter_ = 0;

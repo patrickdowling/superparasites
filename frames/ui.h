@@ -128,6 +128,7 @@ class Ui {
   
   int16_t active_keyframe_;
   int16_t active_channel_;
+  int16_t active_slot_;
   bool active_keyframe_lock_;
 
   bool poly_lfo_mode_;
