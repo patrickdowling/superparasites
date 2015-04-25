@@ -37,6 +37,7 @@
 #include "clouds/dsp/fx/diffuser.h"
 #include "clouds/dsp/fx/pitch_shifter.h"
 #include "clouds/dsp/fx/reverb.h"
+#include "clouds/dsp/resonator.h"
 #include "clouds/dsp/fx/full_reverb.h"
 #include "clouds/dsp/granular_processor.h"
 #include "clouds/dsp/granular_sample_player.h"
@@ -55,6 +56,7 @@ enum PlaybackMode {
   PLAYBACK_MODE_LOOPING_DELAY,
   PLAYBACK_MODE_SPECTRAL,
   PLAYBACK_MODE_REVERB,
+  PLAYBACK_MODE_RESONATOR,
   PLAYBACK_MODE_LAST
 };
 
@@ -187,6 +189,7 @@ class GranularProcessor {
   Diffuser diffuser_;
   Reverb reverb_;
   FullReverb full_reverb_;
+  Resonator resonator_;
   PitchShifter pitch_shifter_;
   stmlib::Svf fb_filter_[2];
   stmlib::Svf hp_filter_[2];

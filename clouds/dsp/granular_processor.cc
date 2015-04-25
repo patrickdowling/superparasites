@@ -211,6 +211,31 @@ void GranularProcessor::ProcessGranular(
       }
       break;
 
+  case PLAYBACK_MODE_RESONATOR:
+    {
+      copy(&input[0], &input[size], &output[0]);
+
+      resonator_.set_pitch(parameters_.pitch);
+      resonator_.set_chord(parameters_.size);
+      resonator_.set_trigger(parameters_.trigger);
+      resonator_.set_damp(parameters_.texture * (2.0f - parameters_.texture));
+      resonator_.set_burst_damp(parameters_.position);
+      resonator_.set_burst_comb((1.0f - parameters_.position));
+      resonator_.set_burst_duration((1.0f - parameters_.position));
+      resonator_.set_spread_amount(parameters_.feedback);
+      resonator_.set_stereo(parameters_.stereo_spread < 0.5f ? 0.0f :
+        (parameters_.stereo_spread - 0.5f) * 2.0f);
+      resonator_.set_separation(parameters_.stereo_spread > 0.5f ? 0.0f :
+                                (0.5f - parameters_.stereo_spread) * 2.0f);
+
+      float fb = parameters_.density;
+      fb *= (2.0f-fb) * ((fb - 2.0f) * fb + 2.0f);
+      resonator_.set_feedback(fb);
+
+      resonator_.Process(output, size);
+    }
+    break;
+
     default:
       break;
   }
@@ -249,7 +274,8 @@ void GranularProcessor::Process(
   // low frequencies (causing large DC swings).
   float feedback = parameters_.feedback;
 
-  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
+  if (playback_mode_ != PLAYBACK_MODE_REVERB &&
+      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
     float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
     fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 1.0f);
@@ -276,7 +302,8 @@ void GranularProcessor::Process(
   
   // Diffusion and pitch-shifting post-processings.
   if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
-      playback_mode_ != PLAYBACK_MODE_REVERB) {
+      playback_mode_ != PLAYBACK_MODE_REVERB &&
+      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     float texture = parameters_.texture;
     float diffusion = playback_mode_ == PLAYBACK_MODE_GRANULAR 
         ? texture > 0.75f ? (texture - 0.75f) * 4.0f : 0.0f
@@ -323,8 +350,9 @@ void GranularProcessor::Process(
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
   
-// Apply the simple post-processing reverb.
-  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
+  // Apply the simple post-processing reverb.
+  if (playback_mode_ != PLAYBACK_MODE_REVERB &&
+      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     float reverb_amount = parameters_.reverb * 0.95f;
     reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
     CONSTRAIN(reverb_amount, 0.0f, 1.0f);
@@ -480,8 +508,12 @@ void GranularProcessor::Prepare() {
     diffuser_.Init(allocator.Allocate<float>(2048));
 
     uint16_t* buf = allocator.Allocate<uint16_t>(16384);
+
+
     if (playback_mode_ == PLAYBACK_MODE_REVERB)
       full_reverb_.Init(buf);
+    else if (playback_mode_ == PLAYBACK_MODE_RESONATOR)
+      resonator_.Init(buf);
     else
       reverb_.Init(buf);
 
