@@ -222,24 +222,24 @@ class Resonator {
       c.Lp(lp4r, damp_);
       c.Write(c4r, 0.0f);
 
-      c.Read(c1l TAIL, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c2l TAIL, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c3l TAIL, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
-      c.Read(c4l TAIL, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
-      c.Read(c1r TAIL, 0.20f + 0.20f * stereo_);
-      c.Read(c2r TAIL, 0.23f * (1.0f - stereo_));
-      c.Read(c3r TAIL, 0.27f + 0.27 * stereo_);
-      c.Read(c4r TAIL, 0.30f * (1.0f - stereo_));
+      c.Read(c1l, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c2l, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
+      c.Read(c3l, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
+      c.Read(c4l, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
+      c.Read(c1r, 0.20f + 0.20f * stereo_);
+      c.Read(c2r, 0.23f * (1.0f - stereo_));
+      c.Read(c3r, 0.27f + 0.27 * stereo_);
+      c.Read(c4r, 0.30f * (1.0f - stereo_));
       c.Write(in_out->l, 0.0f);
 
-      c.Read(c1l TAIL, 0.20f + 0.20f * stereo_);
-      c.Read(c2l TAIL, 0.23f * (1.0f - stereo_));
-      c.Read(c3l TAIL, 0.27f + 0.27 * stereo_);
-      c.Read(c4l TAIL, 0.30f * (1.0f - stereo_));
-      c.Read(c1r TAIL, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c2r TAIL, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c3r TAIL, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c4r TAIL, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
+      c.Read(c1l, 0.20f + 0.20f * stereo_);
+      c.Read(c2l, 0.23f * (1.0f - stereo_));
+      c.Read(c3l, 0.27f + 0.27 * stereo_);
+      c.Read(c4l, 0.30f * (1.0f - stereo_));
+      c.Read(c1r, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c2r, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
+      c.Read(c3r, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c4r, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
