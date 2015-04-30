@@ -180,47 +180,23 @@ class Resonator {
       c.Read(in_out->l + in_out->r, 1.0f);
       c.Write(bd, 0.0f);
 
+#define COMB(pre, del, time, lp, vol)                    \
+      c.Read(bd, pre * spread_amount_, vol);   \
+      c.InterpolateHermite(del, time, feedback_);        \
+      c.Lp(lp, damp_);                                   \
+      c.Write(del, 0.0f);
+
       /* first voice: */
-      c.Read(bd, 1.0f - voice_);
-      c.InterpolateHermite(c1l, c1l_delay, feedback_);
-      c.Lp(lp1l, damp_);
-      c.Write(c1l, 0.0f);
-
-      c.Read(bd, spread_delay_1_ * spread_amount_, 1.0f - voice_);
-      c.InterpolateHermite(c2l, c2l_delay, feedback_);
-      c.Lp(lp2l, damp_);
-      c.Write(c2l, 0.0f);
-
-      c.Read(bd, spread_delay_2_ * spread_amount_, 1.0f - voice_);
-      c.InterpolateHermite(c3l, c3l_delay, feedback_);
-      c.Lp(lp3l, damp_);
-      c.Write(c3l, 0.0f);
-
-      c.Read(bd, spread_delay_3_ * spread_amount_, 1.0f - voice_);
-      c.InterpolateHermite(c4l, c4l_delay, feedback_);
-      c.Lp(lp4l, damp_);
-      c.Write(c4l, 0.0f);
+      COMB(0, c1l, c1l_delay, lp1l, 1.0f - voice_);
+      COMB(spread_delay_1_, c2l, c2l_delay, lp2l, 1.0f - voice_);
+      COMB(spread_delay_2_, c3l, c3l_delay, lp3l, 1.0f - voice_);
+      COMB(spread_delay_3_, c4l, c4l_delay, lp4l, 1.0f - voice_);
 
       /* second voice: */
-      c.Read(bd, voice_);
-      c.InterpolateHermite(c1r, c1r_delay, feedback_);
-      c.Lp(lp1r, damp_);
-      c.Write(c1r, 0.0f);
-
-      c.Read(bd, spread_delay_1_ * spread_amount_, voice_);
-      c.InterpolateHermite(c2r, c2r_delay, feedback_);
-      c.Lp(lp2r, damp_);
-      c.Write(c2r, 0.0f);
-
-      c.Read(bd, spread_delay_2_ * spread_amount_, voice_);
-      c.InterpolateHermite(c3r, c3r_delay, feedback_);
-      c.Lp(lp3r, damp_);
-      c.Write(c3r, 0.0f);
-
-      c.Read(bd, spread_delay_3_ * spread_amount_, voice_);
-      c.InterpolateHermite(c4r, c4r_delay, feedback_);
-      c.Lp(lp4r, damp_);
-      c.Write(c4r, 0.0f);
+      COMB(0, c1r, c1r_delay, lp1r, voice_);
+      COMB(spread_delay_1_, c2r, c2r_delay, lp2r, voice_);
+      COMB(spread_delay_2_, c3r, c3r_delay, lp3r, voice_);
+      COMB(spread_delay_3_, c4r, c4r_delay, lp4r, voice_);
 
       c.Read(c1l, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c2l, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
