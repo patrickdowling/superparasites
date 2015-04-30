@@ -77,7 +77,8 @@ void GranularProcessor::ProcessGranular(
     size_t size) {
   // At the exception of the spectral mode, all modes require the incoming
   // audio signal to be written to the recording buffer.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL) {
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     const float* input_samples = &input[0].l;
     for (int32_t i = 0; i < num_channels_; ++i) {
       if (resolution() == 8) {
@@ -351,8 +352,7 @@ void GranularProcessor::Process(
   copy(&out_[0], &out_[size], &fb_[0]);
   
   // Apply the simple post-processing reverb.
-  if (playback_mode_ != PLAYBACK_MODE_REVERB &&
-      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
+  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
     float reverb_amount = parameters_.reverb * 0.95f;
     reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
     CONSTRAIN(reverb_amount, 0.0f, 1.0f);
@@ -511,15 +511,11 @@ void GranularProcessor::Prepare() {
     BufferAllocator allocator(workspace, workspace_size);
     diffuser_.Init(allocator.Allocate<float>(2048));
 
-    uint16_t* buf = allocator.Allocate<uint16_t>(16384);
-
-
+    uint16_t* reverb_buffer = allocator.Allocate<uint16_t>(16384);
     if (playback_mode_ == PLAYBACK_MODE_REVERB)
-      full_reverb_.Init(buf);
-    else if (playback_mode_ == PLAYBACK_MODE_RESONATOR)
-      resonator_.Init(buf);
+      full_reverb_.Init(reverb_buffer);
     else
-      reverb_.Init(buf);
+      reverb_.Init(reverb_buffer);
 
     size_t correlator_block_size = (kMaxWSOLASize / 32) + 2;
     uint32_t* correlator_data = allocator.Allocate<uint32_t>(
@@ -534,6 +530,10 @@ void GranularProcessor::Prepare() {
           buffer, buffer_size,
           lut_sine_window_4096, 4096,
           num_channels_, resolution(), sr);
+    } else if (playback_mode_ == PLAYBACK_MODE_RESONATOR) {
+      BufferAllocator allocator(buffer[0], buffer_size[0]);
+      uint16_t* buf = allocator.Allocate<uint16_t>(16384);
+      resonator_.Init(buf);
     } else {
       for (int32_t i = 0; i < num_channels_; ++i) {
         if (resolution() == 8) {
