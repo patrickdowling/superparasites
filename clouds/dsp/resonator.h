@@ -63,7 +63,8 @@ inline float InterpolateSine(const float* table, float index, float size) {
   MAKE_INTEGRAL_FRACTIONAL(index)
   float a = table[index_integral];
   float b = table[index_integral + 1];
-  float c = Interpolate(lut_sin, index_fractional, LUT_SIN_SIZE);
+  float c = Interpolate(&lut_sin[3*LUT_SIN_SIZE/5], index_fractional, 2*LUT_SIN_SIZE/5);
+  c = (c+1.0f) / 2.0f;
   return a + (b - a) * c;
 }
 
