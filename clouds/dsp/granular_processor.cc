@@ -465,8 +465,12 @@ bool GranularProcessor::LoadPersistentData(const uint32_t* data) {
 void GranularProcessor::Prepare() {
   bool playback_mode_changed = previous_playback_mode_ != playback_mode_;
   bool benign_change = previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL
-      && playback_mode_ != PLAYBACK_MODE_SPECTRAL
-      && previous_playback_mode_ != PLAYBACK_MODE_LAST;
+    && playback_mode_ != PLAYBACK_MODE_SPECTRAL
+    && playback_mode_ != PLAYBACK_MODE_RESONATOR
+    && previous_playback_mode_ != PLAYBACK_MODE_RESONATOR
+    && playback_mode_ != PLAYBACK_MODE_REVERB
+    && previous_playback_mode_ != PLAYBACK_MODE_REVERB
+    && previous_playback_mode_ != PLAYBACK_MODE_LAST;
   
   if (!reset_buffers_ && playback_mode_changed && benign_change) {
     ResetFilters();
