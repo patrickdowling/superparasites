@@ -123,34 +123,26 @@ class Resonator {
     else
       pitch_r_ = pitch_;
 
+    float c2_pitch = InterpolatePlateau(chords[0], chord_, 16);
+    float c3_pitch = InterpolatePlateau(chords[1], chord_, 16);
+    float c4_pitch = InterpolatePlateau(chords[2], chord_, 16);
+
     float c1l_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_l_);
     CONSTRAIN(c1l_delay, 0, c1l.length);
-    float c2l_pitch = InterpolatePlateau(chords[0], chord_, 17);
-    float c2l_ratio = SemitonesToRatio(c2l_pitch);
-    float c2l_delay = c1l_delay / c2l_ratio;
+    float c2l_delay = c1l_delay / SemitonesToRatio(c2_pitch);
     CONSTRAIN(c2l_delay, 0, c2l.length);
-    float c3l_pitch = InterpolatePlateau(chords[1], chord_, 17);
-    float c3l_ratio = SemitonesToRatio(c3l_pitch);
-    float c3l_delay = c1l_delay / c3l_ratio;
+    float c3l_delay = c1l_delay / SemitonesToRatio(c3_pitch);
     CONSTRAIN(c3l_delay, 0, c3l.length);
-    float c4l_pitch = InterpolatePlateau(chords[2], chord_, 17);
-    float c4l_ratio = SemitonesToRatio(c4l_pitch);
-    float c4l_delay = c1l_delay / c4l_ratio;
+    float c4l_delay = c1l_delay / SemitonesToRatio(c4_pitch);
     CONSTRAIN(c4l_delay, 0, c4l.length);
 
     float c1r_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_r_);
     CONSTRAIN(c1r_delay, 0, c1r.length);
-    float c2r_pitch = InterpolatePlateau(chords[0], chord_, 17);
-    float c2r_ratio = SemitonesToRatio(c2r_pitch);
-    float c2r_delay = c1r_delay / c2r_ratio;
+    float c2r_delay = c1r_delay / SemitonesToRatio(c2_pitch);
     CONSTRAIN(c2r_delay, 0, c2r.length);
-    float c3r_pitch = InterpolatePlateau(chords[1], chord_, 17);
-    float c3r_ratio = SemitonesToRatio(c3r_pitch);
-    float c3r_delay = c1r_delay / c3r_ratio;
+    float c3r_delay = c1r_delay / SemitonesToRatio(c3_pitch);
     CONSTRAIN(c3r_delay, 0, c3r.length);
-    float c4r_pitch = InterpolatePlateau(chords[2], chord_, 17);
-    float c4r_ratio = SemitonesToRatio(c4r_pitch);
-    float c4r_delay = c1r_delay / c4r_ratio;
+    float c4r_delay = c1r_delay / SemitonesToRatio(c4_pitch);
     CONSTRAIN(c4r_delay, 0, c4r.length);
 
     if (trigger_ && !previous_trigger_) {
