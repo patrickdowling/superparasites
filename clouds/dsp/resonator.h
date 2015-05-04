@@ -58,14 +58,17 @@ const float chords[3][18] =
       16.0f }
   };
 
-inline float InterpolateSine(const float* table, float index, float size) {
+#define PLATEAU 3.0f
+
+inline float InterpolatePlateau(const float* table, float index, float size) {
   index *= size;
   MAKE_INTEGRAL_FRACTIONAL(index)
   float a = table[index_integral];
   float b = table[index_integral + 1];
-  float c = Interpolate(&lut_sin[3*LUT_SIN_SIZE/5], index_fractional, 2*LUT_SIN_SIZE/5);
-  c = (c+1.0f) / 2.0f;
-  return a + (b - a) * c;
+  if (index_fractional < 1.0f/PLATEAU)
+    return a + (b - a) * index_fractional * PLATEAU;
+  else
+    return b;
 }
 
 class Resonator {
@@ -120,32 +123,32 @@ class Resonator {
     else
       pitch_r_ = pitch_;
 
-    float c1l_delay = 32000.0f / 110.0f / SemitonesToRatio(pitch_l_);
+    float c1l_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_l_);
     CONSTRAIN(c1l_delay, 0, c1l.length);
-    float c2l_pitch = InterpolateSine(chords[0], chord_, 17);
+    float c2l_pitch = InterpolatePlateau(chords[0], chord_, 17);
     float c2l_ratio = SemitonesToRatio(c2l_pitch);
     float c2l_delay = c1l_delay / c2l_ratio;
     CONSTRAIN(c2l_delay, 0, c2l.length);
-    float c3l_pitch = InterpolateSine(chords[1], chord_, 17);
+    float c3l_pitch = InterpolatePlateau(chords[1], chord_, 17);
     float c3l_ratio = SemitonesToRatio(c3l_pitch);
     float c3l_delay = c1l_delay / c3l_ratio;
     CONSTRAIN(c3l_delay, 0, c3l.length);
-    float c4l_pitch = InterpolateSine(chords[2], chord_, 17);
+    float c4l_pitch = InterpolatePlateau(chords[2], chord_, 17);
     float c4l_ratio = SemitonesToRatio(c4l_pitch);
     float c4l_delay = c1l_delay / c4l_ratio;
     CONSTRAIN(c4l_delay, 0, c4l.length);
 
-    float c1r_delay = 32000.0f / 110.0f / SemitonesToRatio(pitch_r_);
+    float c1r_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_r_);
     CONSTRAIN(c1r_delay, 0, c1r.length);
-    float c2r_pitch = InterpolateSine(chords[0], chord_, 17);
+    float c2r_pitch = InterpolatePlateau(chords[0], chord_, 17);
     float c2r_ratio = SemitonesToRatio(c2r_pitch);
     float c2r_delay = c1r_delay / c2r_ratio;
     CONSTRAIN(c2r_delay, 0, c2r.length);
-    float c3r_pitch = InterpolateSine(chords[1], chord_, 17);
+    float c3r_pitch = InterpolatePlateau(chords[1], chord_, 17);
     float c3r_ratio = SemitonesToRatio(c3r_pitch);
     float c3r_delay = c1r_delay / c3r_ratio;
     CONSTRAIN(c3r_delay, 0, c3r.length);
-    float c4r_pitch = InterpolateSine(chords[2], chord_, 17);
+    float c4r_pitch = InterpolatePlateau(chords[2], chord_, 17);
     float c4r_ratio = SemitonesToRatio(c4r_pitch);
     float c4r_delay = c1r_delay / c4r_ratio;
     CONSTRAIN(c4r_delay, 0, c4r.length);
