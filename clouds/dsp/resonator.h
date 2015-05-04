@@ -58,7 +58,7 @@ const float chords[3][18] =
       16.0f }
   };
 
-#define PLATEAU 3.0f
+#define PLATEAU 2.0f
 
 inline float InterpolatePlateau(const float* table, float index, float size) {
   index *= size;
