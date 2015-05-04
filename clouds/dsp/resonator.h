@@ -184,23 +184,24 @@ class Resonator {
       c.Read(in_out->l + in_out->r, 1.0f);
       c.Write(bd, 0.0f);
 
-#define COMB(pre, del, time, lp, vol)                    \
-      c.Read(bd, pre * spread_amount_, vol);   \
-      c.InterpolateHermite(del, time, feedback_);        \
-      c.Lp(lp, damp_);                                   \
-      c.Write(del, 0.0f);
+#define COMB(pre, part, vol)                                            \
+      c.Load(0.0f);                                                     \
+      c.Read(bd, pre * spread_amount_, vol);                            \
+      c.InterpolateHermite(c ## part, c ## part ## _delay, feedback_);  \
+      c.Lp(lp ## part, damp_);                                          \
+      c.Write(c ## part, 0.0f);                                         \
 
       /* first voice: */
-      COMB(0, c1l, c1l_delay, lp1l, 1.0f - voice_);
-      COMB(spread_delay_1_, c2l, c2l_delay, lp2l, 1.0f - voice_);
-      COMB(spread_delay_2_, c3l, c3l_delay, lp3l, 1.0f - voice_);
-      COMB(spread_delay_3_, c4l, c4l_delay, lp4l, 1.0f - voice_);
+      COMB(0, 1l, 1.0f - voice_);
+      COMB(spread_delay_1_, 2l, 1.0f - voice_);
+      COMB(spread_delay_2_, 3l, 1.0f - voice_);
+      COMB(spread_delay_3_, 4l, 1.0f - voice_);
 
       /* second voice: */
-      COMB(0, c1r, c1r_delay, lp1r, voice_);
-      COMB(spread_delay_1_, c2r, c2r_delay, lp2r, voice_);
-      COMB(spread_delay_2_, c3r, c3r_delay, lp3r, voice_);
-      COMB(spread_delay_3_, c4r, c4r_delay, lp4r, voice_);
+      COMB(0, 1r, voice_);
+      COMB(spread_delay_1_, 2r, voice_);
+      COMB(spread_delay_2_, 3r, voice_);
+      COMB(spread_delay_3_, 4r, voice_);
 
       c.Read(c1l, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c2l, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
