@@ -80,7 +80,7 @@ class Resonator {
     engine_.Init(buffer);
     feedback_ = 0.0f;
     damp_ = 0.6f;
-    pitch_ = 0.0f;
+    base_pitch_ = 0.0f;
     chord_ = 0.0f;
     spread_amount_ = 0.0f;
     stereo_ = 0.0f;
@@ -88,6 +88,8 @@ class Resonator {
     burst_damp_ = 1.0f;
     burst_comb_ = 1.0f;
     voice_ = 0.0f;
+    for (int i=0; i<3; i++)
+      spread_delay_[i] = Random::GetFloat() * 3999;
   }
 
   void Process(FloatFrame* in_out, size_t size) {
@@ -118,16 +120,13 @@ class Resonator {
       voice_ = 1.0f - voice_;
     }
 
-    if (voice_ < 0.5f)
-      pitch_l_ = pitch_;
-    else
-      pitch_r_ = pitch_;
+    pitch_[voice_ < 0.5f] = base_pitch_;
 
     float c2_pitch = InterpolatePlateau(chords[0], chord_, 16);
     float c3_pitch = InterpolatePlateau(chords[1], chord_, 16);
     float c4_pitch = InterpolatePlateau(chords[2], chord_, 16);
 
-    float c1l_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_l_);
+    float c1l_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_[0]);
     CONSTRAIN(c1l_delay, 0, c1l.length);
     float c2l_delay = c1l_delay / SemitonesToRatio(c2_pitch);
     CONSTRAIN(c2l_delay, 0, c2l.length);
@@ -136,7 +135,7 @@ class Resonator {
     float c4l_delay = c1l_delay / SemitonesToRatio(c4_pitch);
     CONSTRAIN(c4l_delay, 0, c4l.length);
 
-    float c1r_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_r_);
+    float c1r_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_[1]);
     CONSTRAIN(c1r_delay, 0, c1r.length);
     float c2r_delay = c1r_delay / SemitonesToRatio(c2_pitch);
     CONSTRAIN(c2r_delay, 0, c2r.length);
@@ -151,9 +150,8 @@ class Resonator {
         c2l_delay > c3l_delay ? c2l_delay : c3l_delay;
       burst_time_ *= 2.0f * burst_duration_;
 
-      spread_delay_1_ = Random::GetFloat() * (bd.length - 1);
-      spread_delay_2_ = Random::GetFloat() * (bd.length - 1);
-      spread_delay_3_ = Random::GetFloat() * (bd.length - 1);
+      for (int i=0; i<3; i++)
+        spread_delay_[i] = Random::GetFloat() * (bd.length - 1);
     }
 
     while (size--) {
@@ -165,13 +163,13 @@ class Resonator {
       // burst noise generation
       c.Read((Random::GetFloat() * 2.0f - 1.0f), burst_gain);
       // goes through comb and lp filters
-      float comb_fb = 0.6f - burst_comb_ * 0.4f;
+      const float comb_fb = 0.6f - burst_comb_ * 0.4f;
       float comb_del = burst_comb_ * bc.length;
       if (comb_del <= 1.0f) comb_del = 1.0f;
       c.InterpolateHermite(bc, comb_del, comb_fb);
       c.Write(bc, 1.0f);
-      c.Lp(burst_lp1, burst_damp_);
-      c.Lp(burst_lp2, burst_damp_);
+      c.Lp(burst_lp[0], burst_damp_);
+      c.Lp(burst_lp[1], burst_damp_);
 
       c.Read(in_out->l + in_out->r, 1.0f);
       c.Write(bd, 0.0f);
@@ -185,15 +183,15 @@ class Resonator {
 
       /* first voice: */
       COMB(0, 1l, 1.0f - voice_);
-      COMB(spread_delay_1_, 2l, 1.0f - voice_);
-      COMB(spread_delay_2_, 3l, 1.0f - voice_);
-      COMB(spread_delay_3_, 4l, 1.0f - voice_);
+      COMB(spread_delay_[0], 2l, 1.0f - voice_);
+      COMB(spread_delay_[1], 3l, 1.0f - voice_);
+      COMB(spread_delay_[2], 4l, 1.0f - voice_);
 
       /* second voice: */
       COMB(0, 1r, voice_);
-      COMB(spread_delay_1_, 2r, voice_);
-      COMB(spread_delay_2_, 3r, voice_);
-      COMB(spread_delay_3_, 4r, voice_);
+      COMB(spread_delay_[0], 2r, voice_);
+      COMB(spread_delay_[1], 3r, voice_);
+      COMB(spread_delay_[2], 4r, voice_);
 
       c.Read(c1l, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c2l, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
@@ -220,7 +218,7 @@ class Resonator {
   }
 
   void set_pitch(float pitch) {
-    pitch_ = pitch;
+    base_pitch_ = pitch;
   }
 
   void set_trigger(bool trigger) {
@@ -270,7 +268,7 @@ class Resonator {
 
   float feedback_;
   float damp_;
-  float pitch_;
+  float base_pitch_;
   float chord_;
   float spread_amount_;
   float stereo_;
@@ -284,11 +282,11 @@ class Resonator {
   float burst_comb_;
   float burst_duration_;
 
-  float pitch_l_, pitch_r_;
+  float pitch_[2];
 
-  float spread_delay_1_, spread_delay_2_, spread_delay_3_;
+  float spread_delay_[3];
 
-  float burst_lp1, burst_lp2;
+  float burst_lp[2];
   float lp1l, lp2l, lp3l, lp4l;
   float lp1r, lp2r, lp3r, lp4r;
 
