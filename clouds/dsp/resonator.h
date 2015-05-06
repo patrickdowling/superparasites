@@ -124,32 +124,21 @@ class Resonator {
 
     pitch_[voice_] = base_pitch_;
 
-    float c2_pitch = InterpolatePlateau(chords[0], chord_, 16);
-    float c3_pitch = InterpolatePlateau(chords[1], chord_, 16);
-    float c4_pitch = InterpolatePlateau(chords[2], chord_, 16);
-
     float c_delay[4][2];
-    c_delay[0][0] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[0]);
-    CONSTRAIN(c_delay[0][0], 0, MAX_COMB-1);
-    c_delay[1][0] = c_delay[0][0] / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c_delay[1][0], 0, MAX_COMB-1);
-    c_delay[2][0] = c_delay[0][0] / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c_delay[2][0], 0, MAX_COMB-1);
-    c_delay[3][0] = c_delay[0][0] / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c_delay[3][0], 0, MAX_COMB-1);
 
-    c_delay[0][1] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[1]);
-    CONSTRAIN(c_delay[0][1], 0, MAX_COMB-1);
-    c_delay[1][1] = c_delay[0][1] / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c_delay[1][1], 0, MAX_COMB-1);
-    c_delay[2][1] = c_delay[0][1] / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c_delay[2][1], 0, MAX_COMB-1);
-    c_delay[3][1] = c_delay[0][1] / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c_delay[3][1], 0, MAX_COMB-1);
+    for (int v=0; v<2; v++) {
+      c_delay[0][v] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[v]);
+      CONSTRAIN(c_delay[0][v], 0, MAX_COMB);
+      for (int p=1; p<4; p++) {
+        float pitch = InterpolatePlateau(chords[p-1], chord_, 16);
+        c_delay[p][v] = c_delay[0][v] / SemitonesToRatio(pitch);
+        CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
+      }
+    }
 
     if (trigger_ && !previous_trigger_) {
       previous_trigger_ = trigger_;
-      burst_time_ = voice_ ? c_delay[0][0] : c_delay[0][1];
+      burst_time_ = c_delay[0][voice_];
       burst_time_ *= 2.0f * burst_duration_;
 
       for (int i=0; i<3; i++)
