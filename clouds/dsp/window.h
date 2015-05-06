@@ -74,7 +74,8 @@ class Window {
   inline void OverlapAdd(
       const AudioBuffer<resolution>* buffer,
       float* samples,
-      int32_t channels) {
+      int32_t channels,
+      float swap_channels) {
     if (done_) {
       return;
     }
@@ -95,8 +96,8 @@ class Window {
       *samples++ += l;
     } else if (channels == 2) {
       float r = buffer[1].ReadHermite(sample_index, phase_fractional) * gain;
-      *samples++ += l;
-      *samples++ += r;
+      *samples++ += l + (r - l) * swap_channels;
+      *samples++ += r + (l - r) * swap_channels;
     }
     phase_ += phase_increment_;
   }

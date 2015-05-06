@@ -120,11 +120,13 @@ class WSOLASamplePlayer {
       ScheduleAlignedWindow(buffer, &windows_[0]);
     }
 
+    const float swap_channels = parameters.stereo_spread;
+
     while (size--) {
       // Sum the two windows.
       std::fill(&out[0], &out[kMaxNumChannels], 0);
       for (int32_t i = 0; i < 2; ++i) {
-        windows_[i].OverlapAdd(buffer, out, num_channels_);
+        windows_[i].OverlapAdd(buffer, out, num_channels_, swap_channels);
       }
 
       // Regenerate expired windows.
@@ -132,7 +134,7 @@ class WSOLASamplePlayer {
         if (windows_[i].needs_regeneration()) {
           windows_[i].MarkAsRegenerated();
           ScheduleAlignedWindow(buffer, &windows_[1 - i]);
-          windows_[1 - i].OverlapAdd(buffer, out, num_channels_);
+          windows_[1 - i].OverlapAdd(buffer, out, num_channels_, swap_channels);
         }
       }
       out += 2;
