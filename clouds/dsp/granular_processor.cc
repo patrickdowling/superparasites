@@ -262,9 +262,16 @@ void GranularProcessor::Process(
     in_[i].l = static_cast<float>(input[i].l) / 32768.0f;
     in_[i].r = static_cast<float>(input[i].r) / 32768.0f;
   }
+
   if (num_channels_ == 1) {
     for (size_t i = 0; i < size; ++i) {
-      in_[i].l = (in_[i].l + in_[i].r) * 0.5f;
+      float xfade = 0.5f;
+      // in mono delay modes, stereo spread controls input crossfade
+      if (playback_mode_ == PLAYBACK_MODE_LOOPING_DELAY ||
+          playback_mode_ == PLAYBACK_MODE_STRETCH)
+        xfade = parameters_.stereo_spread;
+
+      in_[i].l = in_[i].l * (1.0f - xfade) + in_[i].r * xfade;
       in_[i].r = in_[i].l;
     }
   }
