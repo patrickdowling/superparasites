@@ -131,7 +131,10 @@ class LoopingSamplePlayer {
       float d = parameters.size;
       float loop_duration = (0.01f + 0.99f * d * d * d) * max_delay;
       if (synchronized_) {
-        loop_duration = tap_delay_;
+        int index = roundf(d * static_cast<float>(kMultDivSteps));
+        CONSTRAIN(index, 0, kMultDivSteps-1);
+        do loop_duration = kMultDivs[index--] * static_cast<float>(tap_delay_);
+        while (loop_duration > max_delay && index >= 0);
       }
       if (loop_point + loop_duration >= max_delay) {
         loop_point = max_delay - loop_duration;
