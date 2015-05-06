@@ -80,15 +80,13 @@ void GranularProcessor::ProcessGranular(
   if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
       playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     const float* input_samples = &input[0].l;
+    const bool play = !parameters_.freeze ||
+      playback_mode_ == PLAYBACK_MODE_REVERB;
     for (int32_t i = 0; i < num_channels_; ++i) {
       if (resolution() == 8) {
-        buffer_8_[i].WriteFade(
-            &input_samples[i], size, 2,
-            playback_mode_ == PLAYBACK_MODE_REVERB || !parameters_.freeze);
+        buffer_8_[i].WriteFade(&input_samples[i], size, 2, play);
       } else {
-        buffer_16_[i].WriteFade(
-            &input_samples[i], size, 2,
-            playback_mode_ == PLAYBACK_MODE_REVERB || !parameters_.freeze);
+        buffer_16_[i].WriteFade(&input_samples[i], size, 2, play);
       }
     }
   }
