@@ -312,11 +312,21 @@ void GranularProcessor::Process(
     diffuser_.set_amount(diffusion);
     diffuser_.Process(out_, size);
   }
+#define LIMIT 0.1f
+#define SLEW 0.02f
   
   if (playback_mode_ == PLAYBACK_MODE_LOOPING_DELAY &&
       (!parameters_.freeze || looper_.synchronized())) {
     pitch_shifter_.set_ratio(SemitonesToRatio(parameters_.pitch));
     pitch_shifter_.set_size(parameters_.size);
+    float x = parameters_.pitch;
+    float wet =
+      x < -LIMIT ? 1.0f :
+      x < -LIMIT + SLEW ? 1.0f - (x + LIMIT) / SLEW:
+      x < LIMIT - SLEW ? 0.0f :
+      x < LIMIT ? 1.0f + (x - LIMIT) / SLEW:
+      1.0f;
+    pitch_shifter_.set_dry_wet(wet);
     pitch_shifter_.Process(out_, size);
   }
   
