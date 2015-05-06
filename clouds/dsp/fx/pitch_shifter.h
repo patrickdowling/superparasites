@@ -45,6 +45,7 @@ class PitchShifter {
     engine_.Init(buffer);
     phase_ = 0;
     size_ = 2047.0f;
+    dry_wet_ = 0.0f;
   }
   
   void Clear() {
@@ -78,22 +79,33 @@ class PitchShifter {
     if (half >= size_) {
       half -= size_;
     }
-    
+
+    float wet = 0.0f;
+
     c.Read(input_output->l, 1.0f);
     c.Write(left, 0.0f);
-    c.Interpolate(left, phase, tri);
-    c.Interpolate(left, half, 1.0f - tri);
-    c.Write(input_output->l, 0.0f);
+    c.InterpolateHermite(left, phase, tri);
+    c.InterpolateHermite(left, half, 1.0f - tri);
+    c.Write(wet, 0.0f);
+
+    input_output->l += (wet - input_output->l) * dry_wet_;
 
     c.Read(input_output->r, 1.0f);
     c.Write(right, 0.0f);
-    c.Interpolate(right, phase, tri);
-    c.Interpolate(right, half, 1.0f - tri);
-    c.Write(input_output->r, 0.0f);
+    c.InterpolateHermite(right, phase, tri);
+    c.InterpolateHermite(right, half, 1.0f - tri);
+    c.Write(wet, 0.0f);
+
+    input_output->r += (wet - input_output->r) * dry_wet_;
+
   }
   
   inline void set_ratio(float ratio) {
     ratio_ = ratio;
+  }
+
+  inline void set_dry_wet(float dry_wet) {
+    dry_wet_ = dry_wet;
   }
   
   inline void set_size(float size) {
@@ -107,7 +119,8 @@ class PitchShifter {
   float phase_;
   float ratio_;
   float size_;
-  
+  float dry_wet_;
+
   DISALLOW_COPY_AND_ASSIGN(PitchShifter);
 };
 
