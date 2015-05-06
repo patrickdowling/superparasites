@@ -180,7 +180,7 @@ class Resonator {
       c.Read(bd, pre * spread_amount_, vol);                            \
       c.InterpolateHermite(c ## part ## voice,                          \
                            c_delay ## part ## voice, feedback_);        \
-      c.Lp(lp ## part ## voice, damp_);                                 \
+      c.Lp(lp[part][voice], damp_);                                     \
       c.Write(c ## part ## voice, 0.0f);                                \
 
       /* first voice: */
@@ -289,8 +289,7 @@ class Resonator {
   float spread_delay_[3];
 
   float burst_lp[2];
-  float lp00, lp10, lp20, lp30;
-  float lp01, lp11, lp21, lp31;
+  float lp[4][2];
 
   DISALLOW_COPY_AND_ASSIGN(Resonator);
 };
