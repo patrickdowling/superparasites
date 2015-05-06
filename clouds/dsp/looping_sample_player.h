@@ -106,6 +106,8 @@ class LoopingSamplePlayer {
       while (target_delay > max_delay && index >= 0);
     }
 
+    const float swap_channels = parameters.stereo_spread;
+
     if (!parameters.freeze) {
       while (size--) {
         float error = (target_delay - current_delay_);
@@ -120,8 +122,8 @@ class LoopingSamplePlayer {
           *out++ = l;
         } else if (num_channels_ == 2) {
           float r = buffer[1].ReadHermite((delay_int >> 12), delay_int << 4);
-          *out++ = l;
-          *out++ = r;
+          *out++ = l + (r - l) * swap_channels;
+          *out++ = r + (l - r) * swap_channels;
         }
       }
       phase_ = 0.0f;
@@ -175,8 +177,8 @@ class LoopingSamplePlayer {
           out[1] = l * gain;
         } else if (num_channels_ == 2) {
           float r = buffer[1].ReadHermite((position >> 12), position << 4);
-          out[0] = l * gain;
-          out[1] = r * gain;
+          out[0] = (l + (r - l) * swap_channels) * gain;
+          out[1] = (r + (l - r) * swap_channels) * gain;
         }
         
         if (gain != 1.0f) {
@@ -190,8 +192,8 @@ class LoopingSamplePlayer {
             out[1] += l * gain;
           } else if (num_channels_ == 2) {
             float r = buffer[1].ReadHermite((position >> 12), position << 4);
-            out[0] += l * gain;
-            out[1] += r * gain;
+            out[0] += (l + (r - l) * swap_channels) * gain;
+            out[1] += (r + (l - r) * swap_channels) * gain;
           }
         }
         out += 2;
@@ -208,7 +210,7 @@ class LoopingSamplePlayer {
   float tail_start_;
   float tail_duration_;
   float loop_reset_;
-  
+
   bool synchronized_;
   
   int32_t num_channels_;
