@@ -106,16 +106,16 @@ class Resonator {
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB > > > > > > > > > > Memory;
-    E::DelayLine<Memory, 0> c1l;
-    E::DelayLine<Memory, 1> c2l;
-    E::DelayLine<Memory, 2> c3l;
-    E::DelayLine<Memory, 3> c4l;
+    E::DelayLine<Memory, 0> c00;
+    E::DelayLine<Memory, 1> c10;
+    E::DelayLine<Memory, 2> c20;
+    E::DelayLine<Memory, 3> c30;
     E::DelayLine<Memory, 4> bc;
     E::DelayLine<Memory, 5> bd;
-    E::DelayLine<Memory, 6> c1r;
-    E::DelayLine<Memory, 7> c2r;
-    E::DelayLine<Memory, 8> c3r;
-    E::DelayLine<Memory, 9> c4r;
+    E::DelayLine<Memory, 6> c01;
+    E::DelayLine<Memory, 7> c11;
+    E::DelayLine<Memory, 8> c21;
+    E::DelayLine<Memory, 9> c31;
     E::Context c;
 
     if (trigger_ && !previous_trigger_) {
@@ -128,28 +128,27 @@ class Resonator {
     float c3_pitch = InterpolatePlateau(chords[1], chord_, 16);
     float c4_pitch = InterpolatePlateau(chords[2], chord_, 16);
 
-    float c1l_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_[0]);
-    CONSTRAIN(c1l_delay, 0, c1l.length);
-    float c2l_delay = c1l_delay / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c2l_delay, 0, c2l.length);
-    float c3l_delay = c1l_delay / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c3l_delay, 0, c3l.length);
-    float c4l_delay = c1l_delay / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c4l_delay, 0, c4l.length);
+    float c_delay00 = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[0]);
+    CONSTRAIN(c_delay00, 0, MAX_COMB-1);
+    float c_delay10 = c_delay00 / SemitonesToRatio(c2_pitch);
+    CONSTRAIN(c_delay10, 0, MAX_COMB-1);
+    float c_delay20 = c_delay00 / SemitonesToRatio(c3_pitch);
+    CONSTRAIN(c_delay20, 0, MAX_COMB-1);
+    float c_delay30 = c_delay00 / SemitonesToRatio(c4_pitch);
+    CONSTRAIN(c_delay30, 0, MAX_COMB-1);
 
-    float c1r_delay = 32000.0f / 220.0f / SemitonesToRatio(pitch_[1]);
-    CONSTRAIN(c1r_delay, 0, c1r.length);
-    float c2r_delay = c1r_delay / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c2r_delay, 0, c2r.length);
-    float c3r_delay = c1r_delay / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c3r_delay, 0, c3r.length);
-    float c4r_delay = c1r_delay / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c4r_delay, 0, c4r.length);
+    float c_delay01 = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[1]);
+    CONSTRAIN(c_delay01, 0, MAX_COMB-1);
+    float c_delay11 = c_delay01 / SemitonesToRatio(c2_pitch);
+    CONSTRAIN(c_delay11, 0, MAX_COMB-1);
+    float c_delay21 = c_delay01 / SemitonesToRatio(c3_pitch);
+    CONSTRAIN(c_delay21, 0, MAX_COMB-1);
+    float c_delay31 = c_delay01 / SemitonesToRatio(c4_pitch);
+    CONSTRAIN(c_delay31, 0, MAX_COMB-1);
 
     if (trigger_ && !previous_trigger_) {
       previous_trigger_ = trigger_;
-      burst_time_ = c1l_delay > c2l_delay && c1l_delay > c3l_delay ? c1l_delay :
-        c2l_delay > c3l_delay ? c2l_delay : c3l_delay;
+      burst_time_ = voice_ ? c_delay00 : c_delay01;
       burst_time_ *= 2.0f * burst_duration_;
 
       for (int i=0; i<3; i++)
@@ -176,43 +175,44 @@ class Resonator {
       c.Read(in_out->l + in_out->r, 1.0f);
       c.Write(bd, 0.0f);
 
-#define COMB(pre, part, vol)                                            \
+#define COMB(pre, part, voice, vol)                                     \
       c.Load(0.0f);                                                     \
       c.Read(bd, pre * spread_amount_, vol);                            \
-      c.InterpolateHermite(c ## part, c ## part ## _delay, feedback_);  \
-      c.Lp(lp ## part, damp_);                                          \
-      c.Write(c ## part, 0.0f);                                         \
+      c.InterpolateHermite(c ## part ## voice,                          \
+                           c_delay ## part ## voice, feedback_);        \
+      c.Lp(lp ## part ## voice, damp_);                                 \
+      c.Write(c ## part ## voice, 0.0f);                                \
 
       /* first voice: */
-      COMB(0, 1l, 1.0f - voice_);
-      COMB(spread_delay_[0], 2l, 1.0f - voice_);
-      COMB(spread_delay_[1], 3l, 1.0f - voice_);
-      COMB(spread_delay_[2], 4l, 1.0f - voice_);
+      COMB(0, 0, 0, 1.0f - voice_);
+      COMB(spread_delay_[0], 1, 0, 1.0f - voice_);
+      COMB(spread_delay_[1], 2, 0, 1.0f - voice_);
+      COMB(spread_delay_[2], 3, 0, 1.0f - voice_);
 
       /* second voice: */
-      COMB(0, 1r, voice_);
-      COMB(spread_delay_[0], 2r, voice_);
-      COMB(spread_delay_[1], 3r, voice_);
-      COMB(spread_delay_[2], 4r, voice_);
+      COMB(0, 0, 1, voice_);
+      COMB(spread_delay_[0], 1, 1, voice_);
+      COMB(spread_delay_[1], 2, 1, voice_);
+      COMB(spread_delay_[2], 3, 1, voice_);
 
-      c.Read(c1l, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c2l, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c3l, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
-      c.Read(c4l, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
-      c.Read(c1r, 0.20f + 0.20f * stereo_);
-      c.Read(c2r, 0.23f * (1.0f - stereo_));
-      c.Read(c3r, 0.27f + 0.27 * stereo_);
-      c.Read(c4r, 0.30f * (1.0f - stereo_));
+      c.Read(c00, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c10, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
+      c.Read(c20, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
+      c.Read(c30, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
+      c.Read(c01, 0.20f + 0.20f * stereo_);
+      c.Read(c11, 0.23f * (1.0f - stereo_));
+      c.Read(c21, 0.27f + 0.27 * stereo_);
+      c.Read(c31, 0.30f * (1.0f - stereo_));
       c.Write(in_out->l, 0.0f);
 
-      c.Read(c1l, 0.20f + 0.20f * stereo_);
-      c.Read(c2l, 0.23f * (1.0f - stereo_));
-      c.Read(c3l, 0.27f + 0.27 * stereo_);
-      c.Read(c4l, 0.30f * (1.0f - stereo_));
-      c.Read(c1r, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c2r, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c3r, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c4r, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
+      c.Read(c00, 0.20f + 0.20f * stereo_);
+      c.Read(c10, 0.23f * (1.0f - stereo_));
+      c.Read(c20, 0.27f + 0.27 * stereo_);
+      c.Read(c30, 0.30f * (1.0f - stereo_));
+      c.Read(c01, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c11, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
+      c.Read(c21, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c31, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
@@ -289,8 +289,8 @@ class Resonator {
   float spread_delay_[3];
 
   float burst_lp[2];
-  float lp1l, lp2l, lp3l, lp4l;
-  float lp1r, lp2r, lp3r, lp4r;
+  float lp00, lp10, lp20, lp30;
+  float lp01, lp11, lp21, lp31;
 
   DISALLOW_COPY_AND_ASSIGN(Resonator);
 };
