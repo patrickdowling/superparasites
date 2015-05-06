@@ -92,8 +92,9 @@ class Resonator {
       spread_delay_[i] = Random::GetFloat() * 3999;
   }
 
-#define MAX_COMB 1500
+#define MAX_COMB 1000
 #define BASE_PITCH 220.0f
+
   void Process(FloatFrame* in_out, size_t size) {
 
     typedef E::Reserve<MAX_COMB,
