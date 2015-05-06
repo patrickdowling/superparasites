@@ -87,7 +87,7 @@ class Resonator {
     burst_time_ = 0.0f;
     burst_damp_ = 1.0f;
     burst_comb_ = 1.0f;
-    voice_ = 0.0f;
+    voice_ = false;
     for (int i=0; i<3; i++)
       spread_delay_[i] = Random::GetFloat() * 3999;
   }
@@ -119,36 +119,37 @@ class Resonator {
     E::Context c;
 
     if (trigger_ && !previous_trigger_) {
-      voice_ = 1.0f - voice_;
+      voice_ = !voice_;
     }
 
-    pitch_[voice_ < 0.5f] = base_pitch_;
+    pitch_[voice_] = base_pitch_;
 
     float c2_pitch = InterpolatePlateau(chords[0], chord_, 16);
     float c3_pitch = InterpolatePlateau(chords[1], chord_, 16);
     float c4_pitch = InterpolatePlateau(chords[2], chord_, 16);
 
-    float c_delay00 = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[0]);
-    CONSTRAIN(c_delay00, 0, MAX_COMB-1);
-    float c_delay10 = c_delay00 / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c_delay10, 0, MAX_COMB-1);
-    float c_delay20 = c_delay00 / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c_delay20, 0, MAX_COMB-1);
-    float c_delay30 = c_delay00 / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c_delay30, 0, MAX_COMB-1);
+    float c_delay[4][2];
+    c_delay[0][0] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[0]);
+    CONSTRAIN(c_delay[0][0], 0, MAX_COMB-1);
+    c_delay[1][0] = c_delay[0][0] / SemitonesToRatio(c2_pitch);
+    CONSTRAIN(c_delay[1][0], 0, MAX_COMB-1);
+    c_delay[2][0] = c_delay[0][0] / SemitonesToRatio(c3_pitch);
+    CONSTRAIN(c_delay[2][0], 0, MAX_COMB-1);
+    c_delay[3][0] = c_delay[0][0] / SemitonesToRatio(c4_pitch);
+    CONSTRAIN(c_delay[3][0], 0, MAX_COMB-1);
 
-    float c_delay01 = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[1]);
-    CONSTRAIN(c_delay01, 0, MAX_COMB-1);
-    float c_delay11 = c_delay01 / SemitonesToRatio(c2_pitch);
-    CONSTRAIN(c_delay11, 0, MAX_COMB-1);
-    float c_delay21 = c_delay01 / SemitonesToRatio(c3_pitch);
-    CONSTRAIN(c_delay21, 0, MAX_COMB-1);
-    float c_delay31 = c_delay01 / SemitonesToRatio(c4_pitch);
-    CONSTRAIN(c_delay31, 0, MAX_COMB-1);
+    c_delay[0][1] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[1]);
+    CONSTRAIN(c_delay[0][1], 0, MAX_COMB-1);
+    c_delay[1][1] = c_delay[0][1] / SemitonesToRatio(c2_pitch);
+    CONSTRAIN(c_delay[1][1], 0, MAX_COMB-1);
+    c_delay[2][1] = c_delay[0][1] / SemitonesToRatio(c3_pitch);
+    CONSTRAIN(c_delay[2][1], 0, MAX_COMB-1);
+    c_delay[3][1] = c_delay[0][1] / SemitonesToRatio(c4_pitch);
+    CONSTRAIN(c_delay[3][1], 0, MAX_COMB-1);
 
     if (trigger_ && !previous_trigger_) {
       previous_trigger_ = trigger_;
-      burst_time_ = voice_ ? c_delay00 : c_delay01;
+      burst_time_ = voice_ ? c_delay[0][0] : c_delay[0][1];
       burst_time_ *= 2.0f * burst_duration_;
 
       for (int i=0; i<3; i++)
@@ -179,15 +180,15 @@ class Resonator {
       c.Load(0.0f);                                                     \
       c.Read(bd, pre * spread_amount_, vol);                            \
       c.InterpolateHermite(c ## part ## voice,                          \
-                           c_delay ## part ## voice, feedback_);        \
+                           c_delay[part][voice], feedback_);        \
       c.Lp(lp[part][voice], damp_);                                     \
       c.Write(c ## part ## voice, 0.0f);                                \
 
       /* first voice: */
-      COMB(0, 0, 0, 1.0f - voice_);
-      COMB(spread_delay_[0], 1, 0, 1.0f - voice_);
-      COMB(spread_delay_[1], 2, 0, 1.0f - voice_);
-      COMB(spread_delay_[2], 3, 0, 1.0f - voice_);
+      COMB(0, 0, 0, !voice_);
+      COMB(spread_delay_[0], 1, 0, !voice_);
+      COMB(spread_delay_[1], 2, 0, !voice_);
+      COMB(spread_delay_[2], 3, 0, !voice_);
 
       /* second voice: */
       COMB(0, 0, 1, voice_);
@@ -275,10 +276,6 @@ class Resonator {
   float spread_amount_;
   float stereo_;
   float separation_;
-  bool trigger_, previous_trigger_;
-
-  float voice_;
-
   float burst_time_;
   float burst_damp_;
   float burst_comb_;
@@ -290,6 +287,11 @@ class Resonator {
 
   float burst_lp[2];
   float lp[4][2];
+
+  bool trigger_, previous_trigger_;
+  /* voice=0 or 1; for some reason bool doesn't work */
+  int32_t voice_;
+
 
   DISALLOW_COPY_AND_ASSIGN(Resonator);
 };
