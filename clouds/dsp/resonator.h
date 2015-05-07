@@ -93,8 +93,11 @@ class Resonator {
       spread_delay_[i] = Random::GetFloat() * 3999;
     burst_lp_.Init();
     for (int v=0; v<2; v++)
-      for (int p=0; p<4; p++)
+      for (int p=0; p<4; p++) {
         lp_[p][v].Init();
+        bp1_[p][v].Init();
+        bp2_[p][v].Init();
+      }
   }
 
 #define MAX_COMB 1000
@@ -139,6 +142,9 @@ class Resonator {
         float pitch = InterpolatePlateau(chords[p-1], chord_, 16);
         c_delay[p][v] = c_delay[0][v] / SemitonesToRatio(pitch);
         CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
+        float freq = 1.0f / c_delay[p][v];
+        bp1_[p][v].set_f_q<FREQUENCY_EXACT>(freq, narrow_);
+        bp2_[p][v].set_f_q<FREQUENCY_EXACT>(freq, narrow_);
       }
     }
 
@@ -180,7 +186,10 @@ class Resonator {
                              c_delay[part][voice], feedback_);          \
         float acc;                                                      \
         c.Write(acc);                                                   \
-        c.Load(lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc));    \
+        acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
+        acc = bp1_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
+        acc = bp2_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
+        c.Load(acc);                                                    \
         c.Hp(hp_[part][voice], 20.0f / 32000.0f);                       \
         c.Write(acc, 0.5f);                                             \
         c.SoftLimit();                                                  \
@@ -276,12 +285,17 @@ class Resonator {
     input_gain_ = input_gain;
   }
 
+  void set_narrow(float narrow) {
+    narrow_ = narrow;
+  }
+
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
 
   float feedback_;
   float damp_;
+  float narrow_;
   float base_pitch_;
   float chord_;
   float spread_amount_;
@@ -299,6 +313,8 @@ class Resonator {
 
   float hp_[4][2];
   Svf lp_[4][2];
+  Svf bp1_[4][2];
+  Svf bp2_[4][2];
   Svf burst_lp_;
 
   int32_t trigger_, previous_trigger_;
