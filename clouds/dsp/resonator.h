@@ -87,9 +87,14 @@ class Resonator {
     burst_time_ = 0.0f;
     burst_damp_ = 1.0f;
     burst_comb_ = 1.0f;
+    input_gain_ = 1.0f;
     voice_ = false;
     for (int i=0; i<3; i++)
       spread_delay_[i] = Random::GetFloat() * 3999;
+    burst_lp_.Init();
+    for (int v=0; v<2; v++)
+      for (int p=0; p<4; p++)
+        lp_[p][v].Init();
   }
 
 #define MAX_COMB 1000
@@ -160,19 +165,28 @@ class Resonator {
       if (comb_del <= 1.0f) comb_del = 1.0f;
       c.InterpolateHermite(bc, comb_del, comb_fb);
       c.Write(bc, 1.0f);
-      c.Lp(burst_lp[0], burst_damp_);
-      c.Lp(burst_lp[1], burst_damp_);
+      float acc;
+      c.Write(acc);
+      c.Load(burst_lp_.Process<FILTER_MODE_LOW_PASS>(acc));
 
-      c.Read(in_out->l + in_out->r, 1.0f);
+      c.Read(in_out->l + in_out->r, input_gain_);
       c.Write(bd, 0.0f);
 
 #define COMB(pre, part, voice, vol)                                     \
-      c.Load(0.0f);                                                     \
-      c.Read(bd, pre * spread_amount_, vol);                            \
-      c.InterpolateHermite(c ## part ## voice,                          \
-                           c_delay[part][voice], feedback_);        \
-      c.Lp(lp[part][voice], damp_);                                     \
-      c.Write(c ## part ## voice, 0.0f);                                \
+      {                                                                 \
+        c.Load(0.0f);                                                   \
+        c.Read(bd, pre * spread_amount_, vol);                          \
+        c.InterpolateHermite(c ## part ## voice,                        \
+                             c_delay[part][voice], feedback_);          \
+        float acc;                                                      \
+        c.Write(acc);                                                   \
+        c.Load(lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc));    \
+        c.Hp(hp_[part][voice], 20.0f / 32000.0f);                       \
+        c.Write(acc, 0.5f);                                             \
+        c.SoftLimit();                                                  \
+        c.Write(acc, 2.0f);                                             \
+        c.Write(c ## part ## voice, 0.0f);                              \
+      }                                                                 \
 
       /* first voice: */
       COMB(0, 0, 0, !voice_);
@@ -224,11 +238,14 @@ class Resonator {
   }
 
   void set_damp(float damp) {
-    damp_ = damp;
+    for (int v=0; v<2; v++)
+      for (int p=0; p<4; p++)
+        lp_[p][v].set_f_q<FREQUENCY_FAST>
+          (damp, 0.4f);
   }
 
   void set_burst_damp(float burst_damp) {
-    burst_damp_ = burst_damp;
+    burst_lp_.set_f_q<FREQUENCY_FAST>(burst_damp * burst_damp * 0.5f, 0.8f);
   }
 
   void set_burst_comb(float burst_comb) {
@@ -255,6 +272,10 @@ class Resonator {
     separation_ = separation;
   }
 
+  void set_input_gain(float input_gain) {
+    input_gain_ = input_gain;
+  }
+
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
@@ -270,17 +291,18 @@ class Resonator {
   float burst_damp_;
   float burst_comb_;
   float burst_duration_;
+  float input_gain_;
 
   float pitch_[2];
 
   float spread_delay_[3];
 
-  float burst_lp[2];
-  float lp[4][2];
+  float hp_[4][2];
+  Svf lp_[4][2];
+  Svf burst_lp_;
 
-  bool trigger_, previous_trigger_;
-  /* voice=0 or 1; for some reason bool doesn't work */
-  int32_t voice_;
+  int32_t trigger_, previous_trigger_;
+  int32_t voice_, __align1;
 
 
   DISALLOW_COPY_AND_ASSIGN(Resonator);
