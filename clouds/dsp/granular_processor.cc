@@ -218,7 +218,7 @@ void GranularProcessor::ProcessGranular(
       resonator_.set_pitch(parameters_.pitch);
       resonator_.set_chord(parameters_.size);
       resonator_.set_trigger(parameters_.trigger);
-      resonator_.set_damp(parameters_.texture);
+      resonator_.set_damp(parameters_.texture * parameters_.texture);
       resonator_.set_burst_damp(parameters_.position);
       resonator_.set_burst_comb((1.0f - parameters_.position));
       resonator_.set_burst_duration((1.0f - parameters_.position));
@@ -229,14 +229,15 @@ void GranularProcessor::ProcessGranular(
                                 (0.5f - parameters_.stereo_spread) * 2.0f);
 
       float fb = parameters_.density;
+      // TODO better curve
       fb *= (2.0f-fb) * ((fb - 2.0f) * fb + 2.0f);
-      resonator_.set_feedback(fb * 1.02f);
+      resonator_.set_feedback(fb * 1.004f);
 
       if (parameters_.freeze) {
         resonator_.set_burst_duration(0.0f);
         resonator_.set_input_gain(0.0f);
         resonator_.set_damp(1.0f);
-        resonator_.set_feedback(1.0f);
+        resonator_.set_feedback(1.002f);
       }
 
       resonator_.Process(output, size);
