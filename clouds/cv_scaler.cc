@@ -52,7 +52,7 @@ CvTransformation CvScaler::transformations_[ADC_CHANNEL_LAST] = {
   // ADC_PITCH_POTENTIOMETER,
   { false, false, 0.01f },
   // ADC_V_OCT_CV,
-  { false, false, 0.5f },
+  { false, false, 1.0f },
   // ADC_BLEND_POTENTIOMETER,
   { false, false, 0.05f },
   // ADC_BLEND_CV,
