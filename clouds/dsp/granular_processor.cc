@@ -230,11 +230,11 @@ void GranularProcessor::ProcessGranular(
       float t = parameters_.texture;
       if (t < 0.5f) {
         resonator_.set_narrow(0.001f);
-        float l = 1.0f - (0.5f - t) * 2.0f;
-        resonator_.set_damp(l * l);
+        float l = 1.0f - (0.5f - t) / 0.5f;
+        resonator_.set_damp(l);
       } else {
         resonator_.set_damp(1.0f);
-        float n = (t - 0.5f) * 2.0f * 1.5f;
+        float n = (t - 0.5f) / 0.5f * 1.5f;
         resonator_.set_narrow(0.001f + n * n * n * n * n * n);
       }
 

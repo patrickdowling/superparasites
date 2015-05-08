@@ -143,8 +143,8 @@ class Resonator {
         c_delay[p][v] = c_delay[0][v] / SemitonesToRatio(pitch);
         CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
         float freq = 1.0f / c_delay[p][v];
-        bp1_[p][v].set_f_q<FREQUENCY_EXACT>(freq, narrow_);
-        bp2_[p][v].set_f_q<FREQUENCY_EXACT>(freq, narrow_);
+        bp1_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_);
+        bp2_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_);
       }
     }
 
