@@ -217,6 +217,7 @@ class Resonator {
       c.Read(c11, 0.23f * (1.0f - stereo_));
       c.Read(c21, 0.27f + 0.27 * stereo_);
       c.Read(c31, 0.30f * (1.0f - stereo_));
+      c.Write(acc, 1.0f + narrow_);
       c.Write(in_out->l, 0.0f);
 
       c.Read(c00, 0.20f + 0.20f * stereo_);
@@ -227,6 +228,7 @@ class Resonator {
       c.Read(c11, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
       c.Read(c21, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c31, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
+      c.Write(acc, 1.0f + narrow_);
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
