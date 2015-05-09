@@ -79,7 +79,6 @@ class Resonator {
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
     feedback_ = 0.0f;
-    damp_ = 0.6f;
     base_pitch_ = 0.0f;
     chord_ = 0.0f;
     spread_amount_ = 0.0f;
@@ -296,12 +295,16 @@ class Resonator {
     narrow_ = narrow;
   }
 
+  void set_freeze(float freeze) {
+    previous_freeze_ = freeze_;
+    freeze_ = freeze;
+  }
+
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
 
   float feedback_;
-  float damp_;
   float narrow_;
   float base_pitch_;
   float chord_;
@@ -323,7 +326,8 @@ class Resonator {
   Svf bp2_[4][2];
   Svf burst_lp_;
 
-  int32_t trigger_, previous_trigger_;
+  int16_t trigger_, previous_trigger_;
+  int16_t freeze_, previous_freeze_;
   int32_t voice_, __align1;
 
 

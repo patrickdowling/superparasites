@@ -225,6 +225,7 @@ void GranularProcessor::ProcessGranular(
         (parameters_.stereo_spread - 0.5f) * 2.0f);
       resonator_.set_separation(parameters_.stereo_spread > 0.5f ? 0.0f :
                                 (0.5f - parameters_.stereo_spread) * 2.0f);
+      resonator_.set_freeze(parameters_.freeze);
 
       float t = parameters_.texture;
       if (t < 0.5f) {
@@ -240,12 +241,6 @@ void GranularProcessor::ProcessGranular(
       float d = parameters_.density;
       d *= (2.0f-d) * ((d - 2.0f) * d + 2.0f);
       resonator_.set_feedback(d * 1.004f);
-
-      if (parameters_.freeze) {
-        resonator_.set_burst_duration(0.0f);
-        resonator_.set_damp(1.0f);
-        resonator_.set_feedback(1.002f);
-      }
 
       resonator_.Process(output, size);
     }
