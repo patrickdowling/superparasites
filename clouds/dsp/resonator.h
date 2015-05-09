@@ -87,7 +87,6 @@ class Resonator {
     burst_time_ = 0.0f;
     burst_damp_ = 1.0f;
     burst_comb_ = 1.0f;
-    input_gain_ = 1.0f;
     voice_ = false;
     for (int i=0; i<3; i++)
       spread_delay_[i] = Random::GetFloat() * 3999;
@@ -110,21 +109,23 @@ class Resonator {
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
       E::Reserve<200,          /* bc */
-      E::Reserve<4000,          /* bd */
+      E::Reserve<4000,          /* bd0 */
+      E::Reserve<4000,          /* bd1 */
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
-      E::Reserve<MAX_COMB > > > > > > > > > > Memory;
+      E::Reserve<MAX_COMB > > > > > > > > > > > Memory;
     E::DelayLine<Memory, 0> c00;
     E::DelayLine<Memory, 1> c10;
     E::DelayLine<Memory, 2> c20;
     E::DelayLine<Memory, 3> c30;
     E::DelayLine<Memory, 4> bc;
-    E::DelayLine<Memory, 5> bd;
-    E::DelayLine<Memory, 6> c01;
-    E::DelayLine<Memory, 7> c11;
-    E::DelayLine<Memory, 8> c21;
-    E::DelayLine<Memory, 9> c31;
+    E::DelayLine<Memory, 5> bd0;
+    E::DelayLine<Memory, 6> bd1;
+    E::DelayLine<Memory, 7> c01;
+    E::DelayLine<Memory, 8> c11;
+    E::DelayLine<Memory, 9> c21;
+    E::DelayLine<Memory, 10> c31;
     E::Context c;
 
     if (trigger_ && !previous_trigger_) {
@@ -144,7 +145,7 @@ class Resonator {
         CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
         float freq = 1.0f / c_delay[p][v];
         bp1_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_);
-        bp2_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_);
+        bp2_[p][v].set(bp1_[p][v]);
       }
     }
 
@@ -154,7 +155,7 @@ class Resonator {
       burst_time_ *= 2.0f * burst_duration_;
 
       for (int i=0; i<3; i++)
-        spread_delay_[i] = Random::GetFloat() * (bd.length - 1);
+        spread_delay_[i] = Random::GetFloat() * (bd0.length - 1);
     }
 
     while (size--) {
@@ -163,7 +164,7 @@ class Resonator {
       burst_time_--;
       float burst_gain = burst_time_ > 0.0f ? 1.0f : 0.0f;
 
-      // burst noise generation
+      /* burst noise generation */
       c.Read((Random::GetFloat() * 2.0f - 1.0f), burst_gain);
       // goes through comb and lp filters
       const float comb_fb = 0.6f - burst_comb_ * 0.4f;
@@ -171,17 +172,23 @@ class Resonator {
       if (comb_del <= 1.0f) comb_del = 1.0f;
       c.InterpolateHermite(bc, comb_del, comb_fb);
       c.Write(bc, 1.0f);
-      float acc;
-      c.Write(acc);
-      c.Load(burst_lp_.Process<FILTER_MODE_LOW_PASS>(acc));
+      float burst;
+      c.Write(burst);
+      c.Load(burst_lp_.Process<FILTER_MODE_LOW_PASS>(burst));
+      c.Write(burst);
 
-      c.Read(in_out->l + in_out->r, input_gain_);
-      c.Write(bd, 0.0f);
+      c.Load(burst);
+      c.Read(in_out->l, 1.0f);
+      c.Write(bd0, 0.0f);
+
+      c.Load(burst);
+      c.Read(in_out->r, 1.0f);
+      c.Write(bd1, 0.0f);
 
 #define COMB(pre, part, voice, vol)                                     \
       {                                                                 \
         c.Load(0.0f);                                                   \
-        c.Read(bd, pre * spread_amount_, vol);                          \
+        c.Read(bd ## voice, pre * spread_amount_, vol);                 \
         c.InterpolateHermite(c ## part ## voice,                        \
                              c_delay[part][voice], feedback_);          \
         float acc;                                                      \
@@ -209,6 +216,7 @@ class Resonator {
       COMB(spread_delay_[1], 2, 1, voice_);
       COMB(spread_delay_[2], 3, 1, voice_);
 
+      /* left mix */
       c.Read(c00, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c10, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
       c.Read(c20, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
@@ -217,9 +225,10 @@ class Resonator {
       c.Read(c11, 0.23f * (1.0f - stereo_));
       c.Read(c21, 0.27f + 0.27 * stereo_);
       c.Read(c31, 0.30f * (1.0f - stereo_));
-      c.Write(acc, 1.0f + narrow_);
+      c.Write(burst, 1.0f + narrow_); /* gain boost to compensate Q */
       c.Write(in_out->l, 0.0f);
 
+      /* right mix */
       c.Read(c00, 0.20f + 0.20f * stereo_);
       c.Read(c10, 0.23f * (1.0f - stereo_));
       c.Read(c20, 0.27f + 0.27 * stereo_);
@@ -228,7 +237,7 @@ class Resonator {
       c.Read(c11, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
       c.Read(c21, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
       c.Read(c31, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
-      c.Write(acc, 1.0f + narrow_);
+      c.Write(burst, 1.0f + narrow_); /* gain boost to compensate Q */
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
@@ -283,10 +292,6 @@ class Resonator {
     separation_ = separation;
   }
 
-  void set_input_gain(float input_gain) {
-    input_gain_ = input_gain;
-  }
-
   void set_narrow(float narrow) {
     narrow_ = narrow;
   }
@@ -307,7 +312,6 @@ class Resonator {
   float burst_damp_;
   float burst_comb_;
   float burst_duration_;
-  float input_gain_;
 
   float pitch_[2];
 

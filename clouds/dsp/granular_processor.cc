@@ -214,7 +214,6 @@ void GranularProcessor::ProcessGranular(
     {
       copy(&input[0], &input[size], &output[0]);
 
-      resonator_.set_input_gain(1.0f);
       resonator_.set_pitch(parameters_.pitch);
       resonator_.set_chord(parameters_.size);
       resonator_.set_trigger(parameters_.trigger);
@@ -244,7 +243,6 @@ void GranularProcessor::ProcessGranular(
 
       if (parameters_.freeze) {
         resonator_.set_burst_duration(0.0f);
-        resonator_.set_input_gain(0.0f);
         resonator_.set_damp(1.0f);
         resonator_.set_feedback(1.002f);
       }
