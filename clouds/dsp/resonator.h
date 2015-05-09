@@ -78,9 +78,12 @@ class Resonator {
 
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
-    feedback_ = 0.0f;
-    base_pitch_ = 0.0f;
-    chord_ = 0.0f;
+    for (int v=0; v<2; v++) {
+      pitch_[v] = 0.0f;
+      chord_[v] = 0.0f;
+      feedback_[v] = 0.0f;
+      narrow_[v] = 0.001f;
+    }
     spread_amount_ = 0.0f;
     stereo_ = 0.0f;
     burst_time_ = 0.0f;
@@ -127,11 +130,14 @@ class Resonator {
     E::DelayLine<Memory, 10> c31;
     E::Context c;
 
-    if (trigger_ && !previous_trigger_) {
+    if (trigger_ && !previous_trigger_ && !freeze_) {
       voice_ = !voice_;
     }
 
-    pitch_[voice_] = base_pitch_;
+    if (freeze_ && !previous_freeze_) {
+      previous_freeze_ = freeze_;
+      voice_ = !voice_;
+    }
 
     float c_delay[4][2];
 
@@ -139,11 +145,11 @@ class Resonator {
       c_delay[0][v] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[v]);
       CONSTRAIN(c_delay[0][v], 0, MAX_COMB);
       for (int p=1; p<4; p++) {
-        float pitch = InterpolatePlateau(chords[p-1], chord_, 16);
+        float pitch = InterpolatePlateau(chords[p-1], chord_[v], 16);
         c_delay[p][v] = c_delay[0][v] / SemitonesToRatio(pitch);
         CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
         float freq = 1.0f / c_delay[p][v];
-        bp1_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_);
+        bp1_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_[v]);
         bp2_[p][v].set(bp1_[p][v]);
       }
     }
@@ -189,7 +195,7 @@ class Resonator {
         c.Load(0.0f);                                                   \
         c.Read(bd ## voice, pre * spread_amount_, vol);                 \
         c.InterpolateHermite(c ## part ## voice,                        \
-                             c_delay[part][voice], feedback_);          \
+                             c_delay[part][voice], feedback_[voice]);   \
         float acc;                                                      \
         c.Write(acc);                                                   \
         acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
@@ -216,27 +222,33 @@ class Resonator {
       COMB(spread_delay_[2], 3, 1, voice_);
 
       /* left mix */
-      c.Read(c00, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c10, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c20, (0.27f * (1.0f - stereo_)) * (1.0f - separation_));
-      c.Read(c30, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
-      c.Read(c01, 0.20f + 0.20f * stereo_);
-      c.Read(c11, 0.23f * (1.0f - stereo_));
-      c.Read(c21, 0.27f + 0.27 * stereo_);
-      c.Read(c31, 0.30f * (1.0f - stereo_));
-      c.Write(burst, 1.0f + narrow_); /* gain boost to compensate Q */
+      c.Read(c00, (1.0f + narrow_[0]) *
+             0.25f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c10, (1.0f + narrow_[0]) *
+             (0.25f + 0.25f * stereo_) * (1.0f - separation_));
+      c.Read(c20, (1.0f + narrow_[0]) *
+             (0.25f * (1.0f - stereo_)) * (1.0f - separation_));
+      c.Read(c30, (1.0f + narrow_[0]) *
+             (0.25f + 0.25f * stereo_) * (1.0f - separation_));
+      c.Read(c01, (1.0f + narrow_[1]) * (0.25f + 0.25f * stereo_));
+      c.Read(c11, (1.0f + narrow_[1]) * 0.25f * (1.0f - stereo_));
+      c.Read(c21, (1.0f + narrow_[1]) * (0.25f + 0.25 * stereo_));
+      c.Read(c31, (1.0f + narrow_[1]) * 0.25f * (1.0f - stereo_));
       c.Write(in_out->l, 0.0f);
 
       /* right mix */
-      c.Read(c00, 0.20f + 0.20f * stereo_);
-      c.Read(c10, 0.23f * (1.0f - stereo_));
-      c.Read(c20, 0.27f + 0.27 * stereo_);
-      c.Read(c30, 0.30f * (1.0f - stereo_));
-      c.Read(c01, 0.20f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c11, (0.23f + 0.23f * stereo_) * (1.0f - separation_));
-      c.Read(c21, 0.27f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c31, (0.30f + 0.30f * stereo_) * (1.0f - separation_));
-      c.Write(burst, 1.0f + narrow_); /* gain boost to compensate Q */
+      c.Read(c00, (1.0f + narrow_[0]) * (0.25f + 0.25f * stereo_));
+      c.Read(c10, (1.0f + narrow_[0]) * 0.25f * (1.0f - stereo_));
+      c.Read(c20, (1.0f + narrow_[0]) * (0.25f + 0.25f * stereo_));
+      c.Read(c30, (1.0f + narrow_[0]) * 0.25f * (1.0f - stereo_));
+      c.Read(c01, (1.0f + narrow_[1]) *
+             0.25f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c11, (1.0f + narrow_[1]) *
+             (0.25f + 0.25f * stereo_) * (1.0f - separation_));
+      c.Read(c21, (1.0f + narrow_[1]) *
+             0.25f * (1.0f - stereo_) * (1.0f - separation_));
+      c.Read(c31, (1.0f + narrow_[1]) *
+             (0.25f + 0.25f * stereo_) * (1.0f - separation_));
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
@@ -244,23 +256,29 @@ class Resonator {
   }
 
   void set_pitch(float pitch) {
-    base_pitch_ = pitch;
+    pitch_[voice_] = pitch;
+  }
+
+  void set_chord(float chord) {
+    chord_[voice_] = chord;
+  }
+
+  void set_feedback(float feedback) {
+    feedback_[voice_] = feedback;
+  }
+
+  void set_narrow(float narrow) {
+    narrow_[voice_] = narrow;
+  }
+
+  void set_damp(float damp) {
+    for (int p=0; p<4; p++)
+      lp_[p][voice_].set_f_q<FREQUENCY_FAST>(damp, 0.4f);
   }
 
   void set_trigger(bool trigger) {
     previous_trigger_ = trigger_;
     trigger_ = trigger;
-  }
-
-  void set_feedback(float feedback) {
-    feedback_ = feedback;
-  }
-
-  void set_damp(float damp) {
-    for (int v=0; v<2; v++)
-      for (int p=0; p<4; p++)
-        lp_[p][v].set_f_q<FREQUENCY_FAST>
-          (damp, 0.4f);
   }
 
   void set_burst_damp(float burst_damp) {
@@ -275,10 +293,6 @@ class Resonator {
     burst_duration_ = burst_duration;
   }
 
-  void set_chord(float chord) {
-    chord_ = chord;
-  }
-
   void set_spread_amount(float spread_amount) {
     spread_amount_ = spread_amount;
   }
@@ -291,10 +305,6 @@ class Resonator {
     separation_ = separation;
   }
 
-  void set_narrow(float narrow) {
-    narrow_ = narrow;
-  }
-
   void set_freeze(float freeze) {
     previous_freeze_ = freeze_;
     freeze_ = freeze;
@@ -304,10 +314,10 @@ class Resonator {
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
 
-  float feedback_;
-  float narrow_;
-  float base_pitch_;
-  float chord_;
+  float feedback_[2];
+  float pitch_[2];
+  float chord_[2];
+  float narrow_[2];
   float spread_amount_;
   float stereo_;
   float separation_;
@@ -315,8 +325,6 @@ class Resonator {
   float burst_damp_;
   float burst_comb_;
   float burst_duration_;
-
-  float pitch_[2];
 
   float spread_delay_[3];
 
