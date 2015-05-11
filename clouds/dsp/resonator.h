@@ -130,6 +130,7 @@ class Resonator {
     E::DelayLine<Memory, 10> c31;
     E::Context c;
 
+    /* switch active voice */
     if (trigger_ && !previous_trigger_ && !freeze_) {
       voice_ = !voice_;
     }
@@ -139,24 +140,30 @@ class Resonator {
       voice_ = !voice_;
     }
 
-    float c_delay[4][2];
-
-    for (int v=0; v<2; v++) {
-      c_delay[0][v] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[v]);
-      CONSTRAIN(c_delay[0][v], 0, MAX_COMB);
-      for (int p=1; p<4; p++) {
-        float pitch = InterpolatePlateau(chords[p-1], chord_[v], 16);
-        c_delay[p][v] = c_delay[0][v] / SemitonesToRatio(pitch);
-        CONSTRAIN(c_delay[p][v], 0, MAX_COMB);
-        float freq = 1.0f / c_delay[p][v];
-        bp1_[p][v].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_[v]);
-        bp2_[p][v].set(bp1_[p][v]);
-      }
+    /* set comb filters pitch */
+    comb_period_[0][voice_] = 32000.0f / BASE_PITCH / SemitonesToRatio(pitch_[voice_]);
+    CONSTRAIN(comb_period_[0][voice_], 0, MAX_COMB);
+    for (int p=1; p<4; p++) {
+      float pitch = InterpolatePlateau(chords[p-1], chord_[voice_], 16);
+      comb_period_[p][voice_] = comb_period_[0][voice_] / SemitonesToRatio(pitch);
+      CONSTRAIN(comb_period_[p][voice_], 0, MAX_COMB);
     }
 
+    /* set LP/BP filters frequencies and feedback */
+    for (int p=0; p<4; p++) {
+      float freq = 1.0f / comb_period_[p][voice_];
+      bp1_[p][voice_].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_[voice_]);
+      bp2_[p][voice_].set(bp1_[p][voice_]);
+      float lp_freq = (2.0f * freq + 1.0f) * damp_[voice_];
+      CONSTRAIN(lp_freq, 0.0f, 1.0f);
+      lp_[p][voice_].set_f_q<FREQUENCY_ACCURATE>(lp_freq, 0.4f);
+      comb_feedback_[p][voice_] = feedback_[voice_];
+    }
+
+    /* initiate burst if trigger */
     if (trigger_ && !previous_trigger_) {
       previous_trigger_ = trigger_;
-      burst_time_ = c_delay[0][voice_];
+      burst_time_ = comb_period_[0][voice_];
       burst_time_ *= 2.0f * burst_duration_;
 
       for (int i=0; i<3; i++)
@@ -195,7 +202,8 @@ class Resonator {
         c.Load(0.0f);                                                   \
         c.Read(bd ## voice, pre * spread_amount_, vol);                 \
         c.InterpolateHermite(c ## part ## voice,                        \
-                             c_delay[part][voice], feedback_[voice]);   \
+                             comb_period_[part][voice],                 \
+                             comb_feedback_[part][voice]);              \
         float acc;                                                      \
         c.Write(acc);                                                   \
         acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
@@ -272,8 +280,7 @@ class Resonator {
   }
 
   void set_damp(float damp) {
-    for (int p=0; p<4; p++)
-      lp_[p][voice_].set_f_q<FREQUENCY_FAST>(damp, 0.4f);
+    damp_[voice_] = damp;
   }
 
   void set_trigger(bool trigger) {
@@ -314,10 +321,12 @@ class Resonator {
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
 
+  /* parameters: */
   float feedback_[2];
   float pitch_[2];
   float chord_[2];
   float narrow_[2];
+  float damp_[2];
   float spread_amount_;
   float stereo_;
   float separation_;
@@ -325,8 +334,13 @@ class Resonator {
   float burst_damp_;
   float burst_comb_;
   float burst_duration_;
+  int16_t trigger_, previous_trigger_;
+  int16_t freeze_, previous_freeze_;
 
+  /* internal states: */
   float spread_delay_[3];
+  float comb_period_[4][2];
+  float comb_feedback_[4][2];
 
   float hp_[4][2];
   Svf lp_[4][2];
@@ -334,8 +348,6 @@ class Resonator {
   Svf bp2_[4][2];
   Svf burst_lp_;
 
-  int16_t trigger_, previous_trigger_;
-  int16_t freeze_, previous_freeze_;
   int32_t voice_, __align1;
 
 
