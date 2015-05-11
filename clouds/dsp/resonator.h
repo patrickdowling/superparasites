@@ -210,7 +210,7 @@ class Resonator {
         acc = bp1_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
         acc = bp2_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
         c.Load(acc);                                                    \
-        c.Hp(hp_[part][voice], 20.0f / 32000.0f);                       \
+        c.Hp(hp_[part][voice], 10.0f / 32000.0f);                       \
         c.Write(acc, 0.5f);                                             \
         c.SoftLimit();                                                  \
         c.Write(acc, 2.0f);                                             \
@@ -230,32 +230,32 @@ class Resonator {
       COMB(spread_delay_[2], 3, 1, voice_);
 
       /* left mix */
-      c.Read(c00, (1.0f + narrow_[0]) *
+      c.Read(c00, (1.0f + 0.5f * narrow_[0]) *
              0.25f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c10, (1.0f + narrow_[0]) *
+      c.Read(c10, (1.0f + 0.5f * narrow_[0]) *
              (0.25f + 0.25f * stereo_) * (1.0f - separation_));
-      c.Read(c20, (1.0f + narrow_[0]) *
+      c.Read(c20, (1.0f + 0.5f * narrow_[0]) *
              (0.25f * (1.0f - stereo_)) * (1.0f - separation_));
-      c.Read(c30, (1.0f + narrow_[0]) *
+      c.Read(c30, (1.0f + 0.5f * narrow_[0]) *
              (0.25f + 0.25f * stereo_) * (1.0f - separation_));
-      c.Read(c01, (1.0f + narrow_[1]) * (0.25f + 0.25f * stereo_));
-      c.Read(c11, (1.0f + narrow_[1]) * 0.25f * (1.0f - stereo_));
-      c.Read(c21, (1.0f + narrow_[1]) * (0.25f + 0.25 * stereo_));
-      c.Read(c31, (1.0f + narrow_[1]) * 0.25f * (1.0f - stereo_));
+      c.Read(c01, (1.0f + 0.5f * narrow_[1]) * (0.25f + 0.25f * stereo_));
+      c.Read(c11, (1.0f + 0.5f * narrow_[1]) * 0.25f * (1.0f - stereo_));
+      c.Read(c21, (1.0f + 0.5f * narrow_[1]) * (0.25f + 0.25 * stereo_));
+      c.Read(c31, (1.0f + 0.5f * narrow_[1]) * 0.25f * (1.0f - stereo_));
       c.Write(in_out->l, 0.0f);
 
       /* right mix */
-      c.Read(c00, (1.0f + narrow_[0]) * (0.25f + 0.25f * stereo_));
-      c.Read(c10, (1.0f + narrow_[0]) * 0.25f * (1.0f - stereo_));
-      c.Read(c20, (1.0f + narrow_[0]) * (0.25f + 0.25f * stereo_));
-      c.Read(c30, (1.0f + narrow_[0]) * 0.25f * (1.0f - stereo_));
-      c.Read(c01, (1.0f + narrow_[1]) *
+      c.Read(c00, (1.0f + 0.5f * narrow_[0]) * (0.25f + 0.25f * stereo_));
+      c.Read(c10, (1.0f + 0.5f * narrow_[0]) * 0.25f * (1.0f - stereo_));
+      c.Read(c20, (1.0f + 0.5f * narrow_[0]) * (0.25f + 0.25f * stereo_));
+      c.Read(c30, (1.0f + 0.5f * narrow_[0]) * 0.25f * (1.0f - stereo_));
+      c.Read(c01, (1.0f + 0.5f * narrow_[1]) *
              0.25f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c11, (1.0f + narrow_[1]) *
+      c.Read(c11, (1.0f + 0.5f * narrow_[1]) *
              (0.25f + 0.25f * stereo_) * (1.0f - separation_));
-      c.Read(c21, (1.0f + narrow_[1]) *
+      c.Read(c21, (1.0f + 0.5f * narrow_[1]) *
              0.25f * (1.0f - stereo_) * (1.0f - separation_));
-      c.Read(c31, (1.0f + narrow_[1]) *
+      c.Read(c31, (1.0f + 0.5f * narrow_[1]) *
              (0.25f + 0.25f * stereo_) * (1.0f - separation_));
       c.Write(in_out->r, 0.0f);
 

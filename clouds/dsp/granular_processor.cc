@@ -231,15 +231,17 @@ void GranularProcessor::ProcessGranular(
       if (t < 0.5f) {
         resonator_.set_narrow(0.001f);
         float l = 1.0f - (0.5f - t) / 0.5f;
-        resonator_.set_damp(l);
+        resonator_.set_damp(l * l);
       } else {
         resonator_.set_damp(1.0f);
-        float n = (t - 0.5f) / 0.5f * 1.5f;
-        resonator_.set_narrow(0.001f + n * n * n * n * n * n);
+        float n = (t - 0.5f) / 0.5f * 1.40f;
+        n *= n * n * n;
+        resonator_.set_narrow(0.001f + n * n);
       }
 
       float d = parameters_.density;
-      resonator_.set_feedback(d * d * d * d * d * d * d * d * 1.04f);
+      d *= d * d * d * d * d;
+      resonator_.set_feedback(d * d * d * d * d * d * 20.0f);
 
       resonator_.Process(output, size);
     }
