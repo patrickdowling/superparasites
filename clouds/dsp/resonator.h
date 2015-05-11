@@ -157,7 +157,7 @@ class Resonator {
       float lp_freq = (2.0f * freq + 1.0f) * damp_[voice_];
       CONSTRAIN(lp_freq, 0.0f, 1.0f);
       lp_[p][voice_].set_f_q<FREQUENCY_ACCURATE>(lp_freq, 0.4f);
-      comb_feedback_[p][voice_] = feedback_[voice_];
+      comb_feedback_[p][voice_] = powf(feedback_[voice_], comb_period_[p][voice_] / 32000.0f);
     }
 
     /* initiate burst if trigger */
