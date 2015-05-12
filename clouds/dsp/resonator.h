@@ -83,6 +83,7 @@ class Resonator {
       chord_[v] = 0.0f;
       feedback_[v] = 0.0f;
       narrow_[v] = 0.001f;
+      harmonicity_[v] = 1.0f;
     }
     spread_amount_ = 0.0f;
     stereo_ = 0.0f;
@@ -203,7 +204,10 @@ class Resonator {
         c.Read(bd ## voice, pre * spread_amount_, vol);                 \
         c.InterpolateHermite(c ## part ## voice,                        \
                              comb_period_[part][voice],                 \
-                             comb_feedback_[part][voice]);              \
+                             comb_feedback_[part][voice] * 0.7f);       \
+        c.Interpolate(c ## part ## voice,                               \
+                      comb_period_[part][voice] * harmonicity_[voice],  \
+                      comb_feedback_[part][voice] * 0.3f);              \
         float acc;                                                      \
         c.Write(acc);                                                   \
         acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
@@ -317,6 +321,10 @@ class Resonator {
     freeze_ = freeze;
   }
 
+  void set_harmonicity(float harmonicity) {
+    harmonicity_[voice_] = harmonicity;
+  }
+
  private:
   typedef FxEngine<16384, FORMAT_12_BIT> E;
   E engine_;
@@ -327,6 +335,7 @@ class Resonator {
   float chord_[2];
   float narrow_[2];
   float damp_[2];
+  float harmonicity_[2];
   float spread_amount_;
   float stereo_;
   float separation_;

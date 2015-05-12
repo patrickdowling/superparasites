@@ -220,12 +220,13 @@ void GranularProcessor::ProcessGranular(
       resonator_.set_burst_damp(parameters_.position);
       resonator_.set_burst_comb((1.0f - parameters_.position));
       resonator_.set_burst_duration((1.0f - parameters_.position));
-      resonator_.set_spread_amount(parameters_.feedback);
+      resonator_.set_spread_amount(parameters_.reverb);
       resonator_.set_stereo(parameters_.stereo_spread < 0.5f ? 0.0f :
         (parameters_.stereo_spread - 0.5f) * 2.0f);
       resonator_.set_separation(parameters_.stereo_spread > 0.5f ? 0.0f :
                                 (0.5f - parameters_.stereo_spread) * 2.0f);
       resonator_.set_freeze(parameters_.freeze);
+      resonator_.set_harmonicity(1.0f - (parameters_.feedback * 0.5f));
 
       float t = parameters_.texture;
       if (t < 0.5f) {
@@ -380,7 +381,8 @@ void GranularProcessor::Process(
   copy(&out_[0], &out_[size], &fb_[0]);
   
   // Apply the simple post-processing reverb.
-  if (playback_mode_ != PLAYBACK_MODE_REVERB) {
+  if (playback_mode_ != PLAYBACK_MODE_REVERB &&
+      playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     float reverb_amount = parameters_.reverb * 0.95f;
     reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
     CONSTRAIN(reverb_amount, 0.0f, 1.0f);
