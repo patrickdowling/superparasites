@@ -83,6 +83,7 @@ class Resonator {
       chord_[v] = 0.0f;
       feedback_[v] = 0.0f;
       narrow_[v] = 0.001f;
+      damp_[v] = 1.0f;
       harmonicity_[v] = 1.0f;
     }
     spread_amount_ = 0.0f;
@@ -90,6 +91,9 @@ class Resonator {
     burst_time_ = 0.0f;
     burst_damp_ = 1.0f;
     burst_comb_ = 1.0f;
+    burst_duration_ = 0.0f;
+    trigger_ = previous_trigger_ = 0.0f;
+    freeze_ = previous_freeze_ = 0.0f;
     voice_ = false;
     for (int i=0; i<3; i++)
       spread_delay_[i] = Random::GetFloat() * 3999;
@@ -99,6 +103,9 @@ class Resonator {
         lp_[p][v].Init();
         bp1_[p][v].Init();
         bp2_[p][v].Init();
+        hp_[p][v] = 0.0f;
+        comb_period_[p][v] = 0.0f;
+        comb_feedback_[p][v] = 0.0f;
       }
   }
 
