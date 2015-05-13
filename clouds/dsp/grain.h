@@ -39,6 +39,9 @@
 
 namespace clouds {
 
+const float slope_response[4] = { 1.3f, 1.0f, 1.0f, 1.0f };
+const float bias_response[4] = { 1.0f, 2.0f - 1.0f/500.0f, 1.0f/500.0f, 1.0f };
+
 enum GrainQuality {
   GRAIN_QUALITY_LOW,
   GRAIN_QUALITY_MEDIUM,
@@ -49,6 +52,17 @@ class Grain {
  public:
   Grain() { }
   ~Grain() { }
+
+  inline float InterpolatePlateau(const float* table, float index, float size) {
+    index *= size;
+    MAKE_INTEGRAL_FRACTIONAL(index)
+      float a = table[index_integral];
+    float b = table[index_integral + 1];
+    if (index_fractional < 1.0f/1.1f)
+      return a + (b - a) * index_fractional * 1.1f;
+    else
+      return b;
+  }
 
   void Init() {
     active_ = false;
@@ -73,19 +87,11 @@ class Grain {
     envelope_phase_ = 0.0f;
     envelope_phase_increment_ = 2.0f / static_cast<float>(width);
 
-    if (window_shape >= 0.333f)
-      envelope_slope_ = 1.0f;
-    else
-      envelope_slope_ = 0.333f / (window_shape + 0.0001f);
-
-    if (window_shape < 0.333f)
-      envelope_bias_ = - 2.0f * window_shape + 1.0f;
-    else if (window_shape < 0.666f)
-      envelope_bias_ = 6.0f * window_shape - 2.0f;
-    else
-      envelope_bias_ = 4.0f - 3.0f * window_shape;
-    /* smooth out the response of bias: */
-    envelope_bias_ = SoftCurve(envelope_bias_ * 2.0f / 1.971f - 0.015f);
+    envelope_slope_ = InterpolatePlateau(slope_response, window_shape, 3);
+    envelope_slope_ *= envelope_slope_ * envelope_slope_;
+    envelope_slope_ *= envelope_slope_ * envelope_slope_;
+    envelope_slope_ *= envelope_slope_ * envelope_slope_;
+    envelope_bias_ = InterpolatePlateau(bias_response, window_shape, 3);
 
     active_ = true;
     gain_l_ = gain_l;
@@ -169,13 +175,6 @@ class Grain {
   
   inline GrainQuality recommended_quality() const {
     return recommended_quality_;
-  }
-
-  inline float SoftCurve (float x) {
-  /* (2x + 1) ^ 3 / (9 (4 (x-2) x + 7)) */
-    float a = 2 * x + 1;
-    float b = 9 * (4 * (x - 2) * x + 7);
-    return a * a * a / b;
   }
 
  private:
