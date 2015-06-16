@@ -65,26 +65,35 @@ class FullReverb {
     // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
     // Modulation is applied in the loop of the first diffuser AP for additional
     // smearing; and to the two long delays for a slow shimmer/chorus effect.
-    typedef E::Reserve<113,
+    typedef
+      E::Reserve<113,
       E::Reserve<162,
       E::Reserve<241,
       E::Reserve<399,
+      E::Reserve<79,
+      E::Reserve<107,
+      E::Reserve<151,
+      E::Reserve<257,
       E::Reserve<1653,
       E::Reserve<2038,
       E::Reserve<3411,
       E::Reserve<1913,
       E::Reserve<1663,
-      E::Reserve<4782> > > > > > > > > > Memory;
-    E::DelayLine<Memory, 0> ap1;
-    E::DelayLine<Memory, 1> ap2;
-    E::DelayLine<Memory, 2> ap3;
-    E::DelayLine<Memory, 3> ap4;
-    E::DelayLine<Memory, 4> dap1a;
-    E::DelayLine<Memory, 5> dap1b;
-    E::DelayLine<Memory, 6> del1;
-    E::DelayLine<Memory, 7> dap2a;
-    E::DelayLine<Memory, 8> dap2b;
-    E::DelayLine<Memory, 9> del2;
+      E::Reserve<4177> > > > > > > > > > > > > > Memory;
+    E::DelayLine<Memory, 0> ap1l;
+    E::DelayLine<Memory, 1> ap2l;
+    E::DelayLine<Memory, 2> ap3l;
+    E::DelayLine<Memory, 3> ap4l;
+    E::DelayLine<Memory, 4> ap1r;
+    E::DelayLine<Memory, 5> ap2r;
+    E::DelayLine<Memory, 6> ap3r;
+    E::DelayLine<Memory, 7> ap4r;
+    E::DelayLine<Memory, 8> dap1a;
+    E::DelayLine<Memory, 9> dap1b;
+    E::DelayLine<Memory, 10> del1;
+    E::DelayLine<Memory, 11> dap2a;
+    E::DelayLine<Memory, 12> dap2b;
+    E::DelayLine<Memory, 13> del2;
     E::Context c;
 
     const float kap = diffusion_;
@@ -100,7 +109,8 @@ class FullReverb {
       lfo_[i].set_period((uint32_t)period);
 
     while (size--) {
-      float apout = 0.0f;
+      float apout1 = 0.0f;
+      float apout2 = 0.0f;
       engine_.Start(&c);
 
       // Smooth parameters to avoid delay glitches
@@ -146,27 +156,38 @@ class FullReverb {
         c.InterpolateHermite(del, offset, gain);                        \
       }
 
-      // Smear AP1 inside the loop.
-      INTERPOLATE_LFO(ap1, lfo_[0], 1.0f);
-      c.Write(ap1, 100 * smooth_size_, 0.0f);
-
-      c.Read(in_out->l + in_out->r, smooth_input_gain_);
-
+      c.Read(in_out->l, smooth_input_gain_);
       // Diffuse through 4 allpasses.
-      INTERPOLATE_LFO(ap1, lfo_[1], kap);
-      c.WriteAllPass(ap1, -kap);
-      INTERPOLATE_LFO(ap2, lfo_[2], kap);
-      c.WriteAllPass(ap2, -kap);
-      INTERPOLATE_LFO(ap3, lfo_[3], kap);
-      c.WriteAllPass(ap3, -kap);
-      INTERPOLATE_LFO(ap4, lfo_[4], kap);
-      c.WriteAllPass(ap4, -kap);
-      c.Write(apout);
+      INTERPOLATE_LFO(ap1l, lfo_[1], kap);
+      c.WriteAllPass(ap1l, -kap);
+      INTERPOLATE_LFO(ap2l, lfo_[2], kap);
+      c.WriteAllPass(ap2l, -kap);
+      INTERPOLATE_LFO(ap3l, lfo_[3], kap);
+      c.WriteAllPass(ap3l, -kap);
+      INTERPOLATE_LFO(ap4l, lfo_[4], kap);
+      c.WriteAllPass(ap4l, -kap);
+      c.Write(apout1, 0.0f);
+
+      c.Read(in_out->r, smooth_input_gain_);
+      // Diffuse through 4 allpasses.
+      INTERPOLATE_LFO(ap1r, lfo_[1], kap);
+      c.WriteAllPass(ap1r, -kap);
+      INTERPOLATE_LFO(ap2r, lfo_[2], kap);
+      c.WriteAllPass(ap2r, -kap);
+      INTERPOLATE_LFO(ap3r, lfo_[3], kap);
+      c.WriteAllPass(ap3r, -kap);
+      INTERPOLATE_LFO(ap4r, lfo_[4], kap);
+      c.WriteAllPass(ap4r, -kap);
+      c.Write(apout2, 0.0f);
 
       // Main reverb loop.
-      c.Load(apout);
+      c.Load(apout1);
 
-      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_);
+      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
+      /* blend in the pitch shifted feedback */
+      c.InterpolateHermite(del2, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
+      c.InterpolateHermite(del2, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
+
       c.Lp(lp_1, smooth_lp_);
       c.Hp(hp_1, smooth_hp_);
       c.SoftLimit();
@@ -177,7 +198,7 @@ class FullReverb {
       c.Write(del1, 1.0f);
       c.Write(in_out->l, 0.0f);
 
-      c.Load(apout);
+      c.Load(apout2);
 
       INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
