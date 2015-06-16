@@ -124,30 +124,26 @@ class FullReverb {
       // compute windowing info for the pitch shifter
       float ps_size = 128.0f + (3410.0f - 128.0f) * smooth_size_;
       phase_ += (1.0f - ratio_) / ps_size;
-      if (phase_ >= 1.0f) {
-        phase_ -= 1.0f;
-      }
-      if (phase_ <= 0.0f) {
-        phase_ += 1.0f;
-      }
+      if (phase_ >= 1.0f) phase_ -= 1.0f;
+      if (phase_ <= 0.0f) phase_ += 1.0f;
       tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
       phase = phase_ * ps_size;
       half = phase + ps_size * 0.5f;
-      if (half >= ps_size) {
-        half -= ps_size;
-      }
+      if (half >= ps_size) half -= ps_size;
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \
       {                                                                 \
         float offset = (del.length - 1) * smooth_size_;                 \
         offset += lfo.Next() * smooth_mod_amount_;                      \
-        CONSTRAIN(offset, 0, del.length - 1);                           \
-        c.InterpolateHermite(del, offset, gain);                               \
+        CONSTRAIN(offset, 1.0f, del.length - 1);                        \
+        c.InterpolateHermite(del, offset, gain);                        \
       }
 
 #define INTERPOLATE(del, gain)                                          \
       {                                                                 \
-        c.InterpolateHermite(del, (del.length - 1) * smooth_size_, gain);      \
+        float offset = (del.length - 1) * smooth_size_;                 \
+        CONSTRAIN(offset, 1.0f, del.length - 1);                        \
+        c.InterpolateHermite(del, offset, gain);                        \
       }
 
       // Smear AP1 inside the loop.
