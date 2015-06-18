@@ -71,6 +71,9 @@ void GranularProcessor::ResetFilters() {
   }
 }
 
+#define LIMIT 0.1f
+#define SLEW 0.02f
+
 void GranularProcessor::ProcessGranular(
     FloatFrame* input,
     FloatFrame* output,
@@ -184,16 +187,24 @@ void GranularProcessor::ProcessGranular(
         full_reverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
         full_reverb_.set_mod_amount(parameters_.reverb * 300.0f);
-        full_reverb_.set_ratio(SemitonesToRatio(roundf(parameters_.pitch * 0.5f)));
-        full_reverb_.set_pitch_shift_amount(0.5f);
+        full_reverb_.set_ratio(SemitonesToRatio(parameters_.pitch));
+
+        float x = parameters_.pitch;
+        float wet =
+          x < -LIMIT ? 1.0f :
+          x < -LIMIT + SLEW ? 1.0f - (x + LIMIT) / SLEW:
+          x < LIMIT - SLEW ? 0.0f :
+          x < LIMIT ? 1.0f + (x - LIMIT) / SLEW:
+          1.0f;
+        full_reverb_.set_pitch_shift_amount(wet);
 
         if (parameters_.freeze) {
           full_reverb_.set_input_gain(0.0f);
-          full_reverb_.set_time(1.0f);
+          full_reverb_.set_decay(1.0f);
           full_reverb_.set_lp(1.0f);
           full_reverb_.set_hp(0.0f);
         } else {
-          full_reverb_.set_time(parameters_.density * 1.3f
+          full_reverb_.set_decay(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
           full_reverb_.set_input_gain(0.5f);
           float lp = parameters_.stereo_spread < 0.5f ?
@@ -331,9 +342,6 @@ void GranularProcessor::Process(
     diffuser_.Process(out_, size);
   }
 
-#define LIMIT 0.1f
-#define SLEW 0.02f
-  
   if (playback_mode_ == PLAYBACK_MODE_LOOPING_DELAY &&
       (!parameters_.freeze || looper_.synchronized())) {
     pitch_shifter_.set_ratio(SemitonesToRatio(parameters_.pitch));

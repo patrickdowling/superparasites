@@ -45,16 +45,16 @@ class FullReverb {
     engine_.Init(buffer);
     diffusion_ = 0.625f;
     size_ = 1.0f;
-    smooth_mod_amount_ = mod_amount_ = 0.0f;
-    smooth_mod_rate_ = mod_rate_ = 0.0f;
-    smooth_size_ = size_ = 0.5f;
-    smooth_input_gain_ = input_gain_ = 1.0f;
-    smooth_time_ = reverb_time_ = 0.5f;
-    smooth_lp_ = lp_ = 1.0f;
-    smooth_hp_ = hp_= 0.0f;
+    mod_amount_ = 0.0f;
+    mod_rate_ = 0.0f;
+    size_ = 0.5f;
+    input_gain_ = 1.0f;
+    decay_ = 0.5f;
+    lp_ = 1.0f;
+    hp_= 0.0f;
     phase_ = 0.0f;
     ratio_ = 0.0f;
-    pitch_shift_amount_ = smooth_pitch_shift_amount_ = 1.0f;
+    pitch_shift_amount_ = 1.0f;
     level_ = 0.0f;
     for (int i=0; i<9; i++)
       lfo_[i].Init();
@@ -104,7 +104,7 @@ class FullReverb {
     float hp_2 = hp_decay_2_;
 
     /* Set frequency of LFOs */
-    float period = 1.0f / (fabs(smooth_mod_rate_) + 0.001f) * 32000.0f;
+    float period = 1.0f / (mod_rate_ + 0.001f) * 32000.0f;
     for (int i=0; i<9; i++)
       lfo_[i].set_period((uint32_t)period);
 
@@ -115,17 +115,6 @@ class FullReverb {
 
       // Smooth parameters to avoid delay glitches
       ONE_POLE(smooth_size_, size_, 0.01f);
-      ONE_POLE(smooth_mod_amount_, mod_amount_, 0.005f);
-      ONE_POLE(smooth_mod_rate_, mod_rate_, 0.005f);
-      ONE_POLE(smooth_input_gain_, input_gain_, 0.05f);
-      ONE_POLE(smooth_time_, reverb_time_, 0.005f);
-      ONE_POLE(smooth_lp_, lp_, 0.05f);
-      ONE_POLE(smooth_hp_, hp_, 0.05f);
-      /* disables pitch shifter when pitch is unchanged, to avoid
-       * weird chorus effects */
-      const float pitch_shift_amount =
-        ratio_ <= 1.0001 && ratio_ >= 0.999 ? 0.0 : pitch_shift_amount_;
-      ONE_POLE(smooth_pitch_shift_amount_, pitch_shift_amount, 0.05f);
 
       float tri;
       float phase;
@@ -144,7 +133,7 @@ class FullReverb {
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \
       {                                                                 \
         float offset = (del.length - 1) * smooth_size_;                 \
-        offset += lfo.Next() * smooth_mod_amount_;                      \
+        offset += lfo.Next() * mod_amount_;                      \
         CONSTRAIN(offset, 1.0f, del.length - 1);                        \
         c.InterpolateHermite(del, offset, gain);                        \
       }
@@ -156,7 +145,7 @@ class FullReverb {
         c.InterpolateHermite(del, offset, gain);                        \
       }
 
-      c.Read(in_out->l, smooth_input_gain_);
+      c.Read(in_out->l, input_gain_);
       // Diffuse through 4 allpasses.
       INTERPOLATE_LFO(ap1l, lfo_[1], kap);
       c.WriteAllPass(ap1l, -kap);
@@ -168,7 +157,7 @@ class FullReverb {
       c.WriteAllPass(ap4l, -kap);
       c.Write(apout1, 0.0f);
 
-      c.Read(in_out->r, smooth_input_gain_);
+      c.Read(in_out->r, input_gain_);
       // Diffuse through 4 allpasses.
       INTERPOLATE_LFO(ap1r, lfo_[1], kap);
       c.WriteAllPass(ap1r, -kap);
@@ -183,13 +172,13 @@ class FullReverb {
       // Main reverb loop.
       c.Load(apout1);
 
-      INTERPOLATE_LFO(del2, lfo_[5], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
+      INTERPOLATE_LFO(del2, lfo_[5], decay_ * (1.0f - pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
-      c.InterpolateHermite(del2, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
-      c.InterpolateHermite(del2, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
+      c.InterpolateHermite(del2, phase, tri * decay_ * pitch_shift_amount_);
+      c.InterpolateHermite(del2, half, (1.0f - tri) * decay_ * pitch_shift_amount_);
 
-      c.Lp(lp_1, smooth_lp_);
-      c.Hp(hp_1, smooth_hp_);
+      c.Lp(lp_1, lp_);
+      c.Hp(hp_1, hp_);
       c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
@@ -200,12 +189,12 @@ class FullReverb {
 
       c.Load(apout2);
 
-      INTERPOLATE_LFO(del1, lfo_[7], smooth_time_ * (1.0f - smooth_pitch_shift_amount_));
+      INTERPOLATE_LFO(del1, lfo_[7], decay_ * (1.0f - pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
-      c.InterpolateHermite(del1, phase, tri * smooth_time_ * smooth_pitch_shift_amount_);
-      c.InterpolateHermite(del1, half, (1.0f - tri) * smooth_time_ * smooth_pitch_shift_amount_);
-      c.Lp(lp_2, smooth_lp_);
-      c.Hp(hp_2, smooth_hp_);
+      c.InterpolateHermite(del1, phase, tri * decay_ * pitch_shift_amount_);
+      c.InterpolateHermite(del1, half, (1.0f - tri) * decay_ * pitch_shift_amount_);
+      c.Lp(lp_2, lp_);
+      c.Hp(hp_2, hp_);
       c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
@@ -227,8 +216,8 @@ class FullReverb {
     input_gain_ = input_gain;
   }
 
-  inline void set_time(float reverb_time) {
-    reverb_time_ = reverb_time;
+  inline void set_decay(float decay) {
+    decay_ = decay;
   }
 
   inline void set_diffusion(float diffusion) {
@@ -268,22 +257,14 @@ class FullReverb {
   E engine_;
 
   float input_gain_;
-  float smooth_input_gain_;
-  float reverb_time_;
-  float smooth_time_;
+  float decay_;
   float diffusion_;
   float lp_;
   float hp_;
-  float smooth_lp_;
-  float smooth_hp_;
-  float size_;
-  float smooth_size_;
+  float size_, smooth_size_;
   float mod_amount_;
-  float smooth_mod_amount_;
   float mod_rate_;
-  float smooth_mod_rate_;
   float pitch_shift_amount_;
-  float smooth_pitch_shift_amount_;
 
   float lp_decay_1_;
   float lp_decay_2_;
