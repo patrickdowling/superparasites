@@ -184,7 +184,7 @@ class FullReverb {
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
       c.WriteAllPass(dap1b, -kap);
-      c.Write(del1, 1.0f);
+      c.Write(del1, 2.0f);
       c.Write(in_out->l, 0.0f);
 
       c.Load(apout2);
@@ -200,7 +200,7 @@ class FullReverb {
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
       c.WriteAllPass(dap2b, kap);
-      c.Write(del2, 1.0f);
+      c.Write(del2, 2.0f);
       c.Write(in_out->r, 0.0f);
 
       ++in_out;
