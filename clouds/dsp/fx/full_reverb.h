@@ -114,18 +114,15 @@ class FullReverb {
       // Smooth parameters to avoid delay glitches
       ONE_POLE(smooth_size_, size_, 0.01f);
 
-      float tri;
-      float phase;
-      float half;
-
       // compute windowing info for the pitch shifter
       float ps_size = 128.0f + (3410.0f - 128.0f) * smooth_size_;
       phase_ += (1.0f - ratio_) / ps_size;
       if (phase_ >= 1.0f) phase_ -= 1.0f;
       if (phase_ <= 0.0f) phase_ += 1.0f;
-      tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
-      phase = phase_ * ps_size;
-      half = phase + ps_size * 0.5f;
+      float tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
+      tri = Interpolate(lut_window, tri, LUT_WINDOW_SIZE-1);
+      float phase = phase_ * ps_size;
+      float half = phase + ps_size * 0.5f;
       if (half >= ps_size) half -= ps_size;
 
 #define INTERPOLATE_LFO(del, lfo, gain)                                 \

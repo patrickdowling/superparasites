@@ -30,7 +30,9 @@
 #define CLOUDS_DSP_FX_PITCH_SHIFTER_H_
 
 #include "stmlib/stmlib.h"
+#include "stmlib/dsp/dsp.h"
 
+#include "clouds/resources.h"
 #include "clouds/dsp/frame.h"
 #include "clouds/dsp/fx/fx_engine.h"
 
@@ -74,6 +76,7 @@ class PitchShifter {
       phase_ += 1.0f;
     }
     float tri = 2.0f * (phase_ >= 0.5f ? 1.0f - phase_ : phase_);
+    tri = stmlib::Interpolate(lut_window, tri, LUT_WINDOW_SIZE-1);
     float phase = phase_ * size_;
     float half = phase + size_ * 0.5f;
     if (half >= size_) {
