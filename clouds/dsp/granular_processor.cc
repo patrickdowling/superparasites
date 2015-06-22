@@ -71,9 +71,6 @@ void GranularProcessor::ResetFilters() {
   }
 }
 
-#define LIMIT 0.1f
-#define SLEW 0.02f
-
 void GranularProcessor::ProcessGranular(
     FloatFrame* input,
     FloatFrame* output,
@@ -350,11 +347,13 @@ void GranularProcessor::Process(
     pitch_shifter_.set_ratio(SemitonesToRatio(parameters_.pitch));
     pitch_shifter_.set_size(parameters_.size);
     float x = parameters_.pitch;
+    const float limit = 0.7f;
+    const float slew = 0.4f;
     float wet =
-      x < -LIMIT ? 1.0f :
-      x < -LIMIT + SLEW ? 1.0f - (x + LIMIT) / SLEW:
-      x < LIMIT - SLEW ? 0.0f :
-      x < LIMIT ? 1.0f + (x - LIMIT) / SLEW:
+      x < -limit ? 1.0f :
+      x < -limit + slew ? 1.0f - (x + limit) / slew:
+      x < limit - slew ? 0.0f :
+      x < limit ? 1.0f + (x - limit) / slew:
       1.0f;
     pitch_shifter_.set_dry_wet(wet);
     pitch_shifter_.Process(out_, size);
