@@ -190,11 +190,14 @@ void GranularProcessor::ProcessGranular(
         full_reverb_.set_ratio(SemitonesToRatio(parameters_.pitch));
 
         float x = parameters_.pitch;
+        const float limit = 0.7f;
+        const float slew = 0.4f;
+
         float wet =
-          x < -LIMIT ? 1.0f :
-          x < -LIMIT + SLEW ? 1.0f - (x + LIMIT) / SLEW:
-          x < LIMIT - SLEW ? 0.0f :
-          x < LIMIT ? 1.0f + (x - LIMIT) / SLEW:
+          x < -limit ? 1.0f :
+          x < -limit + slew ? 1.0f - (x + limit) / slew:
+          x < limit - slew ? 0.0f :
+          x < limit ? 1.0f + (x - limit) / slew:
           1.0f;
         full_reverb_.set_pitch_shift_amount(wet);
 
