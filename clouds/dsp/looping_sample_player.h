@@ -97,7 +97,7 @@ class LoopingSamplePlayer {
       tap_delay_counter_ = 0;
     }
 
-    float target_delay = parameters.position * max_delay;
+    float target_delay = parameters.position * parameters.position * max_delay;
     if (synchronized_) {
       int index = roundf(parameters.position *
                          static_cast<float>(kMultDivSteps));
@@ -111,7 +111,7 @@ class LoopingSamplePlayer {
     if (!parameters.freeze) {
       while (size--) {
         float error = (target_delay - current_delay_);
-        float delay = current_delay_ + 0.00005f * error;
+        float delay = current_delay_ + 0.001f * error;
         current_delay_ = delay;
         int32_t delay_int = (buffer->head() - 4 - size + buffer->size()) << 12;
         delay_int -= static_cast<int32_t>(delay * 4096.0f);
