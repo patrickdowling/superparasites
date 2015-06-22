@@ -109,8 +109,6 @@ class FullReverb {
       lfo_[i].set_period((uint32_t)period);
 
     while (size--) {
-      float apout1 = 0.0f;
-      float apout2 = 0.0f;
       engine_.Start(&c);
 
       // Smooth parameters to avoid delay glitches
@@ -145,6 +143,10 @@ class FullReverb {
         c.InterpolateHermite(del, offset, gain);                        \
       }
 
+      // Smear AP1 inside the loop.
+      c.Interpolate(ap1l, 10.0f, LFO_1, 60.0f, 1.0f);
+      c.Write(ap1l, 100, 0.0f);
+
       c.Read(in_out->l, input_gain_);
       // Diffuse through 4 allpasses.
       INTERPOLATE_LFO(ap1l, lfo_[1], kap);
@@ -155,22 +157,6 @@ class FullReverb {
       c.WriteAllPass(ap3l, -kap);
       INTERPOLATE_LFO(ap4l, lfo_[4], kap);
       c.WriteAllPass(ap4l, -kap);
-      c.Write(apout1, 0.0f);
-
-      c.Read(in_out->r, input_gain_);
-      // Diffuse through 4 allpasses.
-      INTERPOLATE_LFO(ap1r, lfo_[1], kap);
-      c.WriteAllPass(ap1r, -kap);
-      INTERPOLATE_LFO(ap2r, lfo_[2], kap);
-      c.WriteAllPass(ap2r, -kap);
-      INTERPOLATE_LFO(ap3r, lfo_[3], kap);
-      c.WriteAllPass(ap3r, -kap);
-      INTERPOLATE_LFO(ap4r, lfo_[4], kap);
-      c.WriteAllPass(ap4r, -kap);
-      c.Write(apout2, 0.0f);
-
-      // Main reverb loop.
-      c.Load(apout1);
 
       INTERPOLATE_LFO(del2, lfo_[5], decay_ * (1.0f - pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
@@ -187,7 +173,20 @@ class FullReverb {
       c.Write(del1, 2.0f);
       c.Write(in_out->l, 0.0f);
 
-      c.Load(apout2);
+      // Smear AP1 inside the loop.
+      c.Interpolate(ap1r, 10.0f, LFO_1, 60.0f, 1.0f);
+      c.Write(ap1r, 100, 0.0f);
+
+      c.Read(in_out->r, input_gain_);
+      // Diffuse through 4 allpasses.
+      INTERPOLATE_LFO(ap1r, lfo_[1], kap);
+      c.WriteAllPass(ap1r, -kap);
+      INTERPOLATE_LFO(ap2r, lfo_[2], kap);
+      c.WriteAllPass(ap2r, -kap);
+      INTERPOLATE_LFO(ap3r, lfo_[3], kap);
+      c.WriteAllPass(ap3r, -kap);
+      INTERPOLATE_LFO(ap4r, lfo_[4], kap);
+      c.WriteAllPass(ap4r, -kap);
 
       INTERPOLATE_LFO(del1, lfo_[7], decay_ * (1.0f - pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
