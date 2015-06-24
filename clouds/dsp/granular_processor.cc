@@ -309,7 +309,7 @@ void GranularProcessor::Process(
       playback_mode_ != PLAYBACK_MODE_RESONATOR) {
     ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
     float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
-    fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 0.7f);
+    fb_filter_[0].set_f_q<FREQUENCY_FAST>(cutoff, 0.75f);
     fb_filter_[1].set(fb_filter_[0]);
     fb_filter_[0].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].l, &fb_[0].l, size, 2);
     fb_filter_[1].Process<FILTER_MODE_HIGH_PASS>(&fb_[0].r, &fb_[0].r, size, 2);
