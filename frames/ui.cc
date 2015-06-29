@@ -333,8 +333,6 @@ void Ui::OnSwitchReleased(const Event& e) {
       case SWITCH_ADD_FRAME:
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_SAVE_CONFIRMATION;
-          active_slot_ = 0;
-
         } else if (e.data > kLongPressDuration) {
           if (!poly_lfo_mode_) {
             mode_ = UI_MODE_EDIT_EASING;
@@ -371,16 +369,8 @@ void Ui::OnSwitchReleased(const Event& e) {
         break;
       
       case SWITCH_DELETE_FRAME:
-        if (frame() < 128) {
-          --secret_handshake_counter_;
-          if (secret_handshake_counter_ <= -10) {
-            poly_lfo_mode_ = !poly_lfo_mode_;
-            secret_handshake_counter_ = 0;
-          }
-        }
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_ERASE_CONFIRMATION;
-          active_slot_ = 0;
         } else if (e.data > kLongPressDuration) {
           if (!poly_lfo_mode_) {
             mode_ = UI_MODE_EDIT_RESPONSE;
@@ -400,6 +390,13 @@ void Ui::OnSwitchReleased(const Event& e) {
           }
           mode_ = UI_MODE_SPLASH;
         } else {
+          if (frame() < 128) {
+            --secret_handshake_counter_;
+            if (secret_handshake_counter_ <= -10) {
+              poly_lfo_mode_ = !poly_lfo_mode_;
+              secret_handshake_counter_ = 0;
+            }
+          }
           if (mode_ == UI_MODE_NORMAL && !poly_lfo_mode_) {
             if (active_keyframe_ != -1) {
               keyframer_->RemoveKeyframe(
@@ -426,6 +423,18 @@ void Ui::OnPotChanged(const Event& e) {
       case 3:
         keyframer_->set_immediate(e.control_id, e.data);
         break;
+    }
+  } else if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
+             mode_ == UI_MODE_ERASE_CONFIRMATION) {
+    switch (e.control_id) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      active_slot_ = e.control_id + 1;
+      break;
+    case kFrameAdcChannel:
+      active_slot_ = 0;
     }
   } else if (poly_lfo_mode_) {
     switch (e.control_id) {
@@ -491,17 +500,11 @@ void Ui::OnPotChanged(const Event& e) {
             keyframer_->mutable_settings(e.control_id)->easing_curve =  \
               static_cast<EasingCurve>(e.data * 6 >> 16);
           }
-        } else if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
-                   mode_ == UI_MODE_ERASE_CONFIRMATION) {
-          active_slot_ = e.control_id + 1;
         }
         break;
       
       case kFrameAdcChannel:
-        if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
-            mode_ == UI_MODE_ERASE_CONFIRMATION) {
-          active_slot_ = 0;
-        } else if (!active_keyframe_lock_) {
+        if (!active_keyframe_lock_) {
           FindNearestKeyframe();
         }
         break;
