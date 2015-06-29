@@ -76,7 +76,7 @@ void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
   extra_settings_ = extra_settings;
   memcpy(persistent_mem_ + slot * SETTINGS_SIZE, keyframes_, SETTINGS_SIZE);
 #ifndef TEST
-  //storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * 5, &version_token_);
+  storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * 5, &version_token_);
 #endif  // TEST
 }
 
@@ -90,7 +90,7 @@ void Keyframer::Calibrate(int32_t dc_offset_frame_modulation) {
   memcpy(persistent_mem_, keyframes_, SETTINGS_SIZE);
   // TODO
 #ifndef TEST
-  //storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * 5, &version_token_);
+  storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * 5, &version_token_);
 #endif  // TEST
 }
 
