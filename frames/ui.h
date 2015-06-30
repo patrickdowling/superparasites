@@ -45,7 +45,7 @@ namespace frames {
 class Keyframer;
 class PolyLfo;
 
-const uint8_t kMaxRegisters = 4;
+const uint8_t kMaxRegisters = 16;
 
 enum SwitchIndex {
   SWITCH_ADD_FRAME,
@@ -98,6 +98,7 @@ class Ui {
   uint8_t shift_divider;
   uint8_t random_level;
   uint16_t shift_register[kMaxRegisters];
+  uint8_t active_registers;
 
  private:
   void OnSwitchPressed(const stmlib::Event& e);

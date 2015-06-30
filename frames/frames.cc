@@ -193,9 +193,9 @@ int main(void) {
             // shift the register and feed it back
             if (ui.shift_divider > 0 &&
                 clock_counter % ui.shift_divider == 0) {
-              uint16_t temp = ui.shift_register[kMaxRegisters-1];
+              uint16_t temp = ui.shift_register[ui.active_registers-1];
               // shift all registers one place
-              for (int i=kMaxRegisters-1; i>0; i--)
+              for (int i=ui.active_registers-1; i>0; i--)
                 ui.shift_register[i] = ui.shift_register[i-1];
               // feed back last value into first, with random added
               if (static_cast<uint8_t>(Random::GetWord()) > ui.random_level) {

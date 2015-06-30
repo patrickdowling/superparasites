@@ -73,6 +73,7 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   step_divider = 1;
   shift_divider = 1;
   random_level = 0;
+  active_registers = kMaxRegisters;
   for (int i=0; i<kMaxRegisters; i++)
     shift_register[i] = 0;
 }
@@ -505,7 +506,10 @@ void Ui::OnPotChanged(const Event& e) {
         break;
       
       case kFrameAdcChannel:
-        if (!active_keyframe_lock_) {
+        // in shift sequencer, big knob sets number of registers
+        if (sequencer_mode_ && mode_ == UI_MODE_EDIT_EASING) {
+          active_registers = (e.data * kMaxRegisters >> 16) + 1;
+        } else if (!active_keyframe_lock_) {
           FindNearestKeyframe();
         }
         break;
