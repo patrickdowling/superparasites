@@ -247,8 +247,7 @@ void Ui::Poll() {
           rgb_led_.set_color(keyframer_->color());
 
           ++keyframe_led_pwm_counter_;
-          if ((keyframe_led_pwm_counter_ & 15) >=
-              (mode_ == UI_MODE_EDIT_RESPONSE ? 14 : 8)) {
+          if ((keyframe_led_pwm_counter_ & 15) >= 15) {
             keyframe_led_.High();
           } else {
             keyframe_led_.Low();
@@ -266,26 +265,11 @@ void Ui::Poll() {
           channel_leds_.set_channel(3, shift_register[3] >> 8);
           rgb_led_.set_color(keyframer_->color());
 
-          if (active_keyframe_ == -1) {
-            keyframe_led_.Low();
+          ++keyframe_led_pwm_counter_;
+          if ((keyframe_led_pwm_counter_ & 15) >= 13) {
+            keyframe_led_.High();
           } else {
-            animation_counter_ += 256;
-            int32_t distance = frame() - \
-              keyframer_->keyframe(active_keyframe_).timestamp;
-            distance = min(distance * distance >> 18, int32_t(15));
-            ++keyframe_led_pwm_counter_;
-            if ((keyframe_led_pwm_counter_ & 15) >= distance) {
-              keyframe_led_.High();
-            } else {
-              keyframe_led_.Low();
-            }
-            if (active_keyframe_lock_) {
-              if (animation_counter_ & 0x8000) {
-                keyframe_led_.High();
-              } else {
-                keyframe_led_.Low();
-              }
-            }
+            keyframe_led_.Low();
           }
         } else {
           // edit easing and response
