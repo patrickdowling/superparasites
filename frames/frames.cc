@@ -193,13 +193,17 @@ int main(void) {
             // shift the register and feed it back
             if (ui.shift_divider > 0 &&
                 clock_counter % ui.shift_divider == 0) {
-              uint16_t t = ui.shift_register[3];
-              ui.shift_register[3] = ui.shift_register[2];
-              ui.shift_register[2] = ui.shift_register[1];
-              ui.shift_register[1] = ui.shift_register[0];
-              ui.shift_register[0] = static_cast<uint8_t>(Random::GetWord()) > ui.random_level ?
-                t : fold_add(t,
-                             static_cast<int16_t>(Random::GetWord()) / 255 * ui.random_level);
+              uint16_t temp = ui.shift_register[kMaxRegisters-1];
+              // shift all registers one place
+              for (int i=kMaxRegisters-1; i>0; i--)
+                ui.shift_register[i] = ui.shift_register[i-1];
+              // feed back last value into first, with random added
+              if (static_cast<uint8_t>(Random::GetWord()) > ui.random_level) {
+                ui.shift_register[0] = temp;
+              } else {
+                int16_t rnd = static_cast<int16_t>(Random::GetWord()) / 255 * ui.random_level;
+                ui.shift_register[0] = fold_add(temp, rnd);
+              }
               // trigger
               pulse_counter = kPulseDuration;
               trigger_output.High();

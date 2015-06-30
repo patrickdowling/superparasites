@@ -73,7 +73,8 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   step_divider = 1;
   shift_divider = 1;
   random_level = 0;
-  shift_register[0] = shift_register[1] = shift_register[2] = shift_register[3] = 0;
+  for (int i=0; i<kMaxRegisters; i++)
+    shift_register[i] = 0;
 }
 
 void Ui::TryCalibration() {
