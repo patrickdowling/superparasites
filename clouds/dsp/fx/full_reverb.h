@@ -65,16 +65,16 @@ class FullReverb {
     // (4 AP diffusers on the input, then a loop of 2x 2AP+1Delay).
     // Modulation is applied in the loop of the first diffuser AP for additional
     // smearing; and to the two long delays for a slow shimmer/chorus effect.
-    typedef E::Reserve<113,
-      E::Reserve<162,
-      E::Reserve<241,
-      E::Reserve<399,
-      E::Reserve<1653,
-      E::Reserve<2038,
-      E::Reserve<3411,
-      E::Reserve<1913,
-      E::Reserve<1663,
-      E::Reserve<4782> > > > > > > > > > Memory;
+    typedef E::Reserve<113,     /* ap1 */
+      E::Reserve<162,           /* ap2 */
+      E::Reserve<241,           /* ap3 */
+      E::Reserve<399,           /* ap4 */
+      E::Reserve<1253,          /* dap1a */
+      E::Reserve<1738,          /* dap1b */
+      E::Reserve<3411,          /* del1 */
+      E::Reserve<1513,          /* dap2a */
+      E::Reserve<1363,          /* dap2b */
+      E::Reserve<4782> > > > > > > > > > Memory; /* del2 */
     E::DelayLine<Memory, 0> ap1;
     E::DelayLine<Memory, 1> ap2;
     E::DelayLine<Memory, 2> ap3;
