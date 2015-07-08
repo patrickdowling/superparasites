@@ -34,7 +34,6 @@ import pylab
 
 lookup_tables = []
 int16_lookup_tables = []
-uint16_lookup_tables = []
 
 """----------------------------------------------------------------------------
 Cosine table.
@@ -43,11 +42,6 @@ Cosine table.
 size = 1024
 t = numpy.arange(0, size + size / 4 + 1) / float(size) * numpy.pi * 2
 lookup_tables.append(('sin', numpy.sin(t)))
-
-env_linear = numpy.arange(0, 257.0) / 256.0
-env_linear[-1] = env_linear[-2]
-raised_cosine = 0.5 - numpy.cos(env_linear * numpy.pi) / 2
-uint16_lookup_tables.append(('raised_cosine', raised_cosine * 65535.0))
 
 """----------------------------------------------------------------------------
 Grain window.

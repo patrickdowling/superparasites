@@ -10,29 +10,34 @@ class RandomOscillator
 {
 public:
 
-  void Init() {
-    value_ = Random::GetSample();
-    next_value_ = Random::GetSample();
+  inline float getFloat()
+  {
+    return Random::GetFloat() * 2.0f - 1.0f;
   }
 
-  inline void set_period(uint32_t period) {
-    phase_increment_ = UINT32_MAX / period;
+  void Init() {
+    value_ = getFloat();
+    next_value_ = getFloat();
+  }
+
+  inline void set_period(float period) {
+    phase_increment_ = 1.0f / period;
   }
 
   float Next() {
     phase_ += phase_increment_;
-    if (phase_ < phase_increment_) {
+    if (phase_ > 1.0f) {
+      phase_ = 0.0f;
       value_ = next_value_;
-      next_value_ = Random::GetSample();
+      next_value_ = getFloat();
     }
-    int16_t raised_cosine = Interpolate824(clouds::lut_raised_cosine, phase_) >> 1;
-    return (value_ + ((next_value_ - value_) * raised_cosine >> 15)) / 32767.0f;
+    float sin = Interpolate(lut_window, phase_, LUT_WINDOW_SIZE-1);
+    return value_ + (next_value_ - value_) * sin;
   }
 
 private:
-  uint32_t phase_;
-  uint32_t phase_increment_;
-  int32_t value_;
-  int32_t next_value_;
-
+  float phase_;
+  float phase_increment_;
+  float value_;
+  float next_value_;
 };

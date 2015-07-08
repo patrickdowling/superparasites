@@ -46,8 +46,6 @@ extern const float* src_filter_table[];
 
 extern const int16_t* lookup_table_int16_table[];
 
-extern const uint16_t* lookup_table_uint16_table[];
-
 extern const float* lookup_table_table[];
 
 extern const float src_filter_1x_2_31[];
@@ -55,7 +53,6 @@ extern const float src_filter_1x_2_45[];
 extern const float src_filter_1x_2_63[];
 extern const float src_filter_1x_2_91[];
 extern const int16_t lut_db[];
-extern const uint16_t lut_raised_cosine[];
 extern const float lut_sin[];
 extern const float lut_window[];
 extern const float lut_sine_window_4096[];
@@ -72,8 +69,6 @@ extern const float lut_quantized_pitch[];
 #define SRC_FILTER_1X_2_91_SIZE 91
 #define LUT_DB 0
 #define LUT_DB_SIZE 257
-#define LUT_RAISED_COSINE 0
-#define LUT_RAISED_COSINE_SIZE 257
 #define LUT_SIN 0
 #define LUT_SIN_SIZE 1281
 #define LUT_WINDOW 1
