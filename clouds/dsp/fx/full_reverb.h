@@ -56,6 +56,7 @@ class FullReverb {
     ratio_ = 0.0f;
     pitch_shift_amount_ = 1.0f;
     level_ = 0.0f;
+    env_1_ = env_2_ = 0.0f;
     for (int i=0; i<9; i++)
       lfo_[i].Init();
   }
@@ -149,14 +150,18 @@ class FullReverb {
       float apout;
       c.Write(apout);
 
+      const float limit = 0.5f;
+      const float latt = 0.5f;
+      const float lrel = 0.0005f;
+
       INTERPOLATE_LFO(del2, lfo_[5], decay_ * (1.0f - pitch_shift_amount_));
       /* blend in the pitch shifted feedback */
       c.InterpolateHermite(del2, phase, tri * decay_ * pitch_shift_amount_);
       c.InterpolateHermite(del2, half, (1.0f - tri) * decay_ * pitch_shift_amount_);
-
+      c.Follow(env_1_, latt, lrel);
+      c.Limit(env_1_, limit);
       c.Lp(lp_1, lp_);
       c.Hp(hp_1, hp_);
-      c.SoftLimit();
       INTERPOLATE_LFO(dap1a, lfo_[6], -kap);
       c.WriteAllPass(dap1a, kap);
       INTERPOLATE(dap1b, kap);
@@ -170,9 +175,10 @@ class FullReverb {
       /* blend in the pitch shifted feedback */
       c.InterpolateHermite(del1, phase, tri * decay_ * pitch_shift_amount_);
       c.InterpolateHermite(del1, half, (1.0f - tri) * decay_ * pitch_shift_amount_);
+      c.Follow(env_2_, latt, lrel);
+      c.Limit(env_2_, limit);
       c.Lp(lp_2, lp_);
       c.Hp(hp_2, hp_);
-      c.SoftLimit();
       INTERPOLATE_LFO(dap2a, lfo_[8], kap);
       c.WriteAllPass(dap2a, -kap);
       INTERPOLATE(dap2b, -kap);
@@ -247,6 +253,9 @@ class FullReverb {
   float lp_decay_2_;
   float hp_decay_1_;
   float hp_decay_2_;
+
+  float env_1_;
+  float env_2_;
 
   float phase_;
   float ratio_;
