@@ -46,7 +46,7 @@
 
 namespace clouds {
 
-const int32_t kMaxNumGrains = 64;
+const int32_t kMaxNumGrains = 40;
 
 using namespace stmlib;
 
