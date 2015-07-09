@@ -24,10 +24,10 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Resonator.
+// Resonestor.
 
-#ifndef CLOUDS_DSP_RESONATOR_H_
-#define CLOUDS_DSP_RESONATOR_H_
+#ifndef CLOUDS_DSP_RESONESTOR_H_
+#define CLOUDS_DSP_RESONESTOR_H_
 
 #include "stmlib/stmlib.h"
 #include "stmlib/utils/random.h"
@@ -71,10 +71,10 @@ inline float InterpolatePlateau(const float* table, float index, float size) {
     return b;
 }
 
-class Resonator {
+class Resonestor {
  public:
-  Resonator() { }
-  ~Resonator() { }
+  Resonestor() { }
+  ~Resonestor() { }
 
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
@@ -367,9 +367,9 @@ class Resonator {
   int32_t voice_, __align1;
 
 
-  DISALLOW_COPY_AND_ASSIGN(Resonator);
+  DISALLOW_COPY_AND_ASSIGN(Resonestor);
 };
 
 }  // namespace clouds
 
-#endif  // CLOUDS_DSP_RESONATOR_H_
+#endif  // CLOUDS_DSP_RESONESTOR_H_

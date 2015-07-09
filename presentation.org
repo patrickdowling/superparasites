@@ -5,15 +5,22 @@ v1.3:
   - fixed a bug causing a "swooping" sound when reducing quickly
     reverb size.
   - fixed a bug causing clicks when Size was fully CCW.
+  - replace soft-clipping by a limiter in the feedback loop. There is
+    no distortion anymore when the reverb is self-oscillating.
+  - made the reverb tail a bit smoother (less "muddy"?)
   - made wet signal significantly louder
 - Looping delay:
   - reduced drastically the slew on the delay time setting. Delay time
     changes are almost instantaneous now.
   - adjusted delay time knob response for more accurate dialing of
     short delays.
-- Oliverb and Looping delay: enhanced the quality of pitch shifting.
+  - enhanced the quality of pitch shifting.
 - Resonestor: adjusted the Texture knob response for more useful
   range.
+- Granular: lowered grain polyphony a bit to cope with inceased memory
+  need.
+- hardware support for Clouds bought after July 2015. Merged minor
+  changes from the last official Clouds firmware.
 - Misc: adjusted HP filter on feedback a bit, to keep more low
   frequencies.
 

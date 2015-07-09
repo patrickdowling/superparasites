@@ -24,10 +24,10 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Full Reverb (used in the dedicated "Oliverb" playback mode).
+// Reverb (used in the dedicated "Oliverb" playback mode).
 
-#ifndef CLOUDS_DSP_FX_FULL_REVERB_H_
-#define CLOUDS_DSP_FX_FULL_REVERB_H_
+#ifndef CLOUDS_DSP_FX_OLIVERB_H_
+#define CLOUDS_DSP_FX_OLIVERB_H_
 
 #include "stmlib/stmlib.h"
 
@@ -36,10 +36,10 @@
 
 namespace clouds {
 
-class FullReverb {
+class Oliverb {
  public:
-  FullReverb() { }
-  ~FullReverb() { }
+  Oliverb() { }
+  ~Oliverb() { }
 
   void Init(uint16_t* buffer) {
     engine_.Init(buffer);
@@ -263,9 +263,9 @@ class FullReverb {
 
   RandomOscillator lfo_[9];
 
-  DISALLOW_COPY_AND_ASSIGN(FullReverb);
+  DISALLOW_COPY_AND_ASSIGN(Oliverb);
 };
 
 }  // namespace clouds
 
-#endif  // CLOUDS_DSP_FX_FULL_REVERB_H_
+#endif  // CLOUDS_DSP_FX_OLIVERB_H_
