@@ -92,7 +92,7 @@ void TestDSP() {
 
   processor.set_num_channels(2);
   processor.set_low_fidelity(false);
-  processor.set_playback_mode(PLAYBACK_MODE_REVERB);
+  processor.set_playback_mode(PLAYBACK_MODE_OLIVERB);
   
   Parameters* p = processor.mutable_parameters();
   
@@ -111,14 +111,14 @@ void TestDSP() {
     p->freeze = false; // || (block_counter & 2047) > 1024;
     pot_noise += 0.05f * ((Random::GetSample() / 32768.0f) * 0.05f - pot_noise);
     p->position = triangle * 0.0f + 0.0f;
-    p->size = 0.5f;
+    p->size = 1.0f;
     p->pitch = 0.0f + (triangle > 0.5f ? 1.0f : 0.0f) * 0.0f;
     p->density = 0.7f;
     p->texture = 1.0f;
     p->dry_wet = 1.0f;
     p->stereo_spread = 0.5f;
-    p->feedback = 1.0f;
-    p->reverb = 1.0f;
+    p->feedback = 0.0f;
+    p->reverb = 0.0f;
 
     ++block_counter;
     ShortFrame input[kBlockSize];
