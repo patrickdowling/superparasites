@@ -185,23 +185,24 @@ int main(void) {
             trigger_detector_armed = true;
           }
 
-          // on clock
+          // on each clock
           if (frame_modulation > 43690 && trigger_detector_armed) {
             trigger_detector_armed = false;
             clock_counter++;
 
-            // shift the register and feed it back
+            // action: shift
             if (ui.shift_divider > 0 &&
-                clock_counter % ui.shift_divider == 0) {
+                clock_counter % ui.shift_divider == 0 &&
+                static_cast<uint8_t>(Random::GetWord()) > ui.shift_random) {
               uint16_t temp = ui.shift_register[ui.active_registers-1];
               // shift all registers one place
               for (int i=ui.active_registers-1; i>0; i--)
                 ui.shift_register[i] = ui.shift_register[i-1];
               // feed back last value into first, with random added
-              if (static_cast<uint8_t>(Random::GetWord()) > ui.random_level) {
+              if (static_cast<uint8_t>(Random::GetWord()) > ui.feedback_random) {
                 ui.shift_register[0] = temp;
               } else {
-                int16_t rnd = static_cast<int16_t>(Random::GetWord()) / 255 * ui.random_level;
+                int16_t rnd = static_cast<int8_t>(Random::GetWord()) * ui.feedback_random;
                 ui.shift_register[0] = fold_add(temp, rnd);
               }
               // trigger
@@ -209,10 +210,11 @@ int main(void) {
               trigger_output.High();
             }
 
-            // place in register and go to next sequencer step
+            // action: step
             if (ui.mode() != UI_MODE_EDIT_EASING ||
                 (ui.step_divider > 0 &&
-                 clock_counter % ui.step_divider == 0)) {
+                 clock_counter % ui.step_divider == 0 &&
+                 static_cast<uint8_t>(Random::GetWord()) > ui.step_random)) {
               ui.shift_register[0] = keyframer.level(0);
               int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
                 (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :

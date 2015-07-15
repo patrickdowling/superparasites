@@ -42,7 +42,7 @@ const uint16_t kAdcThreshold = 1 << (16 - 10);  // 10 bits
 const int32_t kLongPressDuration = 800;
 const int32_t kVeryLongPressDuration = 3000;
 const uint16_t kKeyframeGridTolerance = 2048;
-const uint8_t dividers_steps = 9;
+const uint8_t kDividersSteps = 9;
 
 void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   factory_testing_switch_.Init();
@@ -71,8 +71,10 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
 
   sequencer_step = 0;
   step_divider = 1;
+  step_random = 0;
   shift_divider = 1;
-  random_level = 0;
+  shift_random = 0;
+  feedback_random = 0;
   active_registers = kMaxRegisters;
   for (int i=0; i<kMaxRegisters; i++)
     shift_register[i] = 0;
@@ -473,13 +475,25 @@ void Ui::OnPotChanged(const Event& e) {
               }
               break;
             case 1:
-              step_divider = ((e.data * dividers_steps >> 16) + 1) % dividers_steps;
+              if (e.data < 32768) {
+                step_random = 0;
+                step_divider = (((32768 - e.data) * kDividersSteps >> 15) + 1) % kDividersSteps;
+              } else {
+                step_random = (e.data - 32768) >> 7;
+                step_divider = 1;
+              }
               break;
             case 2:
-              shift_divider = ((e.data * dividers_steps >> 16) + 1) % dividers_steps;
+              if (e.data < 32768) {
+                shift_random = 0;
+                shift_divider = (((32768 - e.data) * kDividersSteps >> 15) + 1) % kDividersSteps;
+              } else {
+                shift_random = (e.data - 32768) >> 7;
+                shift_divider = 1;
+              }
               break;
             case 3:
-              random_level = (e.data * 255 >> 16);
+              feedback_random = e.data >> 8;
             }
           } else {
             active_channel_ = e.control_id;

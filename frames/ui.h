@@ -96,7 +96,9 @@ class Ui {
   uint8_t sequencer_step;
   uint8_t step_divider;
   uint8_t shift_divider;
-  uint8_t random_level;
+  uint8_t step_random;
+  uint8_t shift_random;
+  uint8_t feedback_random;
   uint16_t shift_register[kMaxRegisters];
   uint8_t active_registers;
 
