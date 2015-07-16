@@ -42,7 +42,7 @@ const uint16_t kAdcThreshold = 1 << (16 - 10);  // 10 bits
 const int32_t kLongPressDuration = 800;
 const int32_t kVeryLongPressDuration = 3000;
 const uint16_t kKeyframeGridTolerance = 2048;
-const uint8_t kDividersSteps = 9;
+const uint8_t kDividersSteps = 7;
 
 void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   factory_testing_switch_.Init();
@@ -463,16 +463,12 @@ void Ui::OnPotChanged(const Event& e) {
           }
         } else if (mode_ == UI_MODE_EDIT_EASING) {
           if (sequencer_mode_) {
-            // knob 1 edits step value, knobs 2 and 3 are divisors for
-            // the shift register
+            // knob 1 is sequence order randomization, knobs 2 and 3
+            // are divisors for the shift register, knob 4 randomizes
+            // feedback value
             switch (e.control_id) {
             case 0:
-              if (active_keyframe_ != -1) {
-                Keyframe* k = keyframer_->mutable_keyframe(active_keyframe_);
-                k->values[e.control_id] = e.data;
-              } else {
-                keyframer_->set_immediate(e.control_id, e.data);
-              }
+              sequencer_random = e.data >> 8;
               break;
             case 1:
               if (e.data < 32768) {

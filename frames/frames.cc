@@ -219,7 +219,11 @@ int main(void) {
               int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
                 (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
                 keyframer.num_keyframes();
-              ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+              int8_t rnd = ui.mode() == UI_MODE_EDIT_EASING ?
+                static_cast<int8_t>(Random::GetWord()) *
+                ui.sequencer_random * max_step / 255 / 128 / 2
+                : 0;
+              ui.sequencer_step = (ui.sequencer_step + 1 + rnd) % max_step;
               // trigger
               pulse_counter = kPulseDuration;
               trigger_output.High();
