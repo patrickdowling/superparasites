@@ -211,15 +211,15 @@ int main(void) {
             }
 
             // action: step
-            if (ui.mode() != UI_MODE_EDIT_EASING ||
+            if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER ||
                 (ui.step_divider > 0 &&
                  clock_counter % ui.step_divider == 0 &&
                  static_cast<uint8_t>(Random::GetWord()) > ui.step_random)) {
               ui.shift_register[0] = keyframer.level(0);
-              int32_t max_step = ui.mode() == UI_MODE_EDIT_RESPONSE ?
+              int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
                 (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
                 keyframer.num_keyframes();
-              int8_t rnd = ui.mode() == UI_MODE_EDIT_EASING ?
+              int8_t rnd = ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER ?
                 static_cast<int8_t>(Random::GetWord()) *
                 ui.sequencer_random * max_step / 255 / 128 / 2
                 : 0;
@@ -230,7 +230,7 @@ int main(void) {
             }
 
             // output a trigger when sequence resets
-            if (ui.mode() != UI_MODE_EDIT_EASING &&
+            if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER &&
                 ui.sequencer_step == 0) {
               pulse_counter = kPulseDuration;
               trigger_output.High();
@@ -245,7 +245,7 @@ int main(void) {
 
         keyframer.Evaluate(frame);
 
-        if (ui.sequencer_mode() && ui.mode() == UI_MODE_EDIT_EASING) {
+        if (ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER) {
           // shift register mode
           dac.Write(0, Keyframer::ConvertToDacCode(ui.shift_register[0], 0));
           dac.Write(1, Keyframer::ConvertToDacCode(ui.shift_register[1], 0));

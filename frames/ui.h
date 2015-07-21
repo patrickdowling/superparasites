@@ -84,8 +84,15 @@ class Ui {
   inline UiMode mode() const {
     return mode_;
   }
-  
-  inline bool sequencer_mode() const {
+
+  enum SequencerMode {
+    SEQ_NO,
+    SEQ_MAIN,
+    SEQ_SHIFT_REGISTER,
+    SEQ_STEP_EDIT
+  };
+
+  inline SequencerMode sequencer_mode() const {
     return sequencer_mode_;
   }
 
@@ -107,7 +114,8 @@ class Ui {
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
   void OnPotChanged(const stmlib::Event& e);
-  
+  void ParseShiftSequencer(uint16_t control_id, int32_t data);
+
   // Force the gain value of the 4 channels to match that of the 4 pots.
   void SyncWithPots();
   
@@ -138,7 +146,9 @@ class Ui {
   bool active_keyframe_lock_;
 
   bool poly_lfo_mode_;
-  bool sequencer_mode_;
+
+  SequencerMode sequencer_mode_;
+
   int8_t secret_handshake_counter_;
   
   uint16_t animation_counter_;
