@@ -65,8 +65,7 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
   active_keyframe_lock_ = false;
   
   uint32_t ui_flags = keyframer_->extra_settings();
-  poly_lfo_mode_ = ui_flags & 1;
-  feature_mode_ = static_cast<FeatureMode>(ui_flags >> 1);
+  feature_mode_ = static_cast<FeatureMode>(ui_flags);
   secret_handshake_counter_ = 0;
 
   sequencer_step = 0;
@@ -198,7 +197,7 @@ void Ui::Poll() {
       
     case UI_MODE_NORMAL:
       
-      if (poly_lfo_mode_) {
+      if (feature_mode_ == FEAT_MODE_POLY_LFO) {
         channel_leds_.set_channel(0, poly_lfo_->level(0));
         channel_leds_.set_channel(1, poly_lfo_->level(1));
         channel_leds_.set_channel(2, poly_lfo_->level(2));
@@ -315,9 +314,9 @@ void Ui::OnSwitchReleased(const Event& e) {
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_SAVE_CONFIRMATION;
         } else if (e.data > kLongPressDuration) {
-          if (poly_lfo_mode_) {
+          if (feature_mode_ == FEAT_MODE_POLY_LFO) {
             poly_lfo_->Reset();
-          } else if (feature_mode_) {
+          } else if (feature_mode_ == FEAT_MODE_SEQ_MAIN) {
             feature_mode_ = FEAT_MODE_SEQ_SHIFT_REGISTER;
             SyncWithPotsShiftSequencer();
           } else {
@@ -328,7 +327,9 @@ void Ui::OnSwitchReleased(const Event& e) {
                    feature_mode_ == FEAT_MODE_SEQ_STEP_EDIT) {
           feature_mode_ = FEAT_MODE_SEQ_MAIN;
         } else {
-          if (mode_ == UI_MODE_NORMAL && !poly_lfo_mode_) {
+          if (mode_ == UI_MODE_NORMAL &&
+              (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+               feature_mode_ == FEAT_MODE_SEQ_MAIN)) {
             if (active_keyframe_ == -1) {
               keyframer_->AddKeyframe(frame(), &adc_value_[0]);
             } else {
@@ -350,8 +351,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           } else if (mode_ == UI_MODE_SAVE_CONFIRMATION) {
             // confirming save -> write to active slot
             uint32_t ui_flags = 0;
-            ui_flags |= poly_lfo_mode_ ? 1 : 0;
-            ui_flags |= feature_mode_ << 1;
+            ui_flags |= feature_mode_;
             keyframer_->Save(ui_flags, active_slot_);
             mode_ = UI_MODE_SPLASH;
           } else {
@@ -364,9 +364,9 @@ void Ui::OnSwitchReleased(const Event& e) {
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_ERASE_CONFIRMATION;
         } else if (e.data > kLongPressDuration) {
-          if (poly_lfo_mode_) {
+          if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
             poly_lfo_->Randomize();
-          } else if (feature_mode_) {
+          } else if (feature_mode_ == FEAT_MODE_SEQ_MAIN) {
             feature_mode_ = FEAT_MODE_SEQ_STEP_EDIT;
           } else {
             mode_ = UI_MODE_EDIT_RESPONSE;
@@ -380,23 +380,27 @@ void Ui::OnSwitchReleased(const Event& e) {
             keyframer_->Clear();
             FindNearestKeyframe();
             SyncWithPots();
-            poly_lfo_mode_ = false;
+            feature_mode_ = FEAT_MODE_KEYFRAMER;
           } else {
             uint32_t ui_flags = 0;
             keyframer_->Load(ui_flags, active_slot_);
-            poly_lfo_mode_ = ui_flags & 1;
-            feature_mode_ = static_cast<FeatureMode>(ui_flags >> 1);
+            feature_mode_ = static_cast<FeatureMode>(ui_flags);
           }
           mode_ = UI_MODE_SPLASH;
         } else {
           if (frame() < 128) {
             --secret_handshake_counter_;
             if (secret_handshake_counter_ <= -10) {
-              poly_lfo_mode_ = !poly_lfo_mode_;
+              if (feature_mode_ == FEAT_MODE_POLY_LFO)
+                feature_mode_ = FEAT_MODE_KEYFRAMER;
+              else
+                feature_mode_ = FEAT_MODE_POLY_LFO;
               secret_handshake_counter_ = 0;
             }
           }
-          if (mode_ == UI_MODE_NORMAL && !poly_lfo_mode_) {
+          if (mode_ == UI_MODE_NORMAL &&
+              (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+               feature_mode_ == FEAT_MODE_SEQ_MAIN)) {
             if (active_keyframe_ != -1) {
               keyframer_->RemoveKeyframe(
                   keyframer_->keyframe(active_keyframe_).timestamp);
@@ -469,7 +473,7 @@ void Ui::OnPotChanged(const Event& e) {
     case kFrameAdcChannel:
       active_slot_ = 0;
     }
-  } else if (poly_lfo_mode_) {
+  } else if (feature_mode_ == FEAT_MODE_POLY_LFO) {
     switch (e.control_id) {
       case 0:
         poly_lfo_->set_shape(e.data);

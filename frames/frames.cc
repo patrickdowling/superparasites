@@ -166,7 +166,7 @@ int main(void) {
       int32_t frame_modulation = \
           (ui.frame_modulation() - dc_offset_frame_modulation) << 1;
       frame += frame_modulation;
-      if (ui.poly_lfo_mode()) {
+      if (ui.feature_mode() == Ui::FEAT_MODE_POLY_LFO) {
         poly_lfo.Render(frame);
         dac.Write(0, poly_lfo.dac_code(0));
         dac.Write(1, poly_lfo.dac_code(1));

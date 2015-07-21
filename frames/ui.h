@@ -89,15 +89,12 @@ class Ui {
     FEAT_MODE_KEYFRAMER,
     FEAT_MODE_SEQ_MAIN,
     FEAT_MODE_SEQ_SHIFT_REGISTER,
-    FEAT_MODE_SEQ_STEP_EDIT
+    FEAT_MODE_SEQ_STEP_EDIT,
+    FEAT_MODE_POLY_LFO
   };
 
   inline FeatureMode feature_mode() const {
     return feature_mode_;
-  }
-
-  inline bool poly_lfo_mode() const {
-    return poly_lfo_mode_;
   }
 
   uint8_t sequencer_step;
@@ -145,8 +142,6 @@ class Ui {
   int16_t active_channel_;
   int16_t active_slot_;
   bool active_keyframe_lock_;
-
-  bool poly_lfo_mode_;
 
   FeatureMode feature_mode_;
 
