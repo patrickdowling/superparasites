@@ -190,50 +190,62 @@ int main(void) {
             trigger_detector_armed = false;
             clock_counter++;
 
-            // action: shift
-            if (ui.shift_divider > 0 &&
-                clock_counter % ui.shift_divider == 0 &&
-                static_cast<uint8_t>(Random::GetWord()) > ui.shift_random) {
-              uint16_t temp = ui.shift_register[ui.active_registers-1];
-              // shift all registers one place
-              for (int i=ui.active_registers-1; i>0; i--)
-                ui.shift_register[i] = ui.shift_register[i-1];
-              // feed back last value into first, with random added
-              if (static_cast<uint8_t>(Random::GetWord()) > ui.feedback_random) {
-                ui.shift_register[0] = temp;
-              } else {
-                int16_t rnd = static_cast<int8_t>(Random::GetWord()) * ui.feedback_random;
-                ui.shift_register[0] = fold_add(temp, rnd);
+            if (ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER) {
+
+              // action: shift
+              if (ui.shift_divider > 0 &&
+                  clock_counter % ui.shift_divider == 0 &&
+                  static_cast<uint8_t>(Random::GetWord()) > ui.shift_random) {
+                uint16_t temp = ui.shift_register[ui.active_registers-1];
+                // shift all registers one place
+                for (int i=ui.active_registers-1; i>0; i--)
+                  ui.shift_register[i] = ui.shift_register[i-1];
+                // feed back last value into first, with random added
+                if (static_cast<uint8_t>(Random::GetWord()) > ui.feedback_random) {
+                  ui.shift_register[0] = temp;
+                } else {
+                  int16_t rnd = static_cast<int8_t>(Random::GetWord()) * ui.feedback_random;
+                  ui.shift_register[0] = fold_add(temp, rnd);
+                }
+                // trigger
+                pulse_counter = kPulseDuration;
+                trigger_output.High();
               }
-              // trigger
-              pulse_counter = kPulseDuration;
-              trigger_output.High();
-            }
 
-            // action: step
-            if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER ||
-                (ui.step_divider > 0 &&
-                 clock_counter % ui.step_divider == 0 &&
-                 static_cast<uint8_t>(Random::GetWord()) > ui.step_random)) {
-              ui.shift_register[0] = keyframer.level(0);
-              int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
-                (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
-                keyframer.num_keyframes();
-              int8_t rnd = ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER ?
-                static_cast<int8_t>(Random::GetWord()) *
-                ui.sequencer_random * max_step / 255 / 128 / 2
-                : 0;
-              ui.sequencer_step = (ui.sequencer_step + 1 + rnd) % max_step;
-              // trigger
-              pulse_counter = kPulseDuration;
-              trigger_output.High();
-            }
+              // action: step
+              if (ui.step_divider > 0 &&
+                   clock_counter % ui.step_divider == 0 &&
+                   static_cast<uint8_t>(Random::GetWord()) > ui.step_random) {
+                ui.shift_register[0] = keyframer.level(0);
+                int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
+                  (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
+                  keyframer.num_keyframes();
+                int8_t rnd = ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER ?
+                  static_cast<int8_t>(Random::GetWord()) *
+                  ui.sequencer_random * max_step / 255 / 128 / 2
+                  : 0;
+                ui.sequencer_step = (ui.sequencer_step + 1 + rnd) % max_step;
+                // trigger
+                pulse_counter = kPulseDuration;
+                trigger_output.High();
+              }
 
-            // output a trigger when sequence resets
-            if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER &&
-                ui.sequencer_step == 0) {
-              pulse_counter = kPulseDuration;
-              trigger_output.High();
+              dac.Write(0, Keyframer::ConvertToDacCode(ui.shift_register[0], 0));
+              dac.Write(1, Keyframer::ConvertToDacCode(ui.shift_register[1], 0));
+              dac.Write(2, Keyframer::ConvertToDacCode(ui.shift_register[2], 0));
+              dac.Write(3, Keyframer::ConvertToDacCode(ui.shift_register[3], 0));
+
+            } else {
+              // step
+                int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
+                  (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
+                  keyframer.num_keyframes();
+              ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
+              // output a trigger when sequence resets
+              if (ui.sequencer_step == 0) {
+                pulse_counter = kPulseDuration;
+                trigger_output.High();
+              }
             }
           }
 
@@ -245,13 +257,7 @@ int main(void) {
 
         keyframer.Evaluate(frame);
 
-        if (ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER) {
-          // shift register mode
-          dac.Write(0, Keyframer::ConvertToDacCode(ui.shift_register[0], 0));
-          dac.Write(1, Keyframer::ConvertToDacCode(ui.shift_register[1], 0));
-          dac.Write(2, Keyframer::ConvertToDacCode(ui.shift_register[2], 0));
-          dac.Write(3, Keyframer::ConvertToDacCode(ui.shift_register[3], 0));
-        } else {
+        if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER) {
           // sequencer or keyframer mode
           dac.Write(0, keyframer.dac_code(0));
           dac.Write(1, keyframer.dac_code(1));
