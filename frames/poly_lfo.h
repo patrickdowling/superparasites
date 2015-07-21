@@ -77,6 +77,9 @@ class PolyLfo {
   }
   static uint32_t FrequencyToPhaseIncrement(int32_t frequency);
 
+  void Reset();
+  void Randomize();
+
  private:
   static const uint8_t rainbow_[17][3];
 

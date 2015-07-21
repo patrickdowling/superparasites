@@ -35,6 +35,8 @@
 
 #include "frames/resources.h"
 
+#include "stmlib/utils/random.h"
+
 namespace frames {
 
 using namespace std;
@@ -120,5 +122,17 @@ void PolyLfo::Render(int32_t frequency) {
     wavetable_index += shape_spread_;
   }
 }
+
+void PolyLfo::Reset() {
+  for (uint8_t i = 0; i < kNumChannels; ++i) {
+    phase_[i] = 0;
+  }
+}
+
+void PolyLfo::Randomize() {
+  for (int i=0; i<4; i++)
+    phase_[i] = Random::GetWord();
+}
+
 
 }  // namespace frames

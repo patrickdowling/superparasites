@@ -316,7 +316,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           mode_ = UI_MODE_SAVE_CONFIRMATION;
         } else if (e.data > kLongPressDuration) {
           if (poly_lfo_mode_) {
-            // nothing for the moment
+            poly_lfo_->Reset();
           } else if (sequencer_mode_) {
             sequencer_mode_ = SEQ_SHIFT_REGISTER;
             SyncWithPotsShiftSequencer();
@@ -365,7 +365,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           mode_ = UI_MODE_ERASE_CONFIRMATION;
         } else if (e.data > kLongPressDuration) {
           if (poly_lfo_mode_) {
-            // nothing
+            poly_lfo_->Randomize();
           } else if (sequencer_mode_) {
             sequencer_mode_ = SEQ_STEP_EDIT;
           } else {
