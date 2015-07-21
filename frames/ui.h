@@ -118,7 +118,8 @@ class Ui {
 
   // Force the gain value of the 4 channels to match that of the 4 pots.
   void SyncWithPots();
-  
+  void SyncWithPotsShiftSequencer();
+
   void FindNearestKeyframe();
 
   stmlib::EventQueue<32> queue_;

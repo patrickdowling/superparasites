@@ -319,7 +319,7 @@ void Ui::OnSwitchReleased(const Event& e) {
             // nothing for the moment
           } else if (sequencer_mode_) {
             sequencer_mode_ = SEQ_SHIFT_REGISTER;
-            // TODO sync knobs
+            SyncWithPotsShiftSequencer();
           } else {
             mode_ = UI_MODE_EDIT_EASING;
             active_channel_ = -1;
@@ -539,6 +539,14 @@ void Ui::SyncWithPots() {
   if (!keyframer_->num_keyframes()) {
     for (uint8_t i = 0; i < kNumChannels; ++i) {
       keyframer_->set_immediate(i, adc_filtered_value_[i]);
+    }
+  }
+}
+
+void Ui::SyncWithPotsShiftSequencer() {
+  if (!keyframer_->num_keyframes()) {
+    for (uint8_t i = 0; i < kNumChannels; ++i) {
+      ParseShiftSequencer(i, adc_filtered_value_[i]);
     }
   }
 }
