@@ -84,7 +84,7 @@ void TIM1_UP_IRQHandler(void) {
     ++refresh;
   }
   
-  if (!ui.sequencer_mode()) {
+  if (ui.feature_mode() == Ui::FEAT_MODE_KEYFRAMER) {
     int16_t position = keyframer.position();
     if (previous_position != position) {
       previous_position = position;
@@ -179,7 +179,9 @@ int main(void) {
           frame = 65535;
         }
 
-        if (ui.sequencer_mode()) {
+        if (ui.feature_mode() == Ui::FEAT_MODE_SEQ_SHIFT_REGISTER ||
+            ui.feature_mode() == Ui::FEAT_MODE_SEQ_STEP_EDIT ||
+            ui.feature_mode() == Ui::FEAT_MODE_SEQ_MAIN) {
           // Detect a trigger on the FRAME input.
           if (frame_modulation < 21845) {
             trigger_detector_armed = true;
@@ -190,7 +192,7 @@ int main(void) {
             trigger_detector_armed = false;
             clock_counter++;
 
-            if (ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER) {
+            if (ui.feature_mode() == Ui::FEAT_MODE_SEQ_SHIFT_REGISTER) {
 
               // action: shift
               if (ui.shift_divider > 0 &&
@@ -217,13 +219,9 @@ int main(void) {
                    clock_counter % ui.step_divider == 0 &&
                    static_cast<uint8_t>(Random::GetWord()) > ui.step_random) {
                 ui.shift_register[0] = keyframer.level(0);
-                int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
-                  (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
-                  keyframer.num_keyframes();
-                int8_t rnd = ui.sequencer_mode() == Ui::SEQ_SHIFT_REGISTER ?
-                  static_cast<int8_t>(Random::GetWord()) *
-                  ui.sequencer_random * max_step / 255 / 128 / 2
-                  : 0;
+                int32_t max_step = keyframer.num_keyframes();
+                int8_t rnd = static_cast<int8_t>(Random::GetWord()) *
+                  ui.sequencer_random * max_step / 255 / 128 / 2;
                 ui.sequencer_step = (ui.sequencer_step + 1 + rnd) % max_step;
                 // trigger
                 pulse_counter = kPulseDuration;
@@ -237,7 +235,7 @@ int main(void) {
 
             } else {
               // step
-                int32_t max_step = ui.sequencer_mode() == Ui::SEQ_STEP_EDIT ?
+                int32_t max_step = ui.feature_mode() == Ui::FEAT_MODE_SEQ_STEP_EDIT ?
                   (keyframer.num_keyframes() * ui.frame() / 65536) + 1 :
                   keyframer.num_keyframes();
               ui.sequencer_step = (ui.sequencer_step + 1) % max_step;
@@ -257,7 +255,7 @@ int main(void) {
 
         keyframer.Evaluate(frame);
 
-        if (ui.sequencer_mode() != Ui::SEQ_SHIFT_REGISTER) {
+        if (ui.feature_mode() != Ui::FEAT_MODE_SEQ_SHIFT_REGISTER) {
           // sequencer or keyframer mode
           dac.Write(0, keyframer.dac_code(0));
           dac.Write(1, keyframer.dac_code(1));

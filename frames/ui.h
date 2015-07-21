@@ -85,15 +85,15 @@ class Ui {
     return mode_;
   }
 
-  enum SequencerMode {
-    SEQ_NO,
-    SEQ_MAIN,
-    SEQ_SHIFT_REGISTER,
-    SEQ_STEP_EDIT
+  enum FeatureMode {
+    FEAT_MODE_KEYFRAMER,
+    FEAT_MODE_SEQ_MAIN,
+    FEAT_MODE_SEQ_SHIFT_REGISTER,
+    FEAT_MODE_SEQ_STEP_EDIT
   };
 
-  inline SequencerMode sequencer_mode() const {
-    return sequencer_mode_;
+  inline FeatureMode feature_mode() const {
+    return feature_mode_;
   }
 
   inline bool poly_lfo_mode() const {
@@ -148,7 +148,7 @@ class Ui {
 
   bool poly_lfo_mode_;
 
-  SequencerMode sequencer_mode_;
+  FeatureMode feature_mode_;
 
   int8_t secret_handshake_counter_;
   
