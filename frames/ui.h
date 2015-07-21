@@ -54,6 +54,7 @@ enum SwitchIndex {
 
 enum UiMode {
   UI_MODE_SPLASH,
+  UI_MODE_FEATURE_SWITCH,
   UI_MODE_NORMAL,
   UI_MODE_SAVE_CONFIRMATION,  
   UI_MODE_ERASE_CONFIRMATION,  
@@ -145,10 +146,10 @@ class Ui {
 
   FeatureMode feature_mode_;
 
-  int8_t secret_handshake_counter_;
-  
   uint16_t animation_counter_;
   uint16_t keyframe_led_pwm_counter_;
+
+  uint8_t ignore_releases_;
 
   bool test_led_;
 
