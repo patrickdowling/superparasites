@@ -544,10 +544,8 @@ void Ui::SyncWithPots() {
 }
 
 void Ui::SyncWithPotsShiftSequencer() {
-  if (!keyframer_->num_keyframes()) {
-    for (uint8_t i = 0; i < kNumChannels; ++i) {
-      ParseShiftSequencer(i, adc_filtered_value_[i]);
-    }
+  for (uint8_t i = 0; i < kNumChannels; ++i) {
+    ParseShiftSequencer(i, adc_value_[i]);
   }
 }
 
