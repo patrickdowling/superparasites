@@ -111,7 +111,8 @@ void TIM1_UP_IRQHandler(void) {
     }
   }
   
-  if (pulse_counter) {
+  if (ui.feature_mode() != Ui::FEAT_MODE_POLY_LFO &&
+      pulse_counter) {
     --pulse_counter;
     if (!pulse_counter) {
       trigger_output.Low();
@@ -168,6 +169,11 @@ int main(void) {
       frame += frame_modulation;
       if (ui.feature_mode() == Ui::FEAT_MODE_POLY_LFO) {
         poly_lfo.Render(frame);
+        if (poly_lfo.level(0) > 128) {
+          trigger_output.High();
+        } else {
+          trigger_output.Low();
+        }
         dac.Write(0, poly_lfo.dac_code(0));
         dac.Write(1, poly_lfo.dac_code(1));
         dac.Write(2, poly_lfo.dac_code(2));
