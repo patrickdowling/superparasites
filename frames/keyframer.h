@@ -157,8 +157,6 @@ class Keyframer {
   };
 #endif  // TEST
 
-  size_t persistent_mem_[SETTINGS_SIZE * 5];
-
   uint16_t version_token_;
 
   int16_t position_;

@@ -40,8 +40,6 @@ namespace frames {
 
 using namespace std;
 
-const int kSlotNr = 2;
-
 /* static */
 const uint8_t Keyframer::palette_[kNumPaletteEntries][3] = {
   { 255, 0, 0 },
@@ -60,39 +58,33 @@ stmlib::Storage<0x8020000, 4> storage;
 
 void Keyframer::Init() {
 #ifndef TEST
-  if (!storage.ParsimoniousLoad(persistent_mem_, SETTINGS_SIZE * kSlotNr, &version_token_)) {
+  if (!storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_)) {
     for (uint8_t i = 0; i < kNumChannels; ++i) {
       settings_[i].easing_curve = EASING_CURVE_LINEAR;
       settings_[i].response = 0;
     }
-    extra_settings_ = 1;
+    extra_settings_ = 0;
     dc_offset_frame_modulation_ = 32767;
     Clear();
-  } else {
-    memcpy(keyframes_, persistent_mem_, SETTINGS_SIZE);
   }
 #endif  // TEST
 }
 
 void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
   extra_settings_ = extra_settings;
-  memcpy(persistent_mem_, keyframes_, SETTINGS_SIZE);
 #ifndef TEST
-  storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * kSlotNr, &version_token_);
+  storage.ParsimoniousSave(keyframes_, SETTINGS_SIZE, &version_token_);
 #endif  // TEST
 }
 
 void Keyframer::Load(uint32_t &extra_settings, uint16_t slot) {
-  memcpy(keyframes_, persistent_mem_, SETTINGS_SIZE);
   extra_settings = extra_settings_;
 }
 
 void Keyframer::Calibrate(int32_t dc_offset_frame_modulation) {
   dc_offset_frame_modulation_ = dc_offset_frame_modulation;
-  memcpy(persistent_mem_, keyframes_, SETTINGS_SIZE);
-  // TODO
 #ifndef TEST
-  storage.ParsimoniousSave(persistent_mem_, SETTINGS_SIZE * kSlotNr, &version_token_);
+  storage.ParsimoniousSave(keyframes_, SETTINGS_SIZE, &version_token_);
 #endif  // TEST
 }
 
