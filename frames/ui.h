@@ -113,10 +113,12 @@ class Ui {
   void OnSwitchReleased(const stmlib::Event& e);
   void OnPotChanged(const stmlib::Event& e);
   void ParseShiftSequencer(uint16_t control_id, int32_t data);
+  void ParsePolyLFO(uint16_t control_id, int32_t data);
 
   // Force the gain value of the 4 channels to match that of the 4 pots.
   void SyncWithPots();
   void SyncWithPotsShiftSequencer();
+  void SyncWithPotsPolyLFO();
 
   void FindNearestKeyframe();
 

@@ -516,16 +516,20 @@ void Ui::OnPotChanged(const Event& e) {
     switch (e.control_id) {
       case 0:
         feature_mode_ = FEAT_MODE_KEYFRAMER;
-        SyncWithPotsShiftSequencer();
+        SyncWithPots();
         break;
       case 1:
-        feature_mode_ = FEAT_MODE_SEQ_MAIN; break;
+        feature_mode_ = FEAT_MODE_SEQ_MAIN;
+        SyncWithPots();
+        break;
       case 2:
         feature_mode_ = FEAT_MODE_SEQ_SHIFT_REGISTER;
         SyncWithPotsShiftSequencer();
         break;
       case 3:
-        feature_mode_ = FEAT_MODE_POLY_LFO; break;
+        feature_mode_ = FEAT_MODE_POLY_LFO;
+        SyncWithPotsPolyLFO();
+        break;
     }
   } else if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
              mode_ == UI_MODE_ERASE_CONFIRMATION) {
@@ -540,20 +544,7 @@ void Ui::OnPotChanged(const Event& e) {
       active_slot_ = 0;
     }
   } else if (feature_mode_ == FEAT_MODE_POLY_LFO) {
-    switch (e.control_id) {
-      case 0:
-        poly_lfo_->set_shape(e.data);
-        break;
-      case 1:
-        poly_lfo_->set_shape_spread(e.data);
-        break;
-      case 2:
-        poly_lfo_->set_spread(e.data);
-        break;
-      case 3:
-        poly_lfo_->set_coupling(e.data);
-        break;
-    }
+    ParsePolyLFO(e.control_id, e.data);
   } else if (feature_mode_ == FEAT_MODE_SEQ_STEP_EDIT) {
     switch (e.control_id) {
       case 0:
@@ -616,6 +607,29 @@ void Ui::SyncWithPots() {
 void Ui::SyncWithPotsShiftSequencer() {
   for (uint8_t i = 0; i < kNumChannels; ++i) {
     ParseShiftSequencer(i, adc_value_[i]);
+  }
+}
+
+void Ui::SyncWithPotsPolyLFO() {
+  for (uint8_t i = 0; i < kNumChannels; ++i) {
+    ParsePolyLFO(i, adc_value_[i]);
+  }
+}
+
+void Ui::ParsePolyLFO(uint16_t control_id, int32_t data) {
+  switch (control_id) {
+  case 0:
+    poly_lfo_->set_shape(data);
+    break;
+  case 1:
+    poly_lfo_->set_shape_spread(data);
+    break;
+  case 2:
+    poly_lfo_->set_spread(data);
+    break;
+  case 3:
+    poly_lfo_->set_coupling(data);
+    break;
   }
 }
 

@@ -110,7 +110,7 @@ void TIM1_UP_IRQHandler(void) {
       factory_testing_timer = 0;
     }
   }
-  
+
   if (ui.feature_mode() != Ui::FEAT_MODE_POLY_LFO &&
       pulse_counter) {
     --pulse_counter;
