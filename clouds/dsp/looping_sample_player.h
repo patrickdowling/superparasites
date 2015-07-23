@@ -97,12 +97,15 @@ class LoopingSamplePlayer {
       tap_delay_counter_ = 0;
     }
 
+    if (synchronized_)
+      smoothed_tap_delay_ += 0.01f * (tap_delay_ - smoothed_tap_delay_);
+
     float target_delay = parameters.position * parameters.position * max_delay;
     if (synchronized_) {
       int index = roundf(parameters.position *
                          static_cast<float>(kMultDivSteps));
       CONSTRAIN(index, 0, kMultDivSteps-1);
-      do target_delay = kMultDivs[index--] * static_cast<float>(tap_delay_);
+      do target_delay = kMultDivs[index--] * static_cast<float>(smoothed_tap_delay_);
       while (target_delay > max_delay && index >= 0);
     }
 
@@ -135,7 +138,7 @@ class LoopingSamplePlayer {
       if (synchronized_) {
         int index = roundf(d * static_cast<float>(kMultDivSteps));
         CONSTRAIN(index, 0, kMultDivSteps-1);
-        do loop_duration = kMultDivs[index--] * static_cast<float>(tap_delay_);
+        do loop_duration = kMultDivs[index--] * static_cast<float>(smoothed_tap_delay_);
         while (loop_duration > max_delay && index >= 0);
       }
       if (loop_point + loop_duration >= max_delay) {
@@ -146,6 +149,7 @@ class LoopingSamplePlayer {
           : SemitonesToRatio(parameters.pitch);
       
       while (size--) {
+        ONE_POLE(smoothed_tap_delay_, tap_delay_, 0.00001f);
         if (phase_ >= loop_duration_ || phase_ == 0.0f) {
           if (phase_ >= loop_duration_) {
             loop_reset_ = loop_duration_;
@@ -216,6 +220,7 @@ class LoopingSamplePlayer {
   int32_t num_channels_;
   int32_t elapsed_;
   int32_t tap_delay_;
+  int32_t smoothed_tap_delay_;
   int32_t tap_delay_counter_;
 
   DISALLOW_COPY_AND_ASSIGN(LoopingSamplePlayer);
