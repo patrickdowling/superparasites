@@ -58,6 +58,7 @@ extern const uint16_t lut_response_balance[];
 extern const uint16_t lut_vca_linear[];
 extern const uint16_t lut_exponential[];
 extern const uint32_t lut_increments[];
+extern const uint32_t lut_euclidean[];
 extern const uint8_t wt_lfo_waveforms[];
 #define STR_DUMMY 0  // dummy
 #define LUT_EASING_IN_QUARTIC 0
@@ -76,6 +77,8 @@ extern const uint8_t wt_lfo_waveforms[];
 #define LUT_EXPONENTIAL_SIZE 256
 #define LUT_INCREMENTS 0
 #define LUT_INCREMENTS_SIZE 159
+#define LUT_EUCLIDEAN 1
+#define LUT_EUCLIDEAN_SIZE 1024
 #define WT_LFO_WAVEFORMS 0
 #define WT_LFO_WAVEFORMS_SIZE 4626
 

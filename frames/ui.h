@@ -44,6 +44,7 @@ namespace frames {
 
 class Keyframer;
 class PolyLfo;
+class Euclidean;
 
 const uint8_t kMaxRegisters = 16;
 
@@ -60,7 +61,9 @@ enum UiMode {
   UI_MODE_ERASE_CONFIRMATION,  
   UI_MODE_EDIT_RESPONSE,
   UI_MODE_EDIT_EASING,
-  UI_MODE_FACTORY_TESTING
+  UI_MODE_FACTORY_TESTING,
+  UI_MODE_EDIT_LENGTH,
+  UI_MODE_EDIT_SHAPE,
 };
 
 class Ui {
@@ -68,7 +71,7 @@ class Ui {
   Ui() { }
   ~Ui() { }
   
-  void Init(Keyframer* keyframer, PolyLfo* poly_lfo);
+  void Init(Keyframer* keyframer, PolyLfo* poly_lfo, Euclidean euclidean[kNumChannels]);
   void Poll();
   void DoEvents();
   void FlushEvents();
@@ -91,7 +94,8 @@ class Ui {
     FEAT_MODE_SEQ_MAIN,
     FEAT_MODE_SEQ_SHIFT_REGISTER,
     FEAT_MODE_SEQ_STEP_EDIT,
-    FEAT_MODE_POLY_LFO
+    FEAT_MODE_POLY_LFO,
+    FEAT_MODE_EUCLIDEAN,
   };
 
   inline FeatureMode feature_mode() const {
@@ -108,17 +112,22 @@ class Ui {
   uint16_t shift_register[kMaxRegisters];
   uint8_t active_registers;
 
+  KeyframeLed keyframe_led_;
+  RgbLed rgb_led_;
+
  private:
   void OnSwitchPressed(const stmlib::Event& e);
   void OnSwitchReleased(const stmlib::Event& e);
   void OnPotChanged(const stmlib::Event& e);
   void ParseShiftSequencer(uint16_t control_id, int32_t data);
   void ParsePolyLFO(uint16_t control_id, int32_t data);
+  void ParseEuclidean(uint16_t control_id, int32_t data);
 
   // Force the gain value of the 4 channels to match that of the 4 pots.
   void SyncWithPots();
   void SyncWithPotsShiftSequencer();
   void SyncWithPotsPolyLFO();
+  void SyncWithPotsEuclidean();
 
   void FindNearestKeyframe();
 
@@ -130,8 +139,6 @@ class Ui {
   bool detect_very_long_press_[kNumSwitches];
   
   ChannelLeds channel_leds_;
-  KeyframeLed keyframe_led_;
-  RgbLed rgb_led_;
   Switches switches_;
   Adc adc_;
   FactoryTestingSwitch factory_testing_switch_;
@@ -140,7 +147,8 @@ class Ui {
   
   Keyframer* keyframer_;
   PolyLfo* poly_lfo_;
-  
+  Euclidean* euclidean_;
+
   int16_t active_keyframe_;
   int16_t active_channel_;
   int16_t active_slot_;

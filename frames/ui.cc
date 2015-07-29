@@ -32,6 +32,7 @@
 
 #include "frames/keyframer.h"
 #include "frames/poly_lfo.h"
+#include "frames/euclidean.h"
 
 namespace frames {
 
@@ -44,7 +45,7 @@ const int32_t kVeryLongPressDuration = 2000;
 const uint16_t kKeyframeGridTolerance = 2048;
 const uint8_t kDividersSteps = 7;
 
-void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
+void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo, Euclidean euclidean[kNumChannels]) {
   factory_testing_switch_.Init();
   channel_leds_.Init();
   keyframe_led_.Init();
@@ -56,11 +57,13 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo) {
         
   keyframer_ = keyframer;
   poly_lfo_ = poly_lfo;
+  euclidean_ = euclidean;
   mode_ = factory_testing_switch_.Read()
       ? UI_MODE_SPLASH
       : UI_MODE_FACTORY_TESTING;
   animation_counter_ = 0;
   ignore_releases_ = 0;
+  active_slot_ = 0;
 
   FindNearestKeyframe();
   active_keyframe_lock_ = false;
@@ -155,14 +158,16 @@ void Ui::Poll() {
 
       switch (feature_mode_) {
       case FEAT_MODE_KEYFRAMER:
-        channel_leds_.set_channel(0, 255); break;
+        break;
       case FEAT_MODE_SEQ_MAIN:
-        channel_leds_.set_channel(1, 255); break;
+        channel_leds_.set_channel(0, 255); break;
       case FEAT_MODE_SEQ_SHIFT_REGISTER:
-        channel_leds_.set_channel(2, 255); break;
+        channel_leds_.set_channel(1, 255); break;
       case FEAT_MODE_SEQ_STEP_EDIT:
         break;
       case FEAT_MODE_POLY_LFO:
+        channel_leds_.set_channel(2, 255); break;
+      case FEAT_MODE_EUCLIDEAN:
         channel_leds_.set_channel(3, 255); break;
       }
 
@@ -231,6 +236,11 @@ void Ui::Poll() {
         } else {
           keyframe_led_.Low();
         }
+      } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
+        channel_leds_.set_channel(0, euclidean_[0].level());
+        channel_leds_.set_channel(1, euclidean_[1].level());
+        channel_leds_.set_channel(2, euclidean_[2].level());
+        channel_leds_.set_channel(3, euclidean_[3].level());
       } else if (feature_mode_ == FEAT_MODE_SEQ_STEP_EDIT) {
         channel_leds_.set_channel(0, keyframer_->level(0) >> 8);
         channel_leds_.set_channel(1, keyframer_->level(1) >> 8);
@@ -303,6 +313,21 @@ void Ui::Poll() {
       }
       break;
 
+    case UI_MODE_EDIT_LENGTH:
+      channel_leds_.set_channel(0, euclidean_[0].level());
+      channel_leds_.set_channel(1, euclidean_[1].level());
+      channel_leds_.set_channel(2, euclidean_[2].level());
+      channel_leds_.set_channel(3, euclidean_[3].level());
+      rgb_led_.set_color(255, 16, 32);
+    break;
+    case UI_MODE_EDIT_SHAPE:
+      channel_leds_.set_channel(0, euclidean_[0].level());
+      channel_leds_.set_channel(1, euclidean_[1].level());
+      channel_leds_.set_channel(2, euclidean_[2].level());
+      channel_leds_.set_channel(3, euclidean_[3].level());
+      rgb_led_.set_color(16, 192, 32);
+    break;
+
     case UI_MODE_EDIT_RESPONSE:
     case UI_MODE_EDIT_EASING:
       {
@@ -368,6 +393,8 @@ void Ui::OnSwitchReleased(const Event& e) {
           if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
             mode_ = UI_MODE_EDIT_EASING;
             active_channel_ = -1;
+          } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
+            mode_ = UI_MODE_EDIT_LENGTH;
           } else if (feature_mode_ == FEAT_MODE_SEQ_MAIN) {
             keyframer_->Randomize();
           }
@@ -414,7 +441,9 @@ void Ui::OnSwitchReleased(const Event& e) {
           } else if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
             mode_ = UI_MODE_EDIT_RESPONSE;
             active_channel_ = -1;
-          }
+          } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
+            mode_ = UI_MODE_EDIT_SHAPE;
+          } 
         } else if (mode_ == UI_MODE_ERASE_CONFIRMATION) {
           if (active_slot_ == 0) {
             keyframer_->Clear();
@@ -504,6 +533,48 @@ void Ui::OnSwitchReleased(const Event& e) {
   }
 }
 
+
+void Ui::ParseEuclidean(uint16_t control_id, int32_t data) {
+  if (mode_ == UI_MODE_NORMAL) {
+      switch (control_id) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+        euclidean_[control_id].set_fill(data);
+        break;
+      case kFrameAdcChannel:
+        for (int i=0; i<kNumChannels; i++)
+          euclidean_[i].set_rotate(data * i);
+        break;
+      }
+    } else if (mode_ == UI_MODE_EDIT_LENGTH) {
+      switch (control_id) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+        euclidean_[control_id].set_length((data >> 12) + 1);
+        break;
+      case kFrameAdcChannel:
+        // nothing yet
+        break;
+      }
+    } else if (mode_ == UI_MODE_EDIT_SHAPE) {
+      switch (control_id) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+        euclidean_[control_id].set_shape(data);
+        break;
+      case kFrameAdcChannel:
+        // nothing yet
+        break;
+      }
+    }
+}
+
 void Ui::OnPotChanged(const Event& e) {
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     switch (e.control_id) {
@@ -516,21 +587,25 @@ void Ui::OnPotChanged(const Event& e) {
     }
   } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
     switch (e.control_id) {
-      case 0:
+      case kFrameAdcChannel:
         feature_mode_ = FEAT_MODE_KEYFRAMER;
         SyncWithPots();
         break;
-      case 1:
+      case 0:
         feature_mode_ = FEAT_MODE_SEQ_MAIN;
         SyncWithPots();
         break;
-      case 2:
+      case 1:
         feature_mode_ = FEAT_MODE_SEQ_SHIFT_REGISTER;
         SyncWithPotsShiftSequencer();
         break;
-      case 3:
+      case 2:
         feature_mode_ = FEAT_MODE_POLY_LFO;
         SyncWithPotsPolyLFO();
+        break;
+      case 3:
+        feature_mode_ = FEAT_MODE_EUCLIDEAN;
+        SyncWithPotsEuclidean();
         break;
     }
   } else if (mode_ == UI_MODE_SAVE_CONFIRMATION ||
@@ -557,6 +632,10 @@ void Ui::OnPotChanged(const Event& e) {
         Keyframe* k = keyframer_->mutable_keyframe(sequencer_step);
         k->values[e.control_id] = e.data;
     }
+
+  } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
+    ParseEuclidean(e.control_id, e.data);
+
   } else if (feature_mode_ == FEAT_MODE_SEQ_SHIFT_REGISTER) {
     ParseShiftSequencer(e.control_id, e.data);
   } else {
@@ -609,6 +688,12 @@ void Ui::SyncWithPots() {
 void Ui::SyncWithPotsShiftSequencer() {
   for (uint8_t i = 0; i < kNumChannels; ++i) {
     ParseShiftSequencer(i, adc_value_[i]);
+  }
+}
+
+void Ui::SyncWithPotsEuclidean() {
+  for (uint8_t i = 0; i < kNumChannels; ++i) {
+    ParseEuclidean(i, adc_value_[i]);
   }
 }
 

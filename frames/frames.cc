@@ -32,6 +32,7 @@
 #include "frames/drivers/trigger_output.h"
 #include "frames/keyframer.h"
 #include "frames/poly_lfo.h"
+#include "frames/euclidean.h"
 #include "frames/ui.h"
 
 using namespace frames;
@@ -40,6 +41,7 @@ using namespace stmlib;
 Dac dac;
 Keyframer keyframer;
 PolyLfo poly_lfo;
+Euclidean euclidean[kNumChannels];
 System sys;
 TriggerOutput trigger_output;
 Ui ui;
@@ -72,6 +74,8 @@ static int16_t previous_nearest_keyframe = -2;
 static uint16_t pulse_counter;
 static bool can_fire_trigger = false;
 static const uint16_t kPulseDuration = 128;
+static uint16_t counter = 0;
+
 
 void TIM1_UP_IRQHandler(void) {
   if (TIM_GetITStatus(TIM1, TIM_IT_Update) == RESET) {
@@ -129,7 +133,9 @@ void Init() {
   trigger_output.Low();
   keyframer.Init();
   poly_lfo.Init();
-  ui.Init(&keyframer, &poly_lfo);
+  for (int i=0; i<kNumChannels; i++)
+    euclidean[i].Init();
+  ui.Init(&keyframer, &poly_lfo, euclidean);
   sys.StartTimers();
 }
 
@@ -178,6 +184,51 @@ int main(void) {
         dac.Write(1, poly_lfo.dac_code(1));
         dac.Write(2, poly_lfo.dac_code(2));
         dac.Write(3, poly_lfo.dac_code(3));
+
+      } else if (ui.feature_mode() == Ui::FEAT_MODE_EUCLIDEAN) {
+
+        // Render envelopes
+        for (int i=0; i<kNumChannels; i++)
+          euclidean[i].Render();
+
+        // update big LED
+        if (counter++ % 32 == 0)
+        ui.rgb_led_.Dim(65535);
+
+        // Detect a trigger on the FRAME input.
+        if (frame_modulation < 21845) {
+          trigger_detector_armed = true;
+        }
+
+        // on each clock:
+        if (frame_modulation > 43690 && trigger_detector_armed) {
+          trigger_detector_armed = false;
+          clock_counter++;
+
+          // step
+          for (int i=0; i<kNumChannels; i++)
+            euclidean[i].Step();
+
+          ui.rgb_led_.set_color(255, 255, 255);
+
+          // update gate output and LED
+          bool gate = true;
+          for (int i=0; i<kNumChannels; i++)
+            gate ^= euclidean[i].gate();
+
+          if (gate) {
+            trigger_output.High();
+            ui.keyframe_led_.High();
+          } else {
+            trigger_output.Low();
+            ui.keyframe_led_.Low();
+          }
+        }
+
+        dac.Write(0, euclidean[0].dac_code());
+        dac.Write(1, euclidean[1].dac_code());
+        dac.Write(2, euclidean[2].dac_code());
+        dac.Write(3, euclidean[3].dac_code());
       } else {
         if (frame < 0) {
           frame = 0;

@@ -111,3 +111,38 @@ Phase increment lookup table for LFO mode
 frequency = 110 * 2 ** (numpy.arange(0, 159.0) / 158.0 - 13)
 phase_increment = frequency / 24000 * (1 << 32)
 lookup_tables_32 = [('increments', numpy.round(phase_increment).astype(int))]
+
+      
+"""----------------------------------------------------------------------------
+Euclidean patterns
+----------------------------------------------------------------------------"""
+
+def Flatten(l):
+  if hasattr(l, 'pop'):
+    for item in l:
+      for j in Flatten(item):
+        yield j
+  else:
+    yield l
+
+
+def EuclideanPattern(k, n):
+  pattern = [[1]] * k + [[0]] * (n - k)
+  while k:
+    cut = min(k, len(pattern) - k)
+    k, pattern = cut, [pattern[i] + pattern[k + i] for i in xrange(cut)] + \
+      pattern[cut:k] + pattern[k + cut:]
+  return pattern
+
+
+table = []
+for num_steps in xrange(1, 33):
+  for num_notes in xrange(32):
+    num_notes = min(num_notes, num_steps)
+    bitmask = 0
+    for i, bit in enumerate(Flatten(EuclideanPattern(num_notes, num_steps))):
+      if bit:
+        bitmask |= (1 << i)
+    table.append(bitmask)
+
+lookup_tables_32 += [('euclidean', table)]
