@@ -368,6 +368,8 @@ void Ui::OnSwitchReleased(const Event& e) {
           if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
             mode_ = UI_MODE_EDIT_EASING;
             active_channel_ = -1;
+          } else if (feature_mode_ == FEAT_MODE_SEQ_MAIN) {
+            keyframer_->Randomize();
           }
         } else {
           if (mode_ == UI_MODE_NORMAL &&

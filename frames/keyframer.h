@@ -129,6 +129,8 @@ class Keyframer {
   inline int16_t nearest_keyframe() const { return nearest_keyframe_; }
   
   void Clear();
+  void Randomize();
+
   static uint16_t ConvertToDacCode(uint16_t gain, uint8_t response);
 
   // In addition to the keyframer data, this extra word stores in
@@ -138,7 +140,7 @@ class Keyframer {
   inline int32_t dc_offset_frame_modulation() const {
     return dc_offset_frame_modulation_;
   }
-  
+
  private:
   uint16_t FindKeyframe(uint16_t timestamp);
    

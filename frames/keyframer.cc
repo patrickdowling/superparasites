@@ -98,6 +98,15 @@ void Keyframer::Clear() {
   id_counter_ = 0;
 }
 
+void Keyframer::Randomize() {
+  for (int i=0; i<kMaxNumKeyframe; i++) {
+    for (int j=0; j<kNumChannels; j++) {
+      keyframes_[i].values[j] = stmlib::Random::GetWord();
+    }
+  }
+}
+
+
 uint16_t Keyframer::FindKeyframe(uint16_t timestamp) {
   if (!num_keyframes_) {
     return 0;
