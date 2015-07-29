@@ -34,11 +34,14 @@
 #include "stmlib/system/storage.h"
 #endif  // TEST
 
+#include "stmlib/utils/random.h"
+
 #include "frames/resources.h"
 
 namespace frames {
 
 using namespace std;
+
 
 /* static */
 const uint8_t Keyframer::palette_[kNumPaletteEntries][3] = {
@@ -54,6 +57,7 @@ const uint8_t Keyframer::palette_[kNumPaletteEntries][3] = {
 
 #ifndef TEST
 stmlib::Storage<0x8020000, 4> storage;
+stmlib::Storage<0x801f000, 4> preset_storage;
 #endif  // TEST
 
 void Keyframer::Init() {
@@ -73,11 +77,20 @@ void Keyframer::Init() {
 void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
   extra_settings_ = extra_settings;
 #ifndef TEST
-  storage.ParsimoniousSave(keyframes_, SETTINGS_SIZE, &version_token_);
+  if (slot == 0)
+    storage.ParsimoniousSave(keyframes_, SETTINGS_SIZE, &version_token_);
+  else
+    preset_storage.Save(keyframes_, SETTINGS_SIZE, slot - 1);
 #endif  // TEST
 }
 
 void Keyframer::Load(uint32_t &extra_settings, uint16_t slot) {
+#ifndef TEST
+  if (slot == 0)
+    storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_);
+  else
+    preset_storage.Load(keyframes_, SETTINGS_SIZE, slot - 1);
+#endif  // TEST
   extra_settings = extra_settings_;
 }
 
