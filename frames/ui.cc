@@ -534,45 +534,65 @@ void Ui::OnSwitchReleased(const Event& e) {
 }
 
 
+void Ui::ParsePolyLFO(uint16_t control_id, int32_t data) {
+  switch (control_id) {
+  case 0:
+    poly_lfo_->set_shape(data);
+    break;
+  case 1:
+    poly_lfo_->set_shape_spread(data);
+    break;
+  case 2:
+    poly_lfo_->set_spread(data);
+    break;
+  case 3:
+    poly_lfo_->set_coupling(data);
+    break;
+  }
+}
+
 void Ui::ParseEuclidean(uint16_t control_id, int32_t data) {
-  if (mode_ == UI_MODE_NORMAL) {
-      switch (control_id) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-        euclidean_[control_id].set_fill(data);
-        break;
+  if (mode_ == UI_MODE_EDIT_LENGTH) {
+    switch (control_id) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      euclidean_[control_id].set_length((data >> 12) + 1);
+      break;
       case kFrameAdcChannel:
-        for (int i=0; i<kNumChannels; i++)
-          euclidean_[i].set_rotate(data * i);
+      for (int i=0; i<kNumChannels; i++)
+        euclidean_[i].set_rotate(data * i);
         break;
-      }
-    } else if (mode_ == UI_MODE_EDIT_LENGTH) {
-      switch (control_id) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-        euclidean_[control_id].set_length((data >> 12) + 1);
-        break;
-      case kFrameAdcChannel:
-        // nothing yet
-        break;
-      }
-    } else if (mode_ == UI_MODE_EDIT_SHAPE) {
-      switch (control_id) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-        euclidean_[control_id].set_shape(data);
-        break;
-      case kFrameAdcChannel:
-        // nothing yet
-        break;
-      }
     }
+  } else if (mode_ == UI_MODE_EDIT_SHAPE) {
+    switch (control_id) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      euclidean_[control_id].set_shape(data);
+      break;
+    case kFrameAdcChannel:
+      for (int i=0; i<kNumChannels; i++)
+        euclidean_[i].set_rotate(data * i);
+      break;
+    }
+  } else {
+    // normal mode or scratch or feature switch
+    switch (control_id) {
+    case 0:
+    case 1:
+    case 2:
+    case 3:
+      euclidean_[control_id].set_fill(data);
+      break;
+    case kFrameAdcChannel:
+      for (int i=0; i<kNumChannels; i++)
+        euclidean_[i].set_rotate(data * i);
+      break;
+    }
+  }
 }
 
 void Ui::OnPotChanged(const Event& e) {
@@ -605,6 +625,7 @@ void Ui::OnPotChanged(const Event& e) {
         break;
       case 3:
         feature_mode_ = FEAT_MODE_EUCLIDEAN;
+        // TODO marche pas
         SyncWithPotsEuclidean();
         break;
     }
@@ -700,23 +721,6 @@ void Ui::SyncWithPotsEuclidean() {
 void Ui::SyncWithPotsPolyLFO() {
   for (uint8_t i = 0; i < kNumChannels; ++i) {
     ParsePolyLFO(i, adc_value_[i]);
-  }
-}
-
-void Ui::ParsePolyLFO(uint16_t control_id, int32_t data) {
-  switch (control_id) {
-  case 0:
-    poly_lfo_->set_shape(data);
-    break;
-  case 1:
-    poly_lfo_->set_shape_spread(data);
-    break;
-  case 2:
-    poly_lfo_->set_spread(data);
-    break;
-  case 3:
-    poly_lfo_->set_coupling(data);
-    break;
   }
 }
 
