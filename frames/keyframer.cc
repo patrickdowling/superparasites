@@ -60,16 +60,21 @@ stmlib::Storage<0x8020000, 4> storage;
 stmlib::Storage<0x801f000, 4> preset_storage;
 #endif  // TEST
 
-void Keyframer::Init() {
-#ifndef TEST
-  if (!storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_)) {
+void Keyframer::Reset() {
     for (uint8_t i = 0; i < kNumChannels; ++i) {
       settings_[i].easing_curve = EASING_CURVE_LINEAR;
       settings_[i].response = 0;
     }
     extra_settings_ = 0;
+    magic_number_ = kMagicNumber;
     dc_offset_frame_modulation_ = 32767;
     Clear();
+}
+
+void Keyframer::Init() {
+#ifndef TEST
+  if (!storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_)) {
+    Reset();
   }
 #endif  // TEST
 }
@@ -86,10 +91,17 @@ void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
 
 void Keyframer::Load(uint32_t &extra_settings, uint16_t slot) {
 #ifndef TEST
-  if (slot == 0)
+  if (slot == 0){
     storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_);
-  else
+  } else {
+    int32_t calibration = dc_offset_frame_modulation_;
     preset_storage.Load(keyframes_, SETTINGS_SIZE, slot - 1);
+    // calibration data needs to remain like in the default slot.
+    dc_offset_frame_modulation_ = calibration;
+    // lightweight protection against corrupted/empty memory slots
+    if (magic_number_ != kMagicNumber)
+      Reset();
+  }
 #endif  // TEST
   extra_settings = extra_settings_;
 }

@@ -35,7 +35,7 @@ namespace frames {
   
 const uint8_t kNumChannels = 4;
 const uint8_t kMaxNumKeyframe = 64;
-
+const uint32_t kMagicNumber = 0xCAFEBABE;
 const uint8_t kNumPaletteEntries = 8;
 
 enum EasingCurve {
@@ -129,6 +129,7 @@ class Keyframer {
   inline int16_t nearest_keyframe() const { return nearest_keyframe_; }
   
   void Clear();
+  void Reset();
   void Randomize();
 
   static uint16_t ConvertToDacCode(uint16_t gain, uint8_t response);
@@ -150,12 +151,13 @@ class Keyframer {
   uint16_t id_counter_;
   uint32_t extra_settings_;
   int32_t dc_offset_frame_modulation_;
-  
+  uint32_t magic_number_;
+
 #ifndef TEST
   enum SettingsSize {
-    SETTINGS_SIZE = sizeof(keyframes_) + sizeof(settings_) + \
-        sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(extra_settings_) + \
-        sizeof(dc_offset_frame_modulation_)
+    SETTINGS_SIZE = sizeof(keyframes_) + sizeof(settings_) +            \
+    sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(extra_settings_) + \
+    sizeof(dc_offset_frame_modulation_) + sizeof(magic_number_)
   };
 #endif  // TEST
 
