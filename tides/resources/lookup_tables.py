@@ -60,7 +60,6 @@ lookup_tables_32.append(
 )
 
 
-
 """----------------------------------------------------------------------------
 Attenuverter curve
 ----------------------------------------------------------------------------"""
@@ -89,3 +88,8 @@ x = numpy.arange(0, SLOPE_COMPRESSION_SIZE + 1) / (SLOPE_COMPRESSION_SIZE / 2.0)
 x -= 1.0
 sine = numpy.sin(x * numpy.pi / 2)
 lookup_tables.append(('slope_compression', numpy.round(32767.5 * (sine + 1.0))))
+
+env_linear = numpy.arange(0, 257.0) / 256.0
+env_linear[-1] = env_linear[-2]
+raised_cosine = 0.5 - numpy.cos(env_linear * numpy.pi * 2) / 2
+lookup_tables.append(('raised_cosine', raised_cosine * 65535.0))

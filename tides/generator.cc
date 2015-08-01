@@ -31,6 +31,7 @@
 #include <algorithm>
 
 #include "stmlib/utils/dsp.h"
+#include "stmlib/utils/random.h"
 
 #include "tides/resources.h"
 
@@ -846,4 +847,101 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
+const uint8_t kHarmonicPatterns[16][9] = {
+  {255, 255, 255, 255, 255, 255, 255, 255, 255},
+  {  0,   0, 255,   0,   0,   0, 255, 255, 255},
+  {  0,   0,   0,   0,   0, 255,   0,   0, 255},
+  {  0, 255, 255,   0, 255,   0, 255, 255, 255},
+  {  0,   0,   0, 255,   0, 255,   0, 255, 255},
+  {  0,   0,   0,   0,   0,   0, 255,   0, 255},
+  {  0,   0,   0,   0, 255, 255,   0, 255, 255},
+  {  0,   0, 255,   0,   0,   0, 255, 255, 255},
+  {  0,   0,   0, 255,   0, 255,   0,   0, 255},
+  {  0,   0,   0,   0, 255,   0, 255, 255, 255},
+  {  0,   0,   0,   0,   0, 255,   0, 255, 255},
+  {  0,   0,   0,   0,   0,   0, 255,   0, 255},
+  {  0,   0,   0, 255, 255, 255,   0, 255, 255},
+  {  0,   0,   0,   0,   0,   0, 255, 255, 255},
+  {  0,   0,   0,   0,   0, 255,   0,   0, 255},
+  {  0, 255, 255,   0, 255,   0, 255, 255, 255},
+};
+
+const uint16_t kNumHarmonics = 14;
+
+void Generator::FillBufferHarmonic() {
+  uint8_t size = kBlockSize;
+  
+  uint16_t shape = static_cast<uint16_t>(shape_ + 32768);
+  uint32_t shape_int = shape >> 13;
+  uint32_t shape_frac = shape & 0x1fff;
+
+  int32_t center = static_cast<int32_t>(slope_ + 32768);
+  int32_t width = (static_cast<int32_t>(smoothness_ + 32768));
+  width = ((width >> 2) * width) >> 13;
+  width += 4000;
+
+  int32_t sum_gains = 0;
+  uint16_t pattern[16];
+  for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
+    uint8_t a = kHarmonicPatterns[harm][shape_int];
+    uint8_t b = kHarmonicPatterns[harm][shape_int + 1];
+    pattern[harm] = a + (((b - a) * shape_frac) >> 13);
+    sum_gains += pattern[harm];
+  }
+
+  // sum_gains = 0;
+  uint16_t envelope[16];
+  for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
+    int32_t x = static_cast<int32_t>(harm) * 65536 / (kNumHarmonics - 1);
+    if (x < center - width)
+      envelope[harm] = 0;
+    else if (x < center)
+      envelope[harm] = 32767 + ((x - center) << 15) / width;
+    else if (x < center + width)
+      envelope[harm] = 32767 + ((center - x) << 15) / width;
+    else
+      envelope[harm] = 0;
+    envelope[harm] <<= 1;
+    sum_gains += envelope[harm];
+  }
+
+  // normalization
+  for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
+    envelope[harm] = ((envelope[harm] << 15) / sum_gains);
+  }
+
+  if (sync_) {
+    pitch_ = ComputePitch(phase_increment_);
+  } else {
+    phase_increment_ = ComputePhaseIncrement(pitch_);
+  }
+
+  while (size--) {
+
+    int32_t sample = 0;
+
+    for (uint8_t harm=1; harm<=kNumHarmonics; harm++) {
+      int32_t sine = Interpolate824(lut_raised_cosine, phase_ * harm) - 32768;
+      sine = (sine * pattern[harm-1]) >> 12;
+      sine = (sine * envelope[harm-1]) >> 11;
+      sample += sine;
+    }
+
+    // sample /= kNumHarmonics;
+
+    GeneratorSample s;
+    s.bipolar = sample;
+    s.unipolar = Interpolate824(lut_raised_cosine, phase_);
+    s.flags = 0;
+    if (s.bipolar > 0) {
+      s.flags |= FLAG_END_OF_ATTACK;
+    }
+    if (sub_phase_ & 0x80000000) {
+      s.flags |= FLAG_END_OF_RELEASE;
+    }
+    output_buffer_.Overwrite(s);
+    sub_phase_ += phase_increment_ >> 1;
+    phase_ += phase_increment_;
+  }
+}
 }  // namespace tides

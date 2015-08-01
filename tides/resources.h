@@ -56,6 +56,7 @@ extern const int16_t* waveshaper_table[];
 
 extern const uint16_t lut_attenuverter_curve[];
 extern const uint16_t lut_slope_compression[];
+extern const uint16_t lut_raised_cosine[];
 extern const uint32_t lut_increments[];
 extern const uint32_t lut_cutoff[];
 extern const int16_t wav_bandlimited_parabola_0[];
@@ -95,6 +96,8 @@ extern const int16_t ws_smooth_bipolar_fold[];
 #define LUT_ATTENUVERTER_CURVE_SIZE 257
 #define LUT_SLOPE_COMPRESSION 1
 #define LUT_SLOPE_COMPRESSION_SIZE 257
+#define LUT_RAISED_COSINE 2
+#define LUT_RAISED_COSINE_SIZE 257
 #define LUT_INCREMENTS 0
 #define LUT_INCREMENTS_SIZE 97
 #define LUT_CUTOFF 1

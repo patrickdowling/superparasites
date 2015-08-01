@@ -34,7 +34,7 @@
 #include "stmlib/algorithms/pattern_predictor.h"
 #include "stmlib/utils/ring_buffer.h"
 
-// #define WAVETABLE_HACK
+#define WAVETABLE_HACK
 
 namespace tides {
 
@@ -171,7 +171,7 @@ class Generator {
       FillBufferControlRate();
     }
 #else
-    FillBufferWavetable();
+    FillBufferHarmonic();
 #endif
   }
   
@@ -185,6 +185,7 @@ class Generator {
   void FillBufferAudioRate();
   void FillBufferControlRate();
   void FillBufferWavetable();
+  void FillBufferHarmonic();
   int32_t ComputeAntialiasAttenuation(
         int16_t pitch,
         int16_t slope,
