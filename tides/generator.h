@@ -201,7 +201,7 @@ class Generator {
   int16_t ComputePitch(uint32_t phase_increment);
   int32_t ComputeCutoffFrequency(int16_t pitch, int16_t smoothness);
   void ComputeFrequencyRatio(int16_t pitch);
-  
+
   stmlib::RingBuffer<uint8_t, kBlockSize * 2> input_buffer_;
   stmlib::RingBuffer<GeneratorSample, kBlockSize * 2> output_buffer_;
    
