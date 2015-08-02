@@ -104,6 +104,8 @@ void Generator::Init() {
   phase_increment_ = 9448928;
   local_osc_phase_increment_ = phase_increment_;
   target_phase_increment_ = phase_increment_;
+
+  RandomizeHarmonicPhase();
 }
 
 void Generator::ComputeFrequencyRatio(int16_t pitch) {
@@ -847,14 +849,12 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
-const uint8_t kNumHarmonics = 10;
-
 void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize;
   
   int32_t center = static_cast<int32_t>(slope_ + 32768);
-  int32_t width = (static_cast<int32_t>(smoothness_ + 32768)) + 3000;
+  int32_t width = (static_cast<int32_t>(smoothness_ + 32768)) + 4000;
 
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
@@ -896,24 +896,82 @@ void Generator::FillBufferHarmonic() {
     }
     tilt /= (harm >> 1) + 1;
 
-    // // mute harmonics over Nyquist to avoid aliasing
-    // if (mode_ == GENERATOR_MODE_AR) {
-    //   int32_t x = phase_increment_ << harm;
-    //   if (x > INT32_MAX / 2) {
-    //     env = 0;
-    //   }
-    // }
-
     envelope[harm] = env > tilt ? env : tilt;
   }
 
   while (size--) {
 
+    uint8_t control = input_buffer_.ImmediateRead();
+
+    if (!(control & CONTROL_FREEZE)) {
+      if (control & CONTROL_GATE_RISING) {
+        phase_ = 0;
+        sub_phase_ = 0;
+        RandomizeHarmonicPhase();
+      }
+    }
+
+    if (control & CONTROL_CLOCK_RISING) {
+      if (sync_) {
+        if (range_ == GENERATOR_RANGE_HIGH) {
+          ++sync_edges_counter_;
+          if (sync_edges_counter_ >= frequency_ratio_.q) {
+            sync_edges_counter_ = 0;
+            if (sync_counter_ < kSyncCounterMaxTime && sync_counter_) {
+              uint64_t increment = frequency_ratio_.p * static_cast<uint64_t>(
+                  0xffffffff / sync_counter_);
+              if (increment > 0x80000000) {
+                increment = 0x80000000;
+              }
+              target_phase_increment_ = static_cast<uint32_t>(increment);
+              local_osc_phase_ = 0;
+            }
+            sync_counter_ = 0;
+          }
+        } else {
+          if (sync_counter_ >= kSyncCounterMaxTime) {
+            phase_ = 0;
+          } else if (sync_counter_) {
+            uint32_t predicted_period = sync_counter_ < 480
+                ? sync_counter_
+                : pattern_predictor_.Predict(sync_counter_);
+            uint64_t increment = frequency_ratio_.p * static_cast<uint64_t>(
+                0xffffffff / (predicted_period * frequency_ratio_.q));
+            if (increment > 0x80000000) {
+              increment = 0x80000000;
+            }
+            phase_increment_ = static_cast<uint32_t>(increment);
+          }
+          sync_counter_ = 0;
+        }
+      } else {
+        // Normal behaviour: switch banks.
+        uint8_t bank_index = mode_ + 1;
+        if (bank_index > 2) {
+          bank_index = 0;
+        }
+        mode_ = static_cast<GeneratorMode>(bank_index);
+      }
+    }
+    
+    // PLL stuff
+    if (sync_ && range_ == GENERATOR_RANGE_HIGH) {
+      // Fast tracking of the local oscillator to the external oscillator.
+      local_osc_phase_increment_ += static_cast<int32_t>(
+          target_phase_increment_ - local_osc_phase_increment_) >> 8;
+      local_osc_phase_ += local_osc_phase_increment_;
+    
+      // Slow phase realignment between the master oscillator and the local
+      // oscillator.
+      int32_t phase_error = local_osc_phase_ - phase_;
+      phase_increment_ = local_osc_phase_increment_ + (phase_error >> 13);
+    }
+
     uint32_t bipolar = 0;
     uint32_t unipolar = 0;
 
     for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
-      uint32_t phase = phase_;
+      uint32_t phase = phase_ + initial_phase_[harm];
       switch (mode_) {
       case GENERATOR_MODE_AR:
         phase = phase_ << harm;
@@ -946,4 +1004,11 @@ void Generator::FillBufferHarmonic() {
     phase_ += phase_increment_;
   }
 }
+
+void Generator::RandomizeHarmonicPhase() {
+  for (uint8_t i=0; i<kNumHarmonics; i++)
+    initial_phase_[i] = Random::GetWord() >> 16;
+}
+
+
 }  // namespace tides
