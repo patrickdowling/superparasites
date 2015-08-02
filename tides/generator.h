@@ -34,7 +34,7 @@
 #include "stmlib/algorithms/pattern_predictor.h"
 #include "stmlib/utils/ring_buffer.h"
 
-#define WAVETABLE_HACK
+// #define WAVETABLE_HACK
 
 namespace tides {
 
@@ -165,19 +165,32 @@ class Generator {
   
   inline void FillBuffer() {
 #ifndef WAVETABLE_HACK
-    if (range_ == GENERATOR_RANGE_HIGH) {
-      FillBufferAudioRate();
-    } else {
-      FillBufferControlRate();
+    if (feature_mode_ == FEAT_MODE_FUNCTION) {
+      if (range_ == GENERATOR_RANGE_HIGH) {
+        FillBufferAudioRate();
+      } else {
+        /* FillBufferControlRate(); */
+      }
+    } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
+      FillBufferHarmonic();
     }
+    
 #else
-    FillBufferHarmonic();
+    FillBufferWavetable();
 #endif
   }
   
   uint32_t clock_divider() const {
     return clock_divider_;
   }
+
+  enum FeatureMode {
+    FEAT_MODE_FUNCTION,
+    FEAT_MODE_HARMONIC,
+    FEAT_MODE_RANDOM,
+  };
+
+  FeatureMode feature_mode_;
 
  private:
   // There are two versions of the rendering code, one optimized for audio, with

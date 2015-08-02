@@ -49,6 +49,7 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
   mode_ = factory_testing_switch_.Read()
       ? UI_MODE_NORMAL
       : UI_MODE_FACTORY_TESTING;
+  generator->feature_mode_ = Generator::FEAT_MODE_FUNCTION;
   
   generator_ = generator;
   cv_scaler_ = cv_scaler;
@@ -60,8 +61,11 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
   } else {
     mode_counter_ = settings_.mode;
     range_counter_ = 2 - settings_.range;
+    generator->feature_mode_ = static_cast<Generator::FeatureMode>(settings_.feature_mode);
     generator->set_sync(settings_.sync);
   }
+
+  ignore_releases_ = 0;
 
   UpdateMode();
   UpdateRange();
@@ -72,6 +76,7 @@ void Ui::SaveState() {
   settings_.mode = generator_->mode();
   settings_.range = generator_->range();
   settings_.sync = generator_->sync();
+  settings_.feature_mode = generator_->feature_mode_;
   mode_storage.ParsimoniousSave(settings_, &version_token_);
 }
 
@@ -134,6 +139,28 @@ void Ui::Poll() {
   }
   
   switch (mode_) {
+    case UI_MODE_FEATURE_SWITCH:
+      {
+        bool blink = system_clock.milliseconds() & 32;
+        switch (generator_->feature_mode_) {
+        case Generator::FEAT_MODE_FUNCTION:
+          leds_.set_mode(blink);
+          leds_.set_value(0);
+          leds_.set_rate(0);
+          break;
+        case Generator::FEAT_MODE_HARMONIC:
+          leds_.set_mode(0);
+          leds_.set_value(blink ? 65535 : 0);
+          leds_.set_rate(0);
+          break;
+        case Generator::FEAT_MODE_RANDOM:
+          leds_.set_mode(0);
+          leds_.set_value(0);
+          leds_.set_rate(blink ? 65535 : 0);
+          break;
+        }
+      }
+      break;
     case UI_MODE_NORMAL:
       {
         GeneratorMode mode = generator_->mode();
@@ -228,18 +255,31 @@ void Ui::FlushEvents() {
 }
 
 void Ui::OnSwitchPressed(const Event& e) {
-  switch (e.control_id) {
-    case 0:
-      break;
-      
-    case 1:
-      break;
+  // double press -> feature switch mode
+  if ((e.control_id == 0 && switches_.pressed_immediate(1)) ||
+      (e.control_id == 1 && switches_.pressed_immediate(0))) {
+    mode_ = UI_MODE_FEATURE_SWITCH;
+    ignore_releases_ = 2;
   }
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
+
+  // hack for double presses
+  if (ignore_releases_ > 0) {
+    ignore_releases_--;
+    return;
+  }
+  
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     return;
+  } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
+    if (e.control_id == 0) {
+      uint8_t feat = generator_->feature_mode_;
+      generator_->feature_mode_ = static_cast<Generator::FeatureMode>((feat + 1) % 3);
+    } else {
+      mode_ = UI_MODE_NORMAL;
+    }
   } else if (mode_ == UI_MODE_PAQUES) {
     mode_ = UI_MODE_NORMAL;
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
