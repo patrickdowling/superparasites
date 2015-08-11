@@ -164,20 +164,19 @@ class Generator {
   }
   
   inline void FillBuffer() {
-#ifndef WAVETABLE_HACK
     if (feature_mode_ == FEAT_MODE_FUNCTION) {
+#ifndef WAVETABLE_HACK
       if (range_ == GENERATOR_RANGE_HIGH) {
         FillBufferAudioRate();
       } else {
         /* FillBufferControlRate(); */
       }
+#else
+      FillBufferWavetable();
+#endif
     } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
       FillBufferHarmonic();
     }
-    
-#else
-    FillBufferWavetable();
-#endif
   }
   
   uint32_t clock_divider() const {
