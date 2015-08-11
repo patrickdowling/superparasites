@@ -87,7 +87,9 @@ class Generator {
   void set_range(GeneratorRange range) {
     ClearFilterState();
     range_ = range;
-    clock_divider_ = range_ == GENERATOR_RANGE_LOW ? 4 : 1;
+    clock_divider_ =
+            range_ == GENERATOR_RANGE_LOW ? 4 :
+            feature_mode_ == FEAT_MODE_HARMONIC ? 2 : 1;
   }
   
   void set_mode(GeneratorMode mode) {
