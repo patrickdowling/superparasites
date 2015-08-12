@@ -902,7 +902,26 @@ void Generator::FillBufferHarmonic() {
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
-    envelope[harm] = static_cast<int16_t>(z);
+    uint32_t pi =
+      mode_ == GENERATOR_MODE_AR ? phase_increment_ << harm :
+      mode_ == GENERATOR_MODE_LOOPING ? phase_increment_ * (harm + 1) :
+      mode_ == GENERATOR_MODE_AD ? phase_increment_ * ((harm << 1) + 1) :
+      UINT32_MAX;
+
+    // Take care of harmonics which phase increment will be > Nyquist
+    const uint32_t kCutoffLow = UINT32_MAX / 4;
+    const uint32_t kCutoffHigh = UINT32_MAX / 2;
+    const uint32_t kCutoffWidth = kCutoffHigh - kCutoffLow;
+
+    if (pi < kCutoffLow)
+      envelope[harm] = static_cast<uint16_t>(z);
+    else if (pi < kCutoffHigh) {
+      envelope[harm] = - z * ((pi>>16) - (kCutoffHigh>>16)) / (kCutoffWidth>>16);
+    }
+    else {
+      for (; harm<kNumHarmonics; harm++)
+        envelope[harm] = 0;
+    }
   }
 
   while (size--) {
