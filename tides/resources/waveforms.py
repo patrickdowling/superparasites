@@ -198,3 +198,14 @@ unipolar_fold = (0.5 * sine + 2 * x) * window + numpy.arctan(4 * x) * (1 - windo
 unipolar_fold /= numpy.abs(unipolar_fold).max()
 waveforms.append(('unipolar_fold', numpy.round(32767 * unipolar_fold)))
 
+
+
+"""----------------------------------------------------------------------------
+Sine wave
+----------------------------------------------------------------------------"""
+
+WAVETABLE_SIZE = 256
+x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
+x[-1] = x[0]
+sine = numpy.sin(2 * numpy.pi * x)
+waveforms.append(('sine', (32767 * sine).astype(int)))

@@ -106,6 +106,7 @@ void Generator::Init() {
   target_phase_increment_ = phase_increment_;
 
   RandomizeHarmonicPhase();
+  RandomizeHarmonicDistribution();
 }
 
 void Generator::ComputeFrequencyRatio(int16_t pitch) {
@@ -867,17 +868,18 @@ inline int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
 
 void Generator::FillBufferHarmonic() {
 
-  uint8_t size = kBlockSize * 2;
+  uint8_t size = kBlockSize * 2; // moar CPU
   
   int32_t center1 = static_cast<int32_t>(slope_ + 32768);
   int32_t center2 = static_cast<int32_t>(shape_ + 32768);
   // 0 < width < 65535
   int32_t width = static_cast<int32_t>(smoothness_) * 2;
-  width = width < 0 ? width + 65536 : ((width >> 1) * width) >> 16;
+  // Scaling:
+  width = width < 0 ? width + 65536 : width * 2 / 3;
   width = ((width >> 1) * width) >> 15;
   width += 2048;
 
-  int32_t reverse = (-smoothness_ << 2) + 32768;
+  int32_t reverse = (-smoothness_ << 3) + 32768;
   CONSTRAIN(reverse, 0, UINT16_MAX);
 
   if (sync_) {
@@ -887,11 +889,10 @@ void Generator::FillBufferHarmonic() {
   }
 
   uint16_t envelope[kNumHarmonics];
-  uint32_t sum_gains = 0;
 
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
-    int32_t x = (static_cast<int32_t>(harm) << 16) / kNumHarmonics;
+    int32_t x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
 
     int32_t peak1 = ComputePeak(center1, width, x);
     int32_t peak2 = ComputePeak(center2, width, x);
@@ -901,7 +902,6 @@ void Generator::FillBufferHarmonic() {
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
-    sum_gains += z;
     envelope[harm] = static_cast<int16_t>(z);
   }
 
@@ -909,20 +909,21 @@ void Generator::FillBufferHarmonic() {
 
     uint8_t control = input_buffer_.ImmediateRead();
 
-    if (!(control & CONTROL_FREEZE)) {
-      if (control & CONTROL_GATE_RISING) {
-        phase_ = 0;
-        sub_phase_ = 0;
-        RandomizeHarmonicPhase();
-      }
+    if (control & CONTROL_GATE_RISING) {
+      phase_ = 0;
+      sub_phase_ = 0;
+      RandomizeHarmonicPhase();
+      RandomizeHarmonicDistribution();
     }
 
-    uint32_t bipolar = 0;
-    uint32_t unipolar = 0;
+    int32_t bipolar = 0;
+    int32_t unipolar = 0;
+    int32_t gain = 0;
 
     for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
 
       smoothed_envelope_[harm] += (envelope[harm] - smoothed_envelope_[harm]) >> 4;
+      gain += smoothed_envelope_[harm];
 
       uint32_t phase = phase_ + initial_phase_[harm];
       switch (mode_) {
@@ -937,14 +938,17 @@ void Generator::FillBufferHarmonic() {
         break;
       }
 
-      uint32_t sine = Interpolate824(lut_raised_cosine, phase);
+      int32_t sine = Interpolate824(wav_sine, phase);
       bipolar += (sine * smoothed_envelope_[harm]) >> 16;
-      unipolar += (sine * smoothed_envelope_[(harm * 7) & 15]) >> 16;
+      unipolar += (sine * smoothed_envelope_[harm_permut_[harm]]) >> 16;
     }
 
     GeneratorSample s;
-    s.bipolar = bipolar / kNumHarmonics - 32768;
-    s.unipolar = unipolar / kNumHarmonics;
+    // prevents from dividing by something close to 0
+    gain += 8192;
+    // we normalize the values
+    s.bipolar = ((bipolar << 13) / gain) << 3;
+    s.unipolar = (((unipolar << 13) / gain) << 3) + 32768;
     s.flags = 0;
     if (s.bipolar > 0) {
       s.flags |= FLAG_END_OF_ATTACK;
@@ -961,6 +965,20 @@ void Generator::FillBufferHarmonic() {
 void Generator::RandomizeHarmonicPhase() {
   for (uint8_t i=0; i<kNumHarmonics; i++)
     initial_phase_[i] = Random::GetWord() >> 16;
+}
+
+void Generator::RandomizeHarmonicDistribution() {
+  for(int i=0;i<kNumHarmonics;++i) {
+    harm_permut_[i]=i;
+  }
+  for (int i = kNumHarmonics-1; i >= 0; --i) {
+    //generate a random number [0, n-1]
+    int j = rand() % (i+1);
+    //swap the last element with element at random index
+    int temp = harm_permut_[i];
+    harm_permut_[i] = harm_permut_[j];
+    harm_permut_[j] = temp;
+  }
 }
 
 
