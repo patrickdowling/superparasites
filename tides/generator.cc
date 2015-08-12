@@ -851,7 +851,7 @@ void Generator::FillBufferWavetable() {
 
 void Generator::FillBufferHarmonic() {
 
-  uint8_t size = kBlockSize;
+  uint8_t size = kBlockSize * 2;
   
   int32_t center = static_cast<int32_t>(slope_ + 32768);
   int32_t width = (static_cast<int32_t>(smoothness_ + 32768)) + 4000;
@@ -986,7 +986,7 @@ void Generator::FillBufferHarmonic() {
 
       uint32_t sine = Interpolate824(lut_raised_cosine, phase);
       bipolar += (sine * envelope[harm]) >> 16;
-      unipolar += (sine * envelope[(harm * 3) & 7]) >> 16;
+      unipolar += (sine * envelope[(harm * 7) & 15]) >> 16;
     }
 
     GeneratorSample s;
