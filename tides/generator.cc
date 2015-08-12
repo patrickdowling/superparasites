@@ -849,18 +849,34 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
+inline int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
+  int32_t peak = 0;            // 0 < peak < 65535
+  if (x < center - width)
+    peak = 0;
+  else if (x < center)
+    peak = 32768 + ((x - center) << 15) / width;
+  else if (x < center + width)
+    peak = 32768 + ((center - x) << 15) / width;
+  else
+    peak = 0;
+  peak <<= 1;
+  // TODO plus propre
+  CONSTRAIN(peak, 0, 65535);
+  return peak;
+}
+
 void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize * 2;
   
-  // 0 < center < 65535
-  int32_t center = static_cast<int32_t>(slope_ + 32768);
+  int32_t center1 = static_cast<int32_t>(slope_ + 32768);
+  int32_t center2 = static_cast<int32_t>(shape_ + 32768);
   // 0 < width < 65535
   int32_t width = static_cast<int32_t>(smoothness_) * 2;
-  width = width < 0 ? width + 65536 : ((width >> 1) * width) >> 17;
-  width += 4000;
+  width = width < 0 ? width + 65536 : ((width >> 1) * width) >> 16;
+  width = ((width >> 1) * width) >> 15;
+  width += 2048;
 
-  // 0 < reverse < 65535
   int32_t reverse = (-smoothness_ << 2) + 32768;
   CONSTRAIN(reverse, 0, UINT16_MAX);
 
@@ -871,45 +887,21 @@ void Generator::FillBufferHarmonic() {
   }
 
   uint16_t envelope[kNumHarmonics];
-  // uint16_t smoothed_envelope[kNumHarmonics];
+  uint32_t sum_gains = 0;
 
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
     int32_t x = (static_cast<int32_t>(harm) << 16) / kNumHarmonics;
 
-    //center and width control
-    int32_t env = 0;            // 0 < env < 65535
-    if (x < center - width)
-      env = 0;
-    else if (x < center)
-      env = 32768 + ((x - center) << 15) / width;
-    else if (x < center + width)
-      env = 32768 + ((center - x) << 15) / width;
-    else
-      env = 0;
-    env <<= 1;
-    // TODO plus propre
-    CONSTRAIN(env, 0, 65535);
+    int32_t peak1 = ComputePeak(center1, width, x);
+    int32_t peak2 = ComputePeak(center2, width, x);
 
-    // tilt control
-    int32_t tilt = 0;
-    if (shape_ < 0) {
-      int32_t shape = -shape_ << 1;
-      tilt = (((65535 - x) * static_cast<uint32_t>(shape)) >> 14) - 65535;
-      tilt /= 2;
-      CONSTRAIN(tilt, 0, 65535);
-    } else {
-      int32_t shape = shape_ << 1;
-      tilt = ((x * static_cast<uint32_t>(shape)) >> 14) - 65535;
-      CONSTRAIN(tilt, 0, 65535);
-    }
-    tilt /= (harm >> 1) + 1;
-
-    int32_t a = env > tilt ? env : tilt;
-    CONSTRAIN(a, 0, INT16_MAX);
+    int32_t a = peak1 > peak2 ? peak1 : peak2;
+    CONSTRAIN(a, 0, INT16_MAX); // TODO devrait pas arriver!
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
+    sum_gains += z;
     envelope[harm] = static_cast<int16_t>(z);
   }
 
@@ -930,6 +922,8 @@ void Generator::FillBufferHarmonic() {
 
     for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
 
+      smoothed_envelope_[harm] += (envelope[harm] - smoothed_envelope_[harm]) >> 4;
+
       uint32_t phase = phase_ + initial_phase_[harm];
       switch (mode_) {
       case GENERATOR_MODE_AR:
@@ -944,8 +938,8 @@ void Generator::FillBufferHarmonic() {
       }
 
       uint32_t sine = Interpolate824(lut_raised_cosine, phase);
-      bipolar += (sine * envelope[harm]) >> 16;
-      unipolar += (sine * envelope[(harm * 7) & 15]) >> 16;
+      bipolar += (sine * smoothed_envelope_[harm]) >> 16;
+      unipolar += (sine * smoothed_envelope_[(harm * 7) & 15]) >> 16;
     }
 
     GeneratorSample s;

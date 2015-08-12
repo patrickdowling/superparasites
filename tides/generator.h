@@ -263,7 +263,9 @@ class Generator {
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 
-  static const uint8_t kNumHarmonics = 16;
+  static const uint8_t kNumHarmonics = 20;
+
+  uint16_t smoothed_envelope_[kNumHarmonics];
   uint16_t initial_phase_[kNumHarmonics];
 
   void RandomizeHarmonicPhase();
