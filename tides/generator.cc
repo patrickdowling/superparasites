@@ -868,7 +868,7 @@ inline int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
 
 void Generator::FillBufferHarmonic() {
 
-  uint8_t size = kBlockSize * 2; // moar CPU
+  uint8_t size = kBlockSize * 3; // moar CPU
   
   int32_t center1 = static_cast<int32_t>(slope_ + 32768);
   int32_t center2 = static_cast<int32_t>(shape_ + 32768);
