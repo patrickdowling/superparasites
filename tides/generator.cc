@@ -889,6 +889,7 @@ void Generator::FillBufferHarmonic() {
   }
 
   uint16_t envelope[kNumHarmonics];
+  uint16_t antialias[kNumHarmonics];
 
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
@@ -902,26 +903,26 @@ void Generator::FillBufferHarmonic() {
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
-    uint32_t pi =
-      mode_ == GENERATOR_MODE_AR ? phase_increment_ << harm :
-      mode_ == GENERATOR_MODE_LOOPING ? phase_increment_ * (harm + 1) :
-      mode_ == GENERATOR_MODE_AD ? phase_increment_ * ((harm << 1) + 1) :
+    uint32_t pi = phase_increment_ >> 16;
+    pi =
+      mode_ == GENERATOR_MODE_AR ? pi << harm :
+      mode_ == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
+      mode_ == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
       UINT32_MAX;
 
+    envelope[harm] = static_cast<uint16_t>(z);
+
     // Take care of harmonics which phase increment will be > Nyquist
-    const uint32_t kCutoffLow = UINT32_MAX / 4;
-    const uint32_t kCutoffHigh = UINT32_MAX / 2;
+    const uint32_t kCutoffLow = UINT16_MAX / 8;
+    const uint32_t kCutoffHigh = UINT16_MAX / 2;
     const uint32_t kCutoffWidth = kCutoffHigh - kCutoffLow;
 
     if (pi < kCutoffLow)
-      envelope[harm] = static_cast<uint16_t>(z);
-    else if (pi < kCutoffHigh) {
-      envelope[harm] = - z * ((pi>>16) - (kCutoffHigh>>16)) / (kCutoffWidth>>16);
-    }
-    else {
-      for (; harm<kNumHarmonics; harm++)
-        envelope[harm] = 0;
-    }
+      antialias[harm] = UINT16_MAX;
+    else if (pi < kCutoffHigh)
+      antialias[harm] = - UINT16_MAX * (pi - kCutoffHigh) / kCutoffWidth;
+    else
+      antialias[harm] = 0;
   }
 
   while (size--) {
@@ -958,8 +959,12 @@ void Generator::FillBufferHarmonic() {
       }
 
       int32_t sine = Interpolate824(wav_sine, phase);
-      bipolar += (sine * smoothed_envelope_[harm]) >> 16;
-      unipolar += (sine * smoothed_envelope_[harm_permut_[harm]]) >> 16;
+      bipolar += (((sine
+                    * smoothed_envelope_[harm]) >> 16)
+                  * antialias[harm]) >> 16;
+      unipolar += (((sine
+                     * smoothed_envelope_[harm_permut_[harm]]) >> 16)
+                   * antialias[harm]) >> 16;
     }
 
     GeneratorSample s;
