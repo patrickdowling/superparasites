@@ -259,7 +259,8 @@ class Generator {
   int64_t bi_lp_state_[2];
   
   bool running_;
-  
+  bool previous_freeze_;
+
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 

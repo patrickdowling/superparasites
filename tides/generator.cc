@@ -94,7 +94,8 @@ void Generator::Init() {
   
   previous_sample_.unipolar = previous_sample_.bipolar = 0;
   running_ = false;
-  
+  previous_freeze_ = false;
+
   ClearFilterState();
   
   sync_counter_ = kSyncCounterMaxTime;
@@ -933,7 +934,15 @@ void Generator::FillBufferHarmonic() {
       phase_ = 0;
       sub_phase_ = 0;
       RandomizeHarmonicPhase();
-      RandomizeHarmonicDistribution();
+    }
+
+    if (control & CONTROL_FREEZE) {
+      if (!previous_freeze_) {
+        RandomizeHarmonicDistribution();
+        previous_freeze_ = true;
+      }
+    } else {
+      previous_freeze_ = false;
     }
 
     int32_t bipolar = 0;
