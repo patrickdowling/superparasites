@@ -89,6 +89,7 @@ class Generator {
     range_ = range;
     clock_divider_ =
             range_ == GENERATOR_RANGE_LOW ? 4 :
+            /* harmonic oscillator is sampled at 24kHz */
             feature_mode_ == FEAT_MODE_HARMONIC ? 2 : 1;
   }
   

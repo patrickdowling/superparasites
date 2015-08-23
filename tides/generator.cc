@@ -898,6 +898,7 @@ void Generator::FillBufferHarmonic() {
 
     int32_t peak1 = ComputePeak(center1, width, x);
     int32_t peak2 = ComputePeak(center2, width, x);
+    peak1 /= 2;                 // second peak has half the gain
 
     int32_t a = peak1 > peak2 ? peak1 : peak2;
     CONSTRAIN(a, 0, INT16_MAX); // TODO devrait pas arriver!
@@ -978,7 +979,7 @@ void Generator::FillBufferHarmonic() {
 
     GeneratorSample s;
     // prevents from dividing by something close to 0
-    gain += 8192;
+    gain += 16384;
     // we normalize the values
     s.bipolar = ((bipolar << 13) / gain) << 3;
     s.unipolar = (((unipolar << 13) / gain) << 3) + 32768;
