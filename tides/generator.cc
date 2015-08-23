@@ -1083,7 +1083,7 @@ void Generator::FillBufferRandom() {
     uint16_t shape = static_cast<uint16_t>(shape_ + 32768);
     shape = (shape >> 2) * 3;
 
-    const int16_t* wf_table[] = {
+    const int16_t* wf_table1[7] = {
       wav_zeros,
       wav_spiky_exp_control,
       wav_spiky_control,
@@ -1093,9 +1093,19 @@ void Generator::FillBufferRandom() {
       wav_fold_control,
     };
 
-    uint16_t wave_index = shape >> 13;
-    const int16_t* shape_1 = wf_table[wave_index];
-    const int16_t* shape_2 = wf_table[wave_index + 1];
+    const int16_t* wf_table2[7] = {
+      wav_zeros,
+      wav_bump_exp_control,
+      wav_spiky_control,
+      wav_linear_control,
+      wav_bump_control,
+      wav_spiky_exp_control,
+      wav_fold_control,
+    };
+
+    uint16_t idx = shape >> 13;
+    const int16_t* shape_1 = walk_direction ? wf_table1[idx] : wf_table2[idx];
+    const int16_t* shape_2 = walk_direction ? wf_table1[idx+1] : wf_table2[idx+1];
     uint16_t shape_xfade = shape << 3;
 
     uint16_t shaped_phase = Crossfade115(shape_1, shape_2, divided_phase_ >> 17, shape_xfade);
