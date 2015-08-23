@@ -1058,25 +1058,58 @@ void Generator::FillBufferRandom() {
       previous_freeze_ = false;
     }
 
-    uint16_t skip_prob = slope_ + 32768;
-
     // on divided phase reset
-    if (divided_phase_ < phase_increment_) {
+    if (divided_phase_ < phase_increment_ / divider_) {
 
       // compute new divider
+      uint16_t skip_prob = slope_ + 32768;
       if (skip_prob > UINT16_MAX - 256)
         divider_ = 1;
       else
         divider_ = Random::GetGeometric(skip_prob) + 1;
+
+      // compute next value
+      uint32_t step_max = smoothness_ + 32768;
+      current_value_[1] = next_value_[1];
+      uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
+      rnd *= walk_direction ? 1 : -1;
+      next_value_[1] = fold_add(next_value_[1], rnd);
+
+      walk_direction = !walk_direction;
     }
+
+    // Waveshaper
+
+    uint16_t shape = static_cast<uint16_t>(shape_ + 32768);
+    shape = (shape >> 2) * 3;
+
+    const int16_t* wf_table[] = {
+      wav_zeros,
+      wav_spiky_exp_control,
+      wav_spiky_control,
+      wav_linear_control,
+      wav_bump_control,
+      wav_bump_exp_control,
+      wav_fold_control,
+    };
+
+    uint16_t wave_index = shape >> 13;
+    const int16_t* shape_1 = wf_table[wave_index];
+    const int16_t* shape_2 = wf_table[wave_index + 1];
+    uint16_t shape_xfade = shape << 3;
+
+    uint16_t shaped_phase = Crossfade115(shape_1, shape_2, divided_phase_ >> 17, shape_xfade);
+
+    int32_t bipolar = (next_value_[1] - current_value_[1]) *
+      shaped_phase / 32768 + current_value_[1];
 
     bool clock = (phase_ >> 16) < pulse_width_;
     bool clock_ch1 = clock;
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
     GeneratorSample s;
-    s.bipolar = divided_phase_ >> 17;
-    s.unipolar = phase_ >> 16;// + 32768;
+    s.bipolar = bipolar - 32768;
+    s.unipolar = divided_phase_ >> 17;
     s.flags = 0
       | (clock_ch1 ? FLAG_END_OF_ATTACK : 0)
       | (clock_ch2 ? FLAG_END_OF_RELEASE : 0);

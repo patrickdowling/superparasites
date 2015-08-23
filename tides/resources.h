@@ -90,6 +90,8 @@ extern const int16_t wav_normal_control[];
 extern const int16_t wav_bipolar_fold[];
 extern const int16_t wav_unipolar_fold[];
 extern const int16_t wav_sine[];
+extern const int16_t wav_zeros[];
+extern const int16_t wav_fold_control[];
 extern const int16_t wt_waves[];
 extern const int16_t ws_smooth_bipolar_fold[];
 #define STR_DUMMY 0  // dummy
@@ -173,6 +175,10 @@ extern const int16_t ws_smooth_bipolar_fold[];
 #define WAV_UNIPOLAR_FOLD_SIZE 1025
 #define WAV_SINE 34
 #define WAV_SINE_SIZE 257
+#define WAV_ZEROS 35
+#define WAV_ZEROS_SIZE 1025
+#define WAV_FOLD_CONTROL 36
+#define WAV_FOLD_CONTROL_SIZE 2049
 #define WT_WAVES 0
 #define WT_WAVES_SIZE 45746
 #define WS_SMOOTH_BIPOLAR_FOLD 0

@@ -253,8 +253,9 @@ class Generator {
   uint32_t divided_phase_;
   uint32_t divider_;
   uint32_t divider_counter_;
-  uint16_t current_value[2];
-  uint16_t previous_value_[2];
+  uint16_t current_value_[2];
+  uint16_t next_value_[2];
+  bool walk_direction;
 
   bool sync_;
   FrequencyRatio frequency_ratio_;
