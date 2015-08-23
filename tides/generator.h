@@ -143,7 +143,11 @@ class Generator {
     sync_ = sync;
     sync_edges_counter_ = 0;
   }
-  
+
+  void set_pulse_width(uint16_t pw) {
+    pulse_width_ = pw;
+  }
+
   inline GeneratorMode mode() const { return mode_; }
   inline GeneratorRange range() const { return range_; }
   inline bool sync() const { return sync_; }
@@ -170,15 +174,17 @@ class Generator {
     if (feature_mode_ == FEAT_MODE_FUNCTION) {
 #ifndef WAVETABLE_HACK
       if (range_ == GENERATOR_RANGE_HIGH) {
-        FillBufferAudioRate();
+        /* FillBufferAudioRate(); */
       } else {
         /* FillBufferControlRate(); */
       }
 #else
-      FillBufferWavetable();
+      /* FillBufferWavetable(); */
 #endif
     } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
       FillBufferHarmonic();
+    } else if (feature_mode_ == FEAT_MODE_RANDOM) {
+      FillBufferRandom();
     }
   }
   
@@ -201,6 +207,7 @@ class Generator {
   void FillBufferControlRate();
   void FillBufferWavetable();
   void FillBufferHarmonic();
+  void FillBufferRandom();
   int32_t ComputeAntialiasAttenuation(
         int16_t pitch,
         int16_t slope,
@@ -226,7 +233,6 @@ class Generator {
   
   uint32_t clock_divider_;
   
-  uint16_t prescaler_;
   int16_t pitch_;
   int16_t previous_pitch_;
   int16_t shape_;
@@ -242,7 +248,14 @@ class Generator {
   uint16_t y_;
   uint16_t z_;
   bool wrap_;
-  
+
+  uint16_t pulse_width_;
+  uint32_t divided_phase_;
+  uint32_t divider_;
+  uint32_t divider_counter_;
+  uint16_t current_value[2];
+  uint16_t previous_value_[2];
+
   bool sync_;
   FrequencyRatio frequency_ratio_;
   

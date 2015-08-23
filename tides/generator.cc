@@ -96,6 +96,11 @@ void Generator::Init() {
   running_ = false;
   previous_freeze_ = false;
 
+  pulse_width_ = UINT16_MAX / 2;
+  divided_phase_ = 0;
+  divider_ = 1;
+  divider_counter_ = 0;
+
   ClearFilterState();
   
   sync_counter_ = kSyncCounterMaxTime;
@@ -1015,5 +1020,84 @@ void Generator::RandomizeHarmonicDistribution() {
   }
 }
 
+inline uint16_t fold_add(uint16_t a, int16_t b) {
+  if (a > 0 && b > 65535 - a) {
+    return 65535 - a - b - 1;
+  } else if (b < 0 && a < - b) {
+    return 65535 - a - b + 1;
+  } else {
+    return a + b;
+  }
+}
+
+void Generator::FillBufferRandom() {
+
+  uint8_t size = kBlockSize;
+  
+  if (sync_) {
+    pitch_ = ComputePitch(phase_increment_);
+  } else {
+    phase_increment_ = ComputePhaseIncrement(pitch_);
+  }
+
+  while (size--) {
+
+    uint8_t control = input_buffer_.ImmediateRead();
+
+    if (control & CONTROL_GATE_RISING) {
+      running_ = true;
+      phase_ = 0;
+    }
+
+    if (control & CONTROL_FREEZE) {
+      if (!previous_freeze_) {
+        // TODO
+        previous_freeze_ = true;
+      }
+    } else {
+      previous_freeze_ = false;
+    }
+
+    uint16_t skip_prob = slope_ + 32768;
+
+    // on divided phase reset
+    if (divided_phase_ < phase_increment_) {
+
+      // compute new divider
+      if (skip_prob > UINT16_MAX - 256)
+        divider_ = 1;
+      else
+        divider_ = Random::GetGeometric(skip_prob) + 1;
+    }
+
+    bool clock = (phase_ >> 16) < pulse_width_;
+    bool clock_ch1 = clock;
+    bool clock_ch2 = divider_counter_ == 0 && clock;
+
+    GeneratorSample s;
+    s.bipolar = divided_phase_ >> 17;
+    s.unipolar = phase_ >> 16;// + 32768;
+    s.flags = 0
+      | (clock_ch1 ? FLAG_END_OF_ATTACK : 0)
+      | (clock_ch2 ? FLAG_END_OF_RELEASE : 0);
+
+    output_buffer_.Overwrite(s);
+
+    // just before phase reset
+    if (phase_ > UINT32_MAX - phase_increment_) {
+      divider_counter_ = (divider_counter_ + 1) % divider_;
+      // stop the oscillator
+      if (running_ && mode_ != GENERATOR_MODE_LOOPING)
+        running_ = false;
+    }
+
+    // increment phasors
+    if (running_ || mode_ == GENERATOR_MODE_LOOPING) {
+      phase_ += phase_increment_;
+      divided_phase_ = phase_ / divider_ +
+        UINT32_MAX / divider_ * divider_counter_;
+    }
+  }
+}
 
 }  // namespace tides

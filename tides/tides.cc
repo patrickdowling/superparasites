@@ -154,6 +154,9 @@ int main(void) {
         gate_output.Write(true, true);
       }
       generator.set_pitch(cv_scaler.pitch());
+      if (generator.feature_mode_ == Generator::FEAT_MODE_RANDOM)
+        generator.set_pulse_width(cv_scaler.raw_attenuverter());
+
       generator.set_shape(cv_scaler.shape());
       generator.set_slope(cv_scaler.slope());
       generator.set_smoothness(cv_scaler.smoothness());

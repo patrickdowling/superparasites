@@ -121,7 +121,9 @@ class CvScaler {
     pitch += 60 << 7;
     return pitch;
   }
-  
+
+  inline uint16_t raw_attenuverter() const { return attenuverter_; }
+
   void CaptureCalibrationValues() {
     v_oct_c2_ = v_oct_;
   }
