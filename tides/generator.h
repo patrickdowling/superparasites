@@ -253,6 +253,9 @@ class Generator {
   uint32_t divided_phase_;
   uint32_t divider_;
   uint32_t divider_counter_;
+  uint32_t delayed_phase_;
+  uint32_t delayed_phase_increment_;
+
   uint16_t current_value_[2];
   uint16_t next_value_[2];
   bool walk_direction;

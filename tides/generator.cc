@@ -100,6 +100,7 @@ void Generator::Init() {
   divided_phase_ = 0;
   divider_ = 1;
   divider_counter_ = 0;
+  delayed_phase_ = 0;
 
   ClearFilterState();
   
@@ -108,6 +109,7 @@ void Generator::Init() {
   frequency_ratio_.q = 1;
   sync_ = false;
   phase_increment_ = 9448928;
+  delayed_phase_increment_ = phase_increment_;
   local_osc_phase_increment_ = phase_increment_;
   target_phase_increment_ = phase_increment_;
 
@@ -1091,6 +1093,21 @@ void Generator::FillBufferRandom() {
       previous_freeze_ = false;
     }
 
+    uint32_t step_max = smoothness_ + 32768;
+
+    // on delayed phase reset
+    if (delayed_phase_ < delayed_phase_increment_) {
+
+      // compute new phase increment
+      uint32_t period = UINT32_MAX / phase_increment_;
+      uint32_t delay_ratio = static_cast<uint32_t>(slope_) + 32768;
+      uint32_t max_delay = (period * delay_ratio) >> 16;// >> 16)(delay_ratio * ) >> 16;
+      uint32_t delay = ((Random::GetWord() >> 16) * max_delay) >> 12;
+      delayed_phase_increment_ = UINT32_MAX / (period + delay);
+
+      // compute next value for ch. 1
+    }
+
     // on divided phase reset
     if (divided_phase_ < phase_increment_ / divider_) {
 
@@ -1101,8 +1118,7 @@ void Generator::FillBufferRandom() {
       else
         divider_ = Random::GetGeometric(skip_prob) + 1;
 
-      // compute next value
-      uint32_t step_max = smoothness_ + 32768;
+      // compute next value for ch. 2
       current_value_[1] = next_value_[1];
       uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
       rnd *= walk_direction ? 1 : -1;
@@ -1123,12 +1139,12 @@ void Generator::FillBufferRandom() {
 
     // compute clocks
     bool clock = (phase_ >> 16) < pulse_width_;
-    bool clock_ch1 = clock;
+    bool clock_ch1 = (delayed_phase_ >> 16) < pulse_width_;
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
     GeneratorSample s;
     s.bipolar = bipolar - 32768;
-    s.unipolar = divided_phase_ >> 17;
+    s.unipolar = delayed_phase_ >> 17;
     s.flags = 0
       | (clock_ch1 ? FLAG_END_OF_ATTACK : 0)
       | (clock_ch2 ? FLAG_END_OF_RELEASE : 0);
@@ -1146,6 +1162,7 @@ void Generator::FillBufferRandom() {
     // increment phasors
     if (running_ || mode_ == GENERATOR_MODE_LOOPING) {
       phase_ += phase_increment_;
+      delayed_phase_ += delayed_phase_increment_;
       divided_phase_ = phase_ / divider_ +
         UINT32_MAX / divider_ * divider_counter_;
     }
