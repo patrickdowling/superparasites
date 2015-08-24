@@ -1112,15 +1112,16 @@ void Generator::FillBufferRandom() {
       walk_direction = !walk_direction;
     }
 
-    // Waveshaper
-
+    // waveshape phase
     uint16_t shape = static_cast<uint16_t>(shape_ + 32768);
     bool direction = next_value_[1] > current_value_[1];
     uint16_t shaped_phase = RandomWaveshaper(shape, direction, divided_phase_);
 
-    int32_t bipolar = (next_value_[1] - current_value_[1]) *
+    // scale phase to random values
+    uint16_t bipolar = (next_value_[1] - current_value_[1]) *
       shaped_phase / 32768 + current_value_[1];
 
+    // compute clocks
     bool clock = (phase_ >> 16) < pulse_width_;
     bool clock_ch1 = clock;
     bool clock_ch2 = divider_counter_ == 0 && clock;
