@@ -207,8 +207,3 @@ x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
 x[-1] = x[0]
 sine = numpy.sin(2 * numpy.pi * x)
 waveforms.append(('sine', (32767 * sine).astype(int)))
-
-cst = [0] * (WAVESHAPER_SIZE + 1)
-waveforms.append(('zeros', cst))
-
-waveforms.append(('fold_control', control_rate_flip((bipolar_fold + 1.0) * 0.5, sin)))

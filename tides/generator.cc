@@ -1074,6 +1074,7 @@ void Generator::FillBufferRandom() {
       uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
       rnd *= walk_direction ? 1 : -1;
       next_value_[1] = fold_add(next_value_[1], rnd);
+      // next_value_[1] = walk_direction ? 65535 : 0; // TODO
 
       walk_direction = !walk_direction;
     }
@@ -1085,32 +1086,36 @@ void Generator::FillBufferRandom() {
 
     bool direction = next_value_[1] > current_value_[1];
 
-    const int16_t* wf_table1[7] = {
-      wav_zeros,
-      wav_spiky_exp_control,
-      wav_spiky_control,
-      wav_linear_control,
-      wav_bump_control,
-      wav_bump_exp_control,
-      wav_fold_control,
-    };
-
-    const int16_t* wf_table2[7] = {
-      wav_zeros,
-      wav_bump_exp_control,
-      wav_spiky_control,
-      wav_linear_control,
-      wav_bump_control,
-      wav_spiky_exp_control,
-      wav_fold_control,
-    };
-
     uint16_t idx = shape >> 13;
-    const int16_t* shape_1 = direction ? wf_table1[idx] : wf_table2[idx];
-    const int16_t* shape_2 = direction ? wf_table1[idx+1] : wf_table2[idx+1];
     uint16_t shape_xfade = shape << 3;
+    uint16_t shaped_phase = 0;
 
-    uint16_t shaped_phase = Crossfade115(shape_1, shape_2, divided_phase_ >> 17, shape_xfade);
+    if (idx == 0) {
+      int32_t b = Interpolate115(direction ? wav_spiky_exp_control : wav_bump_exp_control,
+                                 divided_phase_ >> 17);
+      shaped_phase = b * static_cast<int32_t>(shape_xfade) >> 16;
+    } else if (idx == 1) {
+      shaped_phase = Crossfade115(direction ? wav_spiky_exp_control : wav_bump_exp_control,
+                                  wav_spiky_control,
+                                  divided_phase_ >> 17, shape_xfade);
+    } else if (idx == 2) {
+      shaped_phase = Crossfade115(wav_spiky_control,
+                                  wav_linear_control,
+                                  divided_phase_ >> 17, shape_xfade);
+    } else if (idx == 3) {
+      shaped_phase = Crossfade115(wav_linear_control,
+                                  wav_bump_control,
+                                  divided_phase_ >> 17, shape_xfade);
+    } else if (idx == 4) {
+      shaped_phase = Crossfade115(wav_bump_control,
+                                  direction ? wav_bump_exp_control : wav_spiky_exp_control,
+                                  divided_phase_ >> 17, shape_xfade);
+    } else if (idx == 5) {
+      int32_t a = Interpolate115(direction ? wav_bump_exp_control : wav_spiky_exp_control,
+                                 divided_phase_ >> 17);
+      int32_t b = (Interpolate115(wav_bipolar_fold, divided_phase_ >> 17) + 32768) >> 1;
+      shaped_phase = a + ((b - a) * static_cast<int32_t>(shape_xfade) >> 16);
+    }
 
     int32_t bipolar = (next_value_[1] - current_value_[1]) *
       shaped_phase / 32768 + current_value_[1];
