@@ -258,7 +258,7 @@ class Generator {
 
   uint16_t current_value_[2];
   uint16_t next_value_[2];
-  bool walk_direction;
+  bool walk_direction_[2];
 
   bool sync_;
   FrequencyRatio frequency_ratio_;

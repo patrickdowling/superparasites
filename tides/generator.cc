@@ -858,7 +858,7 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
-inline int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
+int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
   int32_t peak = 0;            // 0 < peak < 65535
   if (x < center - width)
     peak = 0;
@@ -1022,7 +1022,7 @@ void Generator::RandomizeHarmonicDistribution() {
   }
 }
 
-inline uint16_t fold_add(uint16_t a, int16_t b) {
+uint16_t fold_add(uint16_t a, int16_t b) {
   if (a > 0 && b > 65535 - a) {
     return 65535 - a - b - 1;
   } else if (b < 0 && a < - b) {
@@ -1093,8 +1093,6 @@ void Generator::FillBufferRandom() {
       previous_freeze_ = false;
     }
 
-    uint32_t step_max = smoothness_ + 32768;
-
     // on delayed phase reset
     if (delayed_phase_ < delayed_phase_increment_) {
 
@@ -1107,6 +1105,12 @@ void Generator::FillBufferRandom() {
       delayed_phase_increment_ = UINT32_MAX / (period + delay);
 
       // compute next value for ch. 1
+      uint32_t step_max = 65536 - (smoothness_ + 32768);
+      current_value_[0] = next_value_[0];
+      uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
+      rnd *= walk_direction_[0] ? 1 : -1;
+      next_value_[0] = fold_add(next_value_[0], rnd);
+      walk_direction_[0] = !walk_direction_[0];
     }
 
     // on divided phase reset
@@ -1120,23 +1124,28 @@ void Generator::FillBufferRandom() {
         divider_ = Random::GetGeometric(skip_prob) + 1;
 
       // compute next value for ch. 2
+      uint32_t step_max = smoothness_ + 32768;
       current_value_[1] = next_value_[1];
       uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
-      rnd *= walk_direction ? 1 : -1;
+      rnd *= walk_direction_[1] ? 1 : -1;
       next_value_[1] = fold_add(next_value_[1], rnd);
-      // next_value_[1] = walk_direction ? 65535 : 0; // TODO
-
-      walk_direction = !walk_direction;
+      walk_direction_[1] = !walk_direction_[1];
     }
 
     // waveshape phase
-    uint16_t shape = static_cast<uint16_t>(shape_ + 32768);
-    bool direction = next_value_[1] > current_value_[1];
-    uint16_t shaped_phase = RandomWaveshaper(shape, direction, divided_phase_);
+    uint16_t shape_1 = static_cast<uint16_t>(shape_ + 32768);
+    bool direction_1 = next_value_[0] > current_value_[0];
+    uint16_t shaped_phase_1 = RandomWaveshaper(shape_1, direction_1, delayed_phase_);
+
+    uint16_t shape_2 = static_cast<uint16_t>(65536 - (shape_ + 32768));
+    bool direction_2 = next_value_[1] > current_value_[1];
+    uint16_t shaped_phase_2 = RandomWaveshaper(shape_2, direction_2, divided_phase_);
 
     // scale phase to random values
+    uint16_t unipolar = (next_value_[0] - current_value_[0]) *
+      shaped_phase_1 / 32768 + current_value_[0];
     uint16_t bipolar = (next_value_[1] - current_value_[1]) *
-      shaped_phase / 32768 + current_value_[1];
+      shaped_phase_2 / 32768 + current_value_[1];
 
     // compute clocks
     bool clock = (phase_ >> 16) < pulse_width_;
@@ -1145,7 +1154,7 @@ void Generator::FillBufferRandom() {
 
     GeneratorSample s;
     s.bipolar = bipolar - 32768;
-    s.unipolar = delayed_phase_ >> 17;
+    s.unipolar = unipolar;
     s.flags = 0
       | (clock_ch1 ? FLAG_END_OF_ATTACK : 0)
       | (clock_ch2 ? FLAG_END_OF_RELEASE : 0);
