@@ -1101,6 +1101,7 @@ void Generator::FillBufferRandom() {
       // compute new phase increment
       uint32_t period = UINT32_MAX / phase_increment_;
       uint32_t delay_ratio = static_cast<uint32_t>(slope_) + 32768;
+      delay_ratio = (delay_ratio * delay_ratio) >> 16;
       uint32_t max_delay = (period * delay_ratio) >> 16;// >> 16)(delay_ratio * ) >> 16;
       uint32_t delay = ((Random::GetWord() >> 16) * max_delay) >> 12;
       delayed_phase_increment_ = UINT32_MAX / (period + delay);
