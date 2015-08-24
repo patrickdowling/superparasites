@@ -147,13 +147,23 @@ x = numpy.arange(0, WAVESHAPER_SIZE + 1) / float(WAVESHAPER_SIZE)
 linear = x
 sin = (1.0 - numpy.cos(numpy.pi * x)) / 2.0
 inverse_sin = numpy.arccos(1 - 2 * x) / numpy.pi
+inverse_sin = (((inverse_sin*2-1) ** 3)+1)*0.5 # for more contrast
 expo = 1.0 - numpy.exp(-3 * x)
 expo_max = expo.max()
-expo /= expo_max
+expo = 1.0 - (1.0 - expo) ** 2  # for more contrast
+expo /= expo.max()
 
-expo_flipped = (1.0 - numpy.exp(-3 * (1 - x))) / expo_max
+expo_flipped = 1.0 - numpy.exp(-3 * (1 - x))
+expo_flipped = 1.0 - (1.0 - expo_flipped) ** 2  # for more contrast
+expo_flipped /= expo_flipped.max()
 log = numpy.log(1.0 - x * expo_max) / -3.0
+log -= log.min()
+log /= log.max()
+log = log ** 2                  # for more contrast
 log_flipped = numpy.log(1.0 - (1 - x) * expo_max) / -3.0
+log_flipped -= log_flipped.min()
+log_flipped /= log_flipped.max()
+log_flipped = log_flipped ** 2  # for more contrast
 
 def control_rate_flip(x, y):
   x = numpy.array(list(x) + list(y[1:]))

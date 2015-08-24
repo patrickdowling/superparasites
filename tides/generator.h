@@ -174,12 +174,12 @@ class Generator {
     if (feature_mode_ == FEAT_MODE_FUNCTION) {
 #ifndef WAVETABLE_HACK
       if (range_ == GENERATOR_RANGE_HIGH) {
-        /* FillBufferAudioRate(); */
+        FillBufferAudioRate();
       } else {
-        /* FillBufferControlRate(); */
+        FillBufferControlRate();
       }
 #else
-      /* FillBufferWavetable(); */
+      FillBufferWavetable();
 #endif
     } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
       FillBufferHarmonic();
