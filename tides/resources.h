@@ -56,7 +56,6 @@ extern const int16_t* waveshaper_table[];
 
 extern const uint16_t lut_attenuverter_curve[];
 extern const uint16_t lut_slope_compression[];
-extern const uint16_t lut_raised_cosine[];
 extern const uint32_t lut_increments[];
 extern const uint32_t lut_cutoff[];
 extern const int16_t wav_bandlimited_parabola_0[];
@@ -89,7 +88,6 @@ extern const int16_t wav_bump_exp_control[];
 extern const int16_t wav_normal_control[];
 extern const int16_t wav_bipolar_fold[];
 extern const int16_t wav_unipolar_fold[];
-extern const int16_t wav_sine[];
 extern const int16_t wt_waves[];
 extern const int16_t ws_smooth_bipolar_fold[];
 #define STR_DUMMY 0  // dummy
@@ -97,8 +95,6 @@ extern const int16_t ws_smooth_bipolar_fold[];
 #define LUT_ATTENUVERTER_CURVE_SIZE 257
 #define LUT_SLOPE_COMPRESSION 1
 #define LUT_SLOPE_COMPRESSION_SIZE 257
-#define LUT_RAISED_COSINE 2
-#define LUT_RAISED_COSINE_SIZE 257
 #define LUT_INCREMENTS 0
 #define LUT_INCREMENTS_SIZE 97
 #define LUT_CUTOFF 1
@@ -171,8 +167,6 @@ extern const int16_t ws_smooth_bipolar_fold[];
 #define WAV_BIPOLAR_FOLD_SIZE 1025
 #define WAV_UNIPOLAR_FOLD 33
 #define WAV_UNIPOLAR_FOLD_SIZE 1025
-#define WAV_SINE 34
-#define WAV_SINE_SIZE 257
 #define WT_WAVES 0
 #define WT_WAVES_SIZE 45746
 #define WS_SMOOTH_BIPOLAR_FOLD 0
