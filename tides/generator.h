@@ -255,6 +255,7 @@ class Generator {
   uint32_t divider_counter_;
   uint32_t delayed_phase_;
   uint32_t delayed_phase_increment_;
+  int16_t previous_slope_;
 
   uint16_t current_value_[2];
   uint16_t next_value_[2];
@@ -288,6 +289,8 @@ class Generator {
   uint16_t initial_phase_[kNumHarmonics];
   uint8_t harm_permut_[kNumHarmonics];
 
+  void RandomizeDelay();
+  void RandomizeDivider();
   void RandomizeHarmonicPhase();
   void RandomizeHarmonicDistribution();
 

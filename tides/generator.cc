@@ -1065,6 +1065,23 @@ uint16_t RandomWaveshaper(uint16_t shape, bool direction, uint32_t phase_) {
   }
 }
 
+inline void Generator::RandomizeDelay() {
+  uint32_t period = UINT32_MAX / phase_increment_;
+  uint32_t delay_ratio = slope_ + 32768;
+  delay_ratio = (delay_ratio * delay_ratio) >> 16; // square knob response
+  uint32_t max_delay = (period * delay_ratio) >> 16;
+  uint32_t delay = ((Random::GetWord() >> 16) * max_delay) >> 12;
+  delayed_phase_increment_ = UINT32_MAX / (period + delay);
+}
+
+void Generator::RandomizeDivider() {
+  uint16_t skip_prob = slope_ + 32768;
+  if (skip_prob > UINT16_MAX - 256)
+    divider_ = 1;
+  else
+    divider_ = Random::GetGeometric(skip_prob) + 1;
+}
+
 void Generator::FillBufferRandom() {
 
   uint8_t size = kBlockSize;
@@ -1079,30 +1096,26 @@ void Generator::FillBufferRandom() {
 
     uint8_t control = input_buffer_.ImmediateRead();
 
+    // on trigger
     if (control & CONTROL_GATE_RISING) {
       running_ = true;
       phase_ = 0;
     }
 
-    if (control & CONTROL_FREEZE) {
-      if (!previous_freeze_) {
-        // TODO
-        previous_freeze_ = true;
-      }
-    } else {
-      previous_freeze_ = false;
+    // on significant slope variation
+    if (phase_ < phase_increment_ &&
+        abs(slope_ - smoothed_slope_) > 2048) {
+      smoothed_slope_ = slope_;
+
+      // recompute delay and divider to avoid waiting for next phase
+      // to hear the changes
+      RandomizeDelay();
+      RandomizeDivider();
     }
 
     // on delayed phase reset
     if (delayed_phase_ < delayed_phase_increment_) {
-
-      // compute new phase increment
-      uint32_t period = UINT32_MAX / phase_increment_;
-      uint32_t delay_ratio = static_cast<uint32_t>(slope_) + 32768;
-      delay_ratio = (delay_ratio * delay_ratio) >> 16;
-      uint32_t max_delay = (period * delay_ratio) >> 16;// >> 16)(delay_ratio * ) >> 16;
-      uint32_t delay = ((Random::GetWord() >> 16) * max_delay) >> 12;
-      delayed_phase_increment_ = UINT32_MAX / (period + delay);
+      RandomizeDelay();
 
       // compute next value for ch. 1
       uint32_t step_max = 65536 - (smoothness_ + 32768);
@@ -1115,13 +1128,7 @@ void Generator::FillBufferRandom() {
 
     // on divided phase reset
     if (divided_phase_ < phase_increment_ / divider_) {
-
-      // compute new divider
-      uint16_t skip_prob = slope_ + 32768;
-      if (skip_prob > UINT16_MAX - 256)
-        divider_ = 1;
-      else
-        divider_ = Random::GetGeometric(skip_prob) + 1;
+      RandomizeDivider();
 
       // compute next value for ch. 2
       uint32_t step_max = smoothness_ + 32768;
