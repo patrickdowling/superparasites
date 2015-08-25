@@ -1162,15 +1162,23 @@ void Generator::FillBufferRandom() {
     output_buffer_.Overwrite(s);
 
     // just before phase reset
-    if (phase_ > UINT32_MAX - phase_increment_) {
+    if (running_ && phase_ > UINT32_MAX - phase_increment_) {
       divider_counter_ = (divider_counter_ + 1) % divider_;
       // stop the oscillator
-      if (running_ && mode_ != GENERATOR_MODE_LOOPING)
+      if ((mode_ == GENERATOR_MODE_AD) ||
+          (control & CONTROL_FREEZE) ||
+          (mode_ == GENERATOR_MODE_AR && !(control & CONTROL_GATE)))
         running_ = false;
     }
 
+    // restart the oscillator
+    if (!(control & CONTROL_FREEZE) &&
+        ((mode_ == GENERATOR_MODE_LOOPING) ||
+         (mode_ ==  GENERATOR_MODE_AR && (control & CONTROL_GATE))))
+      running_ = true;
+
     // increment phasors
-    if (running_ || mode_ == GENERATOR_MODE_LOOPING) {
+    if (running_) {
       phase_ += phase_increment_;
       delayed_phase_ += delayed_phase_increment_;
       divided_phase_ = phase_ / divider_ +
