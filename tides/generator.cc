@@ -1121,7 +1121,7 @@ void Generator::FillBufferRandom() {
 
       // compute next value for ch. 1
       uint32_t step_max = 65536 - (smoothness_ + 32768);
-      current_value_[0] = next_value_[0];
+      current_value_[0] = value_[0];
       uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
       rnd *= walk_direction_[0] ? 1 : -1;
       next_value_[0] = fold_add(next_value_[0], rnd);
@@ -1134,7 +1134,7 @@ void Generator::FillBufferRandom() {
 
       // compute next value for ch. 2
       uint32_t step_max = smoothness_ + 32768;
-      current_value_[1] = next_value_[1];
+      current_value_[1] = value_[1];
       uint16_t rnd = ((Random::GetWord() >> 16) * step_max) >> 16;
       rnd *= walk_direction_[1] ? 1 : -1;
       next_value_[1] = fold_add(next_value_[1], rnd);

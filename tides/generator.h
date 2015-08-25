@@ -260,6 +260,7 @@ class Generator {
   uint16_t current_value_[2];
   uint16_t next_value_[2];
   bool walk_direction_[2];
+  uint16_t value_[2];
 
   bool sync_;
   FrequencyRatio frequency_ratio_;
@@ -276,7 +277,7 @@ class Generator {
   
   int64_t uni_lp_state_[2];
   int64_t bi_lp_state_[2];
-  
+
   bool running_;
   bool previous_freeze_;
 
