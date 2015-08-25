@@ -1038,9 +1038,10 @@ uint16_t RandomWaveshaper(uint16_t shape, bool direction, uint32_t phase_) {
   uint16_t shape_xfade = shape << 3;
 
   if (idx == 0) {
+    int32_t a = 32767;
     int32_t b = Interpolate115(direction ? wav_spiky_exp_control : wav_bump_exp_control,
                                phase_ >> 17);
-    return b * static_cast<int32_t>(shape_xfade) >> 16;
+    return a + ((b - a) * static_cast<int32_t>(shape_xfade) >> 16);
   } else if (idx == 1) {
     return Crossfade115(direction ? wav_spiky_exp_control : wav_bump_exp_control,
                         wav_spiky_control,
