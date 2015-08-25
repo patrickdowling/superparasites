@@ -93,7 +93,7 @@ void Generator::Init() {
   smoothness_ = 0;
   
   previous_sample_.unipolar = previous_sample_.bipolar = 0;
-  running_ = false;
+  running_ = wrap_ = false;
   previous_freeze_ = false;
 
   pulse_width_ = UINT16_MAX / 2;
@@ -1098,8 +1098,10 @@ void Generator::FillBufferRandom() {
 
     // on trigger
     if (control & CONTROL_GATE_RISING) {
-      running_ = true;
+      // reset and start both oscillators
+      running_ = wrap_ = true;
       phase_ = 0;
+      delayed_phase_ = 0;
     }
 
     // on significant slope variation
@@ -1149,9 +1151,9 @@ void Generator::FillBufferRandom() {
     uint16_t shaped_phase_2 = RandomWaveshaper(shape_2, direction_2, divided_phase_);
 
     // scale phase to random values
-    uint16_t unipolar = (next_value_[0] - current_value_[0]) *
+    value_[0] = (next_value_[0] - current_value_[0]) *
       shaped_phase_1 / 32768 + current_value_[0];
-    uint16_t bipolar = (next_value_[1] - current_value_[1]) *
+    value_[1] = (next_value_[1] - current_value_[1]) *
       shaped_phase_2 / 32768 + current_value_[1];
 
     // compute clocks
@@ -1160,34 +1162,51 @@ void Generator::FillBufferRandom() {
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
     GeneratorSample s;
-    s.bipolar = bipolar - 32768;
-    s.unipolar = unipolar;
+    s.unipolar = value_[0];
+    s.bipolar = value_[1] - 32768;
     s.flags = 0
       | (clock_ch1 ? FLAG_END_OF_ATTACK : 0)
       | (clock_ch2 ? FLAG_END_OF_RELEASE : 0);
 
     output_buffer_.Overwrite(s);
 
-    // just before phase reset
+    /* note: we use running_ and wrap_ to store the state
+     * (running/stopped) of resp. the divided and the delayed
+     * oscillator */
+
+    // just before main phase reset
     if (running_ && phase_ > UINT32_MAX - phase_increment_) {
       divider_counter_ = (divider_counter_ + 1) % divider_;
-      // stop the oscillator
-      if ((mode_ == GENERATOR_MODE_AD) ||
-          (control & CONTROL_FREEZE) ||
-          (mode_ == GENERATOR_MODE_AR && !(control & CONTROL_GATE)))
+      // stop the divided oscillator on reset
+      if (divider_counter_ == 0 &&
+          ((mode_ == GENERATOR_MODE_AD) ||
+           (control & CONTROL_FREEZE) ||
+           (mode_ == GENERATOR_MODE_AR && !(control & CONTROL_GATE))))
         running_ = false;
     }
 
-    // restart the oscillator
+    // just before delayed phase reset
+    if (wrap_ && delayed_phase_ > UINT32_MAX - delayed_phase_increment_) {
+      // stop the delayed oscillator
+      if (((mode_ == GENERATOR_MODE_AD) ||
+           (control & CONTROL_FREEZE) ||
+           (mode_ == GENERATOR_MODE_AR && !(control & CONTROL_GATE))))
+      wrap_ = false;
+    }
+
+    // restart the oscillator if needed
     if (!(control & CONTROL_FREEZE) &&
         ((mode_ == GENERATOR_MODE_LOOPING) ||
          (mode_ ==  GENERATOR_MODE_AR && (control & CONTROL_GATE))))
-      running_ = true;
+      running_ = wrap_ = true;
 
     // increment phasors
+    if (wrap_) {
+      delayed_phase_ += delayed_phase_increment_;
+    }
+
     if (running_) {
       phase_ += phase_increment_;
-      delayed_phase_ += delayed_phase_increment_;
       divided_phase_ = phase_ / divider_ +
         UINT32_MAX / divider_ * divider_counter_;
     }
