@@ -88,9 +88,9 @@ class Generator {
     ClearFilterState();
     range_ = range;
     clock_divider_ =
-            range_ == GENERATOR_RANGE_LOW ? 4 :
-            /* harmonic oscillator is sampled at 24kHz */
-            feature_mode_ == FEAT_MODE_HARMONIC ? 2 : 1;
+      /* harmonic oscillator is sampled at 24kHz */
+      feature_mode_ == FEAT_MODE_HARMONIC ? 2 :
+      range_ == GENERATOR_RANGE_LOW ? 4 : 1;
   }
   
   void set_mode(GeneratorMode mode) {
@@ -100,10 +100,18 @@ class Generator {
     }
   }
   
+  void set_pitch_high_range(int16_t pitch) {
+    if (sync_) {
+      ComputeFrequencyRatio(pitch);
+    }
+    pitch_ = pitch + (12 << 7);
+  }
+
   void set_pitch(int16_t pitch) {
     if (sync_) {
       ComputeFrequencyRatio(pitch);
     }
+
     pitch += (12 << 7) - (60 << 7) * static_cast<int16_t>(range_);
     if (range_ == GENERATOR_RANGE_LOW) {
       pitch -= (12 << 7);  // One extra octave of super LF stuff!
@@ -117,7 +125,8 @@ class Generator {
 
   void set_slope(int16_t slope) {
 #ifndef WAVETABLE_HACK
-    if (range_ == GENERATOR_RANGE_HIGH) {
+    if (range_ == GENERATOR_RANGE_HIGH &&
+        feature_mode_ != FEAT_MODE_HARMONIC) {
       CONSTRAIN(slope, -32512, 32512);
     }
 #endif  // WAVETABLE_HACK
@@ -284,7 +293,7 @@ class Generator {
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 
-  static const uint8_t kNumHarmonics = 16;
+  static const uint8_t kNumHarmonics = 15;
 
   uint16_t smoothed_envelope_[kNumHarmonics];
   uint16_t initial_phase_[kNumHarmonics];

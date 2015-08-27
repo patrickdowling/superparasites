@@ -153,9 +153,15 @@ int main(void) {
       if (debug_rendering) {
         gate_output.Write(true, true);
       }
-      generator.set_pitch(cv_scaler.pitch());
-      if (generator.feature_mode_ == Generator::FEAT_MODE_RANDOM)
+      /* in harmonic mode, the range button sets the waveform, not the pitch */
+      if (generator.feature_mode_ == Generator::FEAT_MODE_HARMONIC) {
+        generator.set_pitch_high_range(cv_scaler.pitch());
+      } else {
+        generator.set_pitch(cv_scaler.pitch());
+      }
+      if (generator.feature_mode_ == Generator::FEAT_MODE_RANDOM) {
         generator.set_pulse_width(cv_scaler.raw_attenuverter());
+      }
 
       generator.set_shape(cv_scaler.shape());
       generator.set_slope(cv_scaler.slope());
