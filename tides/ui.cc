@@ -268,14 +268,11 @@ void Ui::OnSwitchReleased(const Event& e) {
   if (mode_ == UI_MODE_FACTORY_TESTING) {
     return;
   } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
-    if (e.control_id == 0) {
-      uint8_t feat = generator_->feature_mode_;
-      generator_->feature_mode_ = static_cast<Generator::FeatureMode>((feat + 1) % 3);
-      UpdateMode();
-      UpdateRange();
-    } else {
-      mode_ = UI_MODE_NORMAL;
-    }
+    uint8_t feat = generator_->feature_mode_;
+    int8_t dir = e.control_id == 0 ? -1 : 1;
+    generator_->feature_mode_ = static_cast<Generator::FeatureMode>((feat + dir) % 3);
+    UpdateMode();
+    UpdateRange();
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
     if (e.data > kLongPressDuration) {
       ++long_press_counter_;
@@ -328,8 +325,10 @@ void Ui::DoEvents() {
       }
     }
   }
-  if (queue_.idle_time() > 1000) {
+  if (queue_.idle_time() > 2000) {
     queue_.Touch();
+    if (mode_ == UI_MODE_FEATURE_SWITCH)
+      mode_ = UI_MODE_NORMAL;
   }
 }
 
