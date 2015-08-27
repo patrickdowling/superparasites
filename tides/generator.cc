@@ -1032,7 +1032,7 @@ uint16_t fold_add(uint16_t a, int16_t b) {
   }
 }
 
-uint16_t RandomWaveshaper(uint16_t shape, bool direction, uint32_t phase_) {
+uint16_t walk_waveshaper(uint16_t shape, bool direction, uint32_t phase_) {
   shape = (shape >> 2) * 3;
   uint16_t idx = shape >> 13;
   uint16_t shape_xfade = shape << 3;
@@ -1145,11 +1145,11 @@ void Generator::FillBufferRandom() {
     // waveshape phase
     uint16_t shape_1 = static_cast<uint16_t>(shape_ + 32768);
     bool direction_1 = next_value_[0] > current_value_[0];
-    uint16_t shaped_phase_1 = RandomWaveshaper(shape_1, direction_1, delayed_phase_);
+    uint16_t shaped_phase_1 = walk_waveshaper(shape_1, direction_1, delayed_phase_);
 
     uint16_t shape_2 = static_cast<uint16_t>(65536 - (shape_ + 32768));
     bool direction_2 = next_value_[1] > current_value_[1];
-    uint16_t shaped_phase_2 = RandomWaveshaper(shape_2, direction_2, divided_phase_);
+    uint16_t shaped_phase_2 = walk_waveshaper(shape_2, direction_2, divided_phase_);
 
     // scale phase to random values
     value_[0] = (next_value_[0] - current_value_[0]) *
@@ -1162,6 +1162,7 @@ void Generator::FillBufferRandom() {
     bool clock_ch1 = (delayed_phase_ >> 16) < pulse_width_;
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
+    // emit sample
     GeneratorSample s;
     s.unipolar = value_[0];
     s.bipolar = value_[1] - 32768;
@@ -1174,6 +1175,10 @@ void Generator::FillBufferRandom() {
     /* note: we use running_ and wrap_ to store the state
      * (running/stopped) of resp. the divided and the delayed
      * oscillator */
+
+    // on main phase reset
+    if (phase_ < phase_increment_) {
+    }
 
     // just before main phase reset
     if (running_ && phase_ > UINT32_MAX - phase_increment_) {
