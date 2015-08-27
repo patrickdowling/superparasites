@@ -201,13 +201,7 @@ void Ui::Poll() {
       leds_.set_rate(0, 65535);
       leds_.set_value(0, 65535);
       break;
-      
-    case UI_MODE_PAQUES:
-      leds_.set_mode(true, false);
-      leds_.set_rate(65535, 0);
-      leds_.set_value(65535, 0);
-      break;
-      
+
     case UI_MODE_FACTORY_TESTING:
       if (orange_) {
         leds_.set_mode(true, true);
@@ -282,8 +276,6 @@ void Ui::OnSwitchReleased(const Event& e) {
     } else {
       mode_ = UI_MODE_NORMAL;
     }
-  } else if (mode_ == UI_MODE_PAQUES) {
-    mode_ = UI_MODE_NORMAL;
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
     if (e.data > kLongPressDuration) {
       ++long_press_counter_;
@@ -298,9 +290,6 @@ void Ui::OnSwitchReleased(const Event& e) {
     mode_ = UI_MODE_NORMAL;
     if (e.control_id == 0) {
       cv_scaler_->Calibrate();
-    } else if (e.control_id == 1 && long_press_counter_ == 1 &&
-               e.data > kLongPressDuration) {
-      mode_ = UI_MODE_PAQUES;
     }
   } else {
     long_press_counter_ = 0;

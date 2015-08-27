@@ -31,7 +31,6 @@
 #include "tides/drivers/system.h"
 #include "tides/cv_scaler.h"
 #include "tides/generator.h"
-#include "tides/plotter.h"
 #include "tides/ui.h"
 
 using namespace tides;
@@ -43,7 +42,6 @@ Dac dac;
 GateOutput gate_output;
 GateInput gate_input;
 Generator generator;
-Plotter plotter;
 System sys;
 Ui ui;
 
@@ -93,11 +91,6 @@ void TIM1_UP_IRQHandler(void) {
       saw_counter += 8589935;
       gate_output.Write(saw_counter & 0x80000000, saw_counter & 0x80000000);
     }
-  } else if (ui.mode() == UI_MODE_PAQUES) {
-    if (dac.ready()) {
-      plotter.Run();
-      dac.Write(plotter.x(), plotter.y());
-    }
   } else {
     if (dac.ready()) {
       ++dac_divider;
@@ -131,8 +124,6 @@ void TIM1_UP_IRQHandler(void) {
 
 }
 
-#include "tides/easter_egg/plotter_program.h"
-
 void Init() {
   sys.Init(F_CPU / (48000 * 2) - 1, true);
   adc.Init(false);
@@ -141,7 +132,6 @@ void Init() {
   gate_output.Init();
   gate_input.Init();
   generator.Init();
-  plotter.Init(plotter_program, sizeof(plotter_program) / sizeof(PlotInstruction));
   ui.Init(&generator, &cv_scaler);
   sys.StartTimers();
 }
