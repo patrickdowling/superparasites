@@ -894,6 +894,8 @@ void Generator::FillBufferHarmonic() {
     pitch_ = ComputePitch(phase_increment_);
   } else {
     phase_increment_ = ComputePhaseIncrement(pitch_);
+    local_osc_phase_increment_ = phase_increment_;
+    target_phase_increment_ = phase_increment_;
   }
 
   uint16_t envelope[kNumHarmonics];
@@ -935,6 +937,7 @@ void Generator::FillBufferHarmonic() {
   }
 
   while (size--) {
+    sync_counter_++;
 
     uint8_t control = input_buffer_.ImmediateRead();
 
@@ -951,6 +954,35 @@ void Generator::FillBufferHarmonic() {
       }
     } else {
       previous_freeze_ = false;
+    }
+
+    if (sync_) {
+      if (control & CONTROL_CLOCK_RISING) {
+        ++sync_edges_counter_;
+        if (sync_edges_counter_ >= frequency_ratio_.q) {
+          sync_edges_counter_ = 0;
+          if (sync_counter_ < kSyncCounterMaxTime && sync_counter_) {
+            uint64_t increment = frequency_ratio_.p * static_cast<uint64_t>(
+                0xffffffff / sync_counter_);
+            if (increment > 0x80000000) {
+              increment = 0x80000000;
+            }
+            target_phase_increment_ = static_cast<uint32_t>(increment);
+            local_osc_phase_ = 0;
+          }
+          sync_counter_ = 0;
+        }
+      }
+
+      // Fast tracking of the local oscillator to the external oscillator.
+      local_osc_phase_increment_ += static_cast<int32_t>(
+          target_phase_increment_ - local_osc_phase_increment_) >> 8;
+      local_osc_phase_ += local_osc_phase_increment_;
+      
+      // Slow phase realignment between the master oscillator and the local
+      // oscillator.
+      int32_t phase_error = local_osc_phase_ - phase_;
+      phase_increment_ = local_osc_phase_increment_ + (phase_error >> 13);
     }
 
     int32_t bipolar = 0;
