@@ -277,6 +277,8 @@ void Ui::OnSwitchReleased(const Event& e) {
     if (e.control_id == 0) {
       uint8_t feat = generator_->feature_mode_;
       generator_->feature_mode_ = static_cast<Generator::FeatureMode>((feat + 1) % 3);
+      UpdateMode();
+      UpdateRange();
     } else {
       mode_ = UI_MODE_NORMAL;
     }
