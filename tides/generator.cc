@@ -1129,9 +1129,12 @@ void Generator::FillBufferRandom() {
     pitch_ = ComputePitch(phase_increment_);
   } else {
     phase_increment_ = ComputePhaseIncrement(pitch_);
+    local_osc_phase_increment_ = phase_increment_;
+    target_phase_increment_ = phase_increment_;
   }
 
   while (size--) {
+    sync_counter_++;
 
     uint8_t control = input_buffer_.ImmediateRead();
 
@@ -1143,6 +1146,22 @@ void Generator::FillBufferRandom() {
       delayed_phase_ = 0;
     }
 
+    // on clock in sync mode
+    if ((control & CONTROL_CLOCK_RISING) && sync_ && sync_counter_) {
+      if (sync_counter_ >= kSyncCounterMaxTime) {
+        phase_ = 0;
+      } else {
+        uint32_t predicted_period = pattern_predictor_.Predict(sync_counter_);
+        uint64_t increment = frequency_ratio_.p * static_cast<uint64_t>(
+            0xffffffff / (predicted_period * frequency_ratio_.q));
+        if (increment > 0x80000000) {
+          increment = 0x80000000;
+        }
+        phase_increment_ = static_cast<uint32_t>(increment);
+      }
+      sync_counter_ = 0;
+    }
+    
     // on significant slope variation
     if (phase_ < phase_increment_ &&
         abs(slope_ - smoothed_slope_) > 2048) {
