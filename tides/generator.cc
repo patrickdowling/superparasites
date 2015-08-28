@@ -1204,7 +1204,9 @@ void Generator::FillBufferRandom() {
       CONSTRAIN(b, 0, UINT16_MAX);
       uint32_t thresh = (Random::GetWord() >> 16) * (b-a) / INT16_MAX + a;
       uint32_t min_thresh = delayed_phase_increment_ / 3000;
-      delayed_threshold_ = thresh < min_thresh ? min_thresh : thresh;
+      uint32_t max_thresh = UINT16_MAX - (delayed_phase_increment_ / 3000);
+      CONSTRAIN(thresh, min_thresh, max_thresh);
+      delayed_threshold_ = thresh;
 
       // compute next value for ch. 1
       uint32_t step_max = 65536 - (smoothness_ + 32768);
@@ -1247,7 +1249,9 @@ void Generator::FillBufferRandom() {
     bool clock_ch1 = (delayed_phase_ >> 16) < delayed_threshold_;
 
     uint32_t min_pw = phase_increment_ / divider_ / 3000;
-    uint32_t pw = pulse_width_ < min_pw ? min_pw : pulse_width_;
+    uint32_t max_pw = UINT16_MAX - (phase_increment_ / 3000);
+    uint32_t pw = pulse_width_;
+    CONSTRAIN(pw, min_pw, max_pw);
     bool clock = (phase_ >> 16) < pw;
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
