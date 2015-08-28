@@ -1015,7 +1015,7 @@ void Generator::FillBufferHarmonic() {
       else if (range_ == GENERATOR_RANGE_LOW)
         phase = (phase >> 26) << 26;
 
-      int32_t sine = Interpolate115(wav_bump_control, phase >> 16) - 32768;
+      int32_t sine = (Interpolate115(wav_bump_control, phase >> 16) << 1) - 32768;
       bipolar += (((sine
                     * smoothed_envelope_[harm]) >> 16)
                   * antialias[harm]) >> 16;
