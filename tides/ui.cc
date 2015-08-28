@@ -50,7 +50,7 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
       ? UI_MODE_NORMAL
       : UI_MODE_FACTORY_TESTING;
   generator->feature_mode_ = Generator::FEAT_MODE_FUNCTION;
-  
+
   generator_ = generator;
   cv_scaler_ = cv_scaler;
   
@@ -270,7 +270,9 @@ void Ui::OnSwitchReleased(const Event& e) {
   } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
     uint8_t feat = generator_->feature_mode_;
     int8_t dir = e.control_id == 0 ? -1 : 1;
-    generator_->feature_mode_ = static_cast<Generator::FeatureMode>((feat + dir) % 3);
+    int8_t mode = (feat + dir) % 3;
+    if (mode == -1) mode = 2;
+    generator_->feature_mode_ = static_cast<Generator::FeatureMode>(mode);
     UpdateMode();
     UpdateRange();
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
