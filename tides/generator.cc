@@ -101,6 +101,8 @@ void Generator::Init() {
   divider_ = 1;
   divider_counter_ = 0;
   delayed_phase_ = 0;
+  delayed_threshold_ = 0;
+  delay_ = 0;
 
   ClearFilterState();
   
@@ -578,7 +580,7 @@ void Generator::FillBufferControlRate() {
       }
       sync_counter_ = 0;
     }
-    
+
     if (control & CONTROL_FREEZE) {
       output_buffer_.Overwrite(sample);
       continue;
@@ -1109,8 +1111,8 @@ inline void Generator::RandomizeDelay() {
   uint32_t delay_ratio = slope_ + 32768;
   delay_ratio = (delay_ratio * delay_ratio) >> 16; // square knob response
   uint32_t max_delay = (period * delay_ratio) >> 16;
-  uint32_t delay = ((Random::GetWord() >> 16) * max_delay) >> 12;
-  delayed_phase_increment_ = UINT32_MAX / (period + delay);
+  delay_ = ((Random::GetWord() >> 16) * max_delay) >> 11;
+  delayed_phase_increment_ = UINT32_MAX / (period + delay_);
 }
 
 void Generator::RandomizeDivider() {
@@ -1140,11 +1142,28 @@ void Generator::FillBufferRandom() {
 
     // on trigger
     if (control & CONTROL_GATE_RISING) {
-      // reset and start both oscillators
-      running_ = wrap_ = true;
-      phase_ = 0;
-      delayed_phase_ = 0;
+      uint16_t skip_prob = slope_ + 32768;
+      // start divided osc. after coin toss
+      if ((Random::GetWord() >> 16) < skip_prob) {
+        running_ = true;
+        phase_ = 0;
+        divided_phase_ = 0;
+      }
+
+      // start delayed osc. after delay
+      // or ignore if ongoing delay
+      if (!delay_counter_)
+        delay_counter_ = 1 + delay_;
     }
+
+    if (delay_counter_) {
+      if (delay_counter_ == 1) {
+        delayed_phase_ = 0;
+        wrap_ = true;
+      }
+      delay_counter_--;
+    }
+
 
     // on clock in sync mode
     if ((control & CONTROL_CLOCK_RISING) && sync_ && sync_counter_) {
@@ -1153,7 +1172,7 @@ void Generator::FillBufferRandom() {
       } else {
         uint32_t predicted_period = pattern_predictor_.Predict(sync_counter_);
         uint64_t increment = frequency_ratio_.p * static_cast<uint64_t>(
-            0xffffffff / (predicted_period * frequency_ratio_.q));
+          0xffffffff / (predicted_period * frequency_ratio_.q));
         if (increment > 0x80000000) {
           increment = 0x80000000;
         }
@@ -1162,9 +1181,10 @@ void Generator::FillBufferRandom() {
       sync_counter_ = 0;
     }
     
-    // on significant slope variation
+    // on significant slope or pitch variation
     if (phase_ < phase_increment_ &&
-        abs(slope_ - smoothed_slope_) > 2048) {
+        (abs(slope_ - smoothed_slope_) > 2048 ||
+         abs(pitch_ - previous_pitch_) > 128)) {
       smoothed_slope_ = slope_;
 
       // recompute delay and divider to avoid waiting for next phase
@@ -1176,6 +1196,15 @@ void Generator::FillBufferRandom() {
     // on delayed phase reset
     if (delayed_phase_ < delayed_phase_increment_) {
       RandomizeDelay();
+
+      // compute next threshold
+      int32_t a = pulse_width_ - (slope_ + 32768) / 2;
+      CONSTRAIN(a, 0, UINT16_MAX);
+      int32_t b = pulse_width_ + (slope_ + 32768) / 2;
+      CONSTRAIN(b, 0, UINT16_MAX);
+      uint32_t thresh = (Random::GetWord() >> 16) * (b-a) / INT16_MAX + a;
+      uint32_t min_thresh = delayed_phase_increment_ / 3000;
+      delayed_threshold_ = thresh < min_thresh ? min_thresh : thresh;
 
       // compute next value for ch. 1
       uint32_t step_max = 65536 - (smoothness_ + 32768);
@@ -1215,8 +1244,11 @@ void Generator::FillBufferRandom() {
       shaped_phase_2 / 32768 + current_value_[1];
 
     // compute clocks
-    bool clock = (phase_ >> 16) < pulse_width_;
-    bool clock_ch1 = (delayed_phase_ >> 16) < pulse_width_;
+    bool clock_ch1 = (delayed_phase_ >> 16) < delayed_threshold_;
+
+    uint32_t min_pw = phase_increment_ / divider_ / 3000;
+    uint32_t pw = pulse_width_ < min_pw ? min_pw : pulse_width_;
+    bool clock = (phase_ >> 16) < pw;
     bool clock_ch2 = divider_counter_ == 0 && clock;
 
     // emit sample

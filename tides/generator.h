@@ -264,7 +264,10 @@ class Generator {
   uint32_t divider_counter_;
   uint32_t delayed_phase_;
   uint32_t delayed_phase_increment_;
+  uint32_t delay_;
+  uint32_t delay_counter_;
   int16_t previous_slope_;
+  uint32_t delayed_threshold_;
 
   uint16_t current_value_[2];
   uint16_t next_value_[2];
