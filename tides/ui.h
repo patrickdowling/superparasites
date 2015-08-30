@@ -47,14 +47,17 @@ enum UiMode {
   UI_MODE_CALIBRATION_C2,
   UI_MODE_CALIBRATION_C4,
   UI_MODE_FACTORY_TESTING,
-  UI_MODE_FEATURE_SWITCH
+  UI_MODE_FEATURE_SWITCH,
+  UI_MODE_QUANTIZE,
 };
 
 struct Settings {
   uint8_t mode;
   uint8_t range;
   uint8_t sync;
+  uint8_t quantize;
   uint8_t feature_mode;
+  uint8_t padding;
 };
 
 class Ui {

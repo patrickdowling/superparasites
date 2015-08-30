@@ -49,6 +49,14 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
   mode_ = factory_testing_switch_.Read()
       ? UI_MODE_NORMAL
       : UI_MODE_FACTORY_TESTING;
+
+  ignore_releases_ = 0;
+
+  if (switches_.pressed_immediate(1)) {
+    mode_ = UI_MODE_CALIBRATION_C2;
+    ignore_releases_ = 1;
+  }
+
   generator->feature_mode_ = Generator::FEAT_MODE_FUNCTION;
 
   generator_ = generator;
@@ -57,15 +65,15 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
   if (!mode_storage.ParsimoniousLoad(&settings_, &version_token_)) {
     mode_counter_ = 1;
     range_counter_ = 2;
+    cv_scaler_->quantize_ = 0;
     generator->set_sync(false);
   } else {
     mode_counter_ = settings_.mode;
     range_counter_ = 2 - settings_.range;
+    cv_scaler_->quantize_ = settings_.quantize;
     generator->feature_mode_ = static_cast<Generator::FeatureMode>(settings_.feature_mode);
     generator->set_sync(settings_.sync);
   }
-
-  ignore_releases_ = 0;
 
   UpdateMode();
   UpdateRange();
@@ -159,6 +167,21 @@ void Ui::Poll() {
           leds_.set_rate(blink ? 65535 : 0);
           break;
         }
+      }
+      break;
+    case UI_MODE_QUANTIZE:
+      {
+        bool led1 = cv_scaler_->quantize_ & 1;
+        bool led2 = cv_scaler_->quantize_ & 2;
+        bool led3 = cv_scaler_->quantize_ & 4;
+        uint16_t on = ((system_clock.milliseconds() & 16) &&
+                       (system_clock.milliseconds() & 8) &&
+                       (system_clock.milliseconds() & 4) &&
+                       (system_clock.milliseconds() & 2)) * 65535;
+        uint16_t off = 0;
+        leds_.set_mode(0, led1 ? on : off);
+        leds_.set_value(0, led2 ? on : off);
+        leds_.set_rate(0, led3 ? on : off);
       }
       break;
     case UI_MODE_NORMAL:
@@ -275,6 +298,12 @@ void Ui::OnSwitchReleased(const Event& e) {
     generator_->feature_mode_ = static_cast<Generator::FeatureMode>(mode);
     UpdateMode();
     UpdateRange();
+  } else if (mode_ == UI_MODE_QUANTIZE) {
+    uint8_t q = cv_scaler_->quantize_;
+    int8_t dir = e.control_id == 0 ? -1 : 1;
+    int8_t quant = (q + dir) % 8;
+    if (quant == -1) quant = 7;
+    cv_scaler_->quantize_ = quant;
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
     if (e.data > kLongPressDuration) {
       ++long_press_counter_;
@@ -294,9 +323,8 @@ void Ui::OnSwitchReleased(const Event& e) {
     long_press_counter_ = 0;
     switch (e.control_id) {
       case 0:
-        if (e.data > kLongPressDuration &&
-            cv_scaler_->can_enter_calibration()) {
-          mode_ = UI_MODE_CALIBRATION_C2;
+        if (e.data > kLongPressDuration) {
+          mode_ = UI_MODE_QUANTIZE;
         } else {
           ++mode_counter_;
           UpdateMode();
@@ -329,7 +357,8 @@ void Ui::DoEvents() {
   }
   if (queue_.idle_time() > 2000) {
     queue_.Touch();
-    if (mode_ == UI_MODE_FEATURE_SWITCH)
+    if (mode_ == UI_MODE_FEATURE_SWITCH ||
+        mode_ == UI_MODE_QUANTIZE)
       mode_ = UI_MODE_NORMAL;
   }
 }

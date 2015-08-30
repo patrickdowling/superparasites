@@ -36,6 +36,29 @@
 
 namespace tides {
 
+const int16_t kOctave = 12 * 128;
+
+#define SE * 128
+
+const uint16_t quantize_lut[7][12] = {
+  /* semitones */
+  {0, 1 SE, 2 SE, 3 SE, 4 SE, 5 SE, 6 SE, 7 SE, 8 SE, 9 SE, 10 SE, 11 SE},
+  /* ionian */
+  {0, 0, 2 SE, 2 SE, 4 SE, 5 SE, 5 SE, 7 SE, 7 SE, 9 SE, 9 SE, 11 SE},
+  /* aeolian */
+  {0, 0, 2 SE, 3 SE, 3 SE, 5 SE, 5 SE, 7 SE, 8 SE, 8 SE, 10 SE, 10 SE},
+  /* locrian */
+  {0, 1 SE, 1 SE, 3 SE, 3 SE, 5 SE, 6 SE, 6 SE, 8 SE, 8 SE, 10 SE, 10 SE},
+  /* pentatonic minor */
+  {0, 0, 3 SE, 3 SE, 3 SE, 5 SE, 5 SE, 7 SE, 7 SE, 10 SE, 10 SE, 10 SE},
+  /* pent-3 */
+  {0, 0, 0, 0, 7 SE, 7 SE, 7 SE, 7 SE, 10 SE, 10 SE, 10 SE, 10 SE},
+  /* fifths */
+  {0, 0, 0, 0, 0, 0, 7 SE, 7 SE, 7 SE, 7 SE, 7 SE, 7 SE},
+  /* octave */
+  /* {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, */
+};
+
 enum AdcChannel {
   ADC_CHANNEL_LEVEL,
   ADC_CHANNEL_V_OCT,
@@ -101,8 +124,7 @@ class CvScaler {
   inline int16_t shape() const { return shape_; }
   inline int16_t slope() const { return slope_; }
   inline int16_t smoothness() const { return smoothness_; }
-  inline int16_t pitch() const {
-    int32_t pitch;
+  inline int16_t pitch() {
     int32_t attenuverter_value = attenuverter_ - 32768;
     int32_t attenuverter_sign = 1;
     if (attenuverter_value < 0) {
@@ -112,13 +134,35 @@ class CvScaler {
     attenuverter_value = attenuverter_sign * static_cast<int32_t>(
         stmlib::Interpolate88(lut_attenuverter_curve, attenuverter_value << 1));
     
-    pitch = (fm_ - calibration_data_.fm_offset) * \
+    int32_t fm = (fm_ - calibration_data_.fm_offset) * \
         calibration_data_.fm_scale >> 15;
-    pitch = pitch * attenuverter_value >> 16;
+    fm = fm * attenuverter_value >> 16;
     
-    pitch += (v_oct_ - calibration_data_.v_oct_offset) * \
-        calibration_data_.v_oct_scale >> 15;
+
+    if (quantize_) {
+      // Apply hysteresis to ADC reading to prevent a single bit error to move
+      // the quantized pitch up and down the quantization boundary.
+      if ((v_oct_ > previous_v_oct_ + 4) ||
+          (v_oct_ < previous_v_oct_ - 4)) {
+        previous_v_oct_ = v_oct_;
+      } else {
+        v_oct_ = previous_v_oct_;
+      }
+    }
+
+    int32_t pitch = (v_oct_ - calibration_data_.v_oct_offset) * \
+      calibration_data_.v_oct_scale >> 15;
     pitch += 60 << 7;
+
+    if (quantize_) {
+      uint16_t semi = pitch >> 7;
+      uint16_t octaves = semi / 12 ;
+      semi -= octaves * 12;
+      pitch = octaves * kOctave +
+        quantize_lut[quantize_ - 1][semi];
+    }
+
+    pitch += fm;
     return pitch;
   }
 
@@ -133,7 +177,9 @@ class CvScaler {
   inline bool can_enter_calibration() const {
     return level_raw_ >= 49152;
   }
-  
+
+  uint8_t quantize_;
+
  private:
   void SaveCalibrationData();
 
@@ -142,6 +188,7 @@ class CvScaler {
   int32_t level_raw_;
   int32_t level_;
   int32_t v_oct_;
+  int32_t previous_v_oct_;
   int32_t fm_;
   int32_t attenuverter_;
   int32_t shape_;
