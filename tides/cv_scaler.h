@@ -47,16 +47,14 @@ const uint16_t quantize_lut[7][12] = {
   {0, 0, 2 SE, 2 SE, 4 SE, 5 SE, 5 SE, 7 SE, 7 SE, 9 SE, 9 SE, 11 SE},
   /* aeolian */
   {0, 0, 2 SE, 3 SE, 3 SE, 5 SE, 5 SE, 7 SE, 8 SE, 8 SE, 10 SE, 10 SE},
-  /* locrian */
-  {0, 1 SE, 1 SE, 3 SE, 3 SE, 5 SE, 6 SE, 6 SE, 8 SE, 8 SE, 10 SE, 10 SE},
+  /* whole tones */
+  {0, 0, 2 SE, 2 SE, 4 SE, 4 SE, 6 SE, 6 SE, 8 SE, 8 SE, 10 SE, 10 SE},
   /* pentatonic minor */
   {0, 0, 3 SE, 3 SE, 3 SE, 5 SE, 5 SE, 7 SE, 7 SE, 10 SE, 10 SE, 10 SE},
   /* pent-3 */
   {0, 0, 0, 0, 7 SE, 7 SE, 7 SE, 7 SE, 10 SE, 10 SE, 10 SE, 10 SE},
   /* fifths */
   {0, 0, 0, 0, 0, 0, 7 SE, 7 SE, 7 SE, 7 SE, 7 SE, 7 SE},
-  /* octave */
-  /* {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, */
 };
 
 enum AdcChannel {
