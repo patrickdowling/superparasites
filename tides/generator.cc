@@ -307,20 +307,32 @@ void Generator::FillBufferAudioRate() {
   const int16_t* wave_1 = waveform_table[WAV_BANDLIMITED_PARABOLA_0 + index];
   const int16_t* wave_2 = waveform_table[WAV_BANDLIMITED_PARABOLA_0 + index + 1];
 
-  int32_t gain = slope_;
+  // we split the slope button into two: original slope on the first
+  // half, compression on the second
+  int16_t compress = -slope_;
+  int16_t slope = slope_;
+  CONSTRAIN(slope, 0, 32767);
+  CONSTRAIN(compress, 0, 32767);
+
+  // adjust knob response for Slope
+  int32_t s = 32768 - slope;
+  slope = 32768 - ((s * s) >> 15);
+  CONSTRAIN(slope, 0, 32600); 	// that is a bit weird
+
+  int32_t gain = slope;
   gain = (32768 - (gain * gain >> 15)) * 3 >> 1;
   gain = 32768 * 1024 / gain;
   
-  uint32_t phase_offset_a_bi = (slope_ - (slope_ >> 1)) << 16;
-  uint32_t phase_offset_b_bi = (32768 - (slope_ >> 1)) << 16;
+  uint32_t phase_offset_a_bi = (slope - (slope >> 1)) << 16;
+  uint32_t phase_offset_b_bi = (32768 - (slope >> 1)) << 16;
   uint32_t phase_offset_a_uni = 49152 << 16;
-  uint32_t phase_offset_b_uni = (32768 + 49152 - slope_) << 16;
+  uint32_t phase_offset_b_uni = (32768 + 49152 - slope) << 16;
   
   int32_t attenuation = 32767;
   if (antialiasing_) {
     attenuation = ComputeAntialiasAttenuation(
           pitch_,
-          slope_,
+	  slope,
           shape_,
           smoothness_);
   }
@@ -330,7 +342,7 @@ void Generator::FillBufferAudioRate() {
   const int16_t* shape_1 = waveform_table[wave_index];
   const int16_t* shape_2 = waveform_table[wave_index + 1];
   uint16_t shape_xfade = shape << 2;
-  
+
   int32_t frequency = ComputeCutoffFrequency(pitch_, smoothness_);
   int32_t f_a = lut_cutoff[frequency >> 7] >> 16;
   int32_t f_b = lut_cutoff[(frequency >> 7) + 1] >> 16;
@@ -344,7 +356,7 @@ void Generator::FillBufferAudioRate() {
   }
 #endif  // CORE_ONLY  
   
-  uint32_t end_of_attack = (static_cast<uint32_t>(slope_ + 32768) << 16);
+  uint32_t end_of_attack = (static_cast<uint32_t>(slope + 32768) << 16);
   
   // Load state into registers - saves some memory load/store inside the
   // rendering loop.
@@ -421,11 +433,23 @@ void Generator::FillBufferAudioRate() {
     }
 
 #ifndef CORE_ONLY
+
+    // Clip the phase for compression
+    uint32_t compress_index = compress << 1;
+    compress_index = 65535 - compress_index;
+    compress_index = (compress_index * compress_index) >> 16;
+    compress_index = 65535 - compress_index;
+    compress_index = compress_index * 29 / 30; // knob range
+    compress_index = 65535 - compress_index;
+    uint32_t compressed_phase =
+      (phase >> 16) > compress_index ? 0 :
+      phase / compress_index * UINT16_MAX;
+
     // Bipolar version ---------------------------------------------------------
     int32_t ramp_a, ramp_b, saw;
     int32_t original, folded;
-    ramp_a = Crossfade1022(wave_1, wave_2, phase + phase_offset_a_bi, xfade);
-    ramp_b = Crossfade1022(wave_1, wave_2, phase + phase_offset_b_bi, xfade);
+    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_bi, xfade);
+    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_bi, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw);
     
@@ -445,8 +469,8 @@ void Generator::FillBufferAudioRate() {
     sample.bipolar = original + ((folded - original) * wf_balance >> 15);
 
     // Unipolar version --------------------------------------------------------
-    ramp_a = Crossfade1022(wave_1, wave_2, phase + phase_offset_a_uni, xfade);
-    ramp_b = Crossfade1022(wave_1, wave_2, phase + phase_offset_b_uni, xfade);
+    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
+    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_uni, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw)
     
@@ -471,7 +495,7 @@ void Generator::FillBufferAudioRate() {
     
     sample.flags = 0;
     bool looped = mode_ == GENERATOR_MODE_LOOPING && wrap;
-    if (phase >= end_of_attack || !running_) {
+    if (compressed_phase >= end_of_attack || !running_) {
       sample.flags |= FLAG_END_OF_ATTACK;
     }
     if (!running_ || looped) {
