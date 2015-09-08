@@ -475,8 +475,8 @@ void Generator::FillBufferAudioRate() {
     sample.bipolar = original + ((folded - original) * wf_balance >> 15);
 
     // Unipolar version --------------------------------------------------------
-    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
-    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_uni, xfade);
+    ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
+    ramp_b = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_b_uni, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw)
     
