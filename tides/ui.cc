@@ -299,11 +299,15 @@ void Ui::OnSwitchReleased(const Event& e) {
     UpdateMode();
     UpdateRange();
   } else if (mode_ == UI_MODE_QUANTIZE) {
-    uint8_t q = cv_scaler_->quantize_;
-    int8_t dir = e.control_id == 0 ? -1 : 1;
-    int8_t quant = (q + dir) % 8;
-    if (quant == -1) quant = 7;
-    cv_scaler_->quantize_ = quant;
+    if (e.data > kLongPressDuration) {
+      mode_ = UI_MODE_NORMAL;
+    } else {
+      uint8_t q = cv_scaler_->quantize_;
+      int8_t dir = e.control_id == 0 ? -1 : 1;
+      int8_t quant = (q + dir) % 8;
+      if (quant == -1) quant = 7;
+      cv_scaler_->quantize_ = quant;
+    }
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
     if (e.data > kLongPressDuration) {
       ++long_press_counter_;
@@ -357,8 +361,7 @@ void Ui::DoEvents() {
   }
   if (queue_.idle_time() > 2000) {
     queue_.Touch();
-    if (mode_ == UI_MODE_FEATURE_SWITCH ||
-        mode_ == UI_MODE_QUANTIZE)
+    if (mode_ == UI_MODE_FEATURE_SWITCH)
       mode_ = UI_MODE_NORMAL;
   }
 }
