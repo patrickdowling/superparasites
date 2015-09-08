@@ -138,12 +138,13 @@ class CvScaler {
     
 
     if (quantize_) {
-      // Apply hysteresis to ADC reading to prevent a single bit error to move
-      // the quantized pitch up and down the quantization boundary.
-      if ((v_oct_ > previous_v_oct_ + 4) ||
-          (v_oct_ < previous_v_oct_ - 4)) {
+      // Apply hysteresis and filtering to ADC reading to prevent
+      // jittery quantization.
+      if ((v_oct_ > previous_v_oct_ + 16) ||
+          (v_oct_ < previous_v_oct_ - 16)) {
         previous_v_oct_ = v_oct_;
       } else {
+        previous_v_oct_ += (v_oct_ - previous_v_oct_) >> 5;
         v_oct_ = previous_v_oct_;
       }
     }
