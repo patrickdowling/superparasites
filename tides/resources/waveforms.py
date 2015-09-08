@@ -37,8 +37,7 @@ Band-limited waveforms
 ----------------------------------------------------------------------------"""
 
 SAMPLE_RATE = 48000.0
-WAVETABLE_SIZE = 1024
-
+WAVETABLE_SIZE = 256
 
 def dither(x, order=0, type=numpy.int16):
   for i in xrange(order):

@@ -448,8 +448,8 @@ void Generator::FillBufferAudioRate() {
     // Bipolar version ---------------------------------------------------------
     int32_t ramp_a, ramp_b, saw;
     int32_t original, folded;
-    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_bi, xfade);
-    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_bi, xfade);
+    ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_bi, xfade);
+    ramp_b = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_b_bi, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw);
     
