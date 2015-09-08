@@ -308,6 +308,7 @@ void Ui::OnSwitchReleased(const Event& e) {
       int8_t quant = (q + dir) % 8;
       if (quant == -1) quant = 7;
       cv_scaler_->quantize_ = quant;
+      SaveState();
     }
   } else if (mode_ == UI_MODE_CALIBRATION_C2) {
     if (e.data > kLongPressDuration) {
