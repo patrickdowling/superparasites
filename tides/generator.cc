@@ -343,6 +343,12 @@ void Generator::FillBufferAudioRate() {
   const int16_t* shape_2 = waveform_table[wave_index + 1];
   uint16_t shape_xfade = shape << 2;
 
+  // cut out the output completely when smoothness is fully off.
+  uint32_t g = smoothness_ + 32768;
+  CONSTRAIN(g, 0, UINT16_MAX >> 4);
+  g <<= 4;
+  gain = (g * gain) >> 16;
+
   int32_t frequency = ComputeCutoffFrequency(pitch_, smoothness_);
   int32_t f_a = lut_cutoff[frequency >> 7] >> 16;
   int32_t f_b = lut_cutoff[(frequency >> 7) + 1] >> 16;
@@ -383,7 +389,7 @@ void Generator::FillBufferAudioRate() {
     // When freeze is high, discard any start/reset command.
     if (!(control & CONTROL_FREEZE)) {
       if (control & CONTROL_GATE_RISING) {
-        phase = 0;
+	phase = 0;
         running_ = true;
       } else if (mode_ != GENERATOR_MODE_LOOPING && wrap) {
         phase = 0;
