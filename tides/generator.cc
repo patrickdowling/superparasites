@@ -344,10 +344,9 @@ void Generator::FillBufferAudioRate() {
   uint16_t shape_xfade = shape << 2;
 
   // cut out the output completely when smoothness is fully off.
-  uint32_t g = smoothness_ + 32768;
-  CONSTRAIN(g, 0, UINT16_MAX >> 4);
-  g <<= 4;
-  gain = (g * gain) >> 16;
+  uint32_t final_gain = smoothness_ + 32768;
+  CONSTRAIN(final_gain, 0, UINT16_MAX >> 4);
+  final_gain <<= 4;
 
   int32_t frequency = ComputeCutoffFrequency(pitch_, smoothness_);
   int32_t f_a = lut_cutoff[frequency >> 7] >> 16;
@@ -473,6 +472,7 @@ void Generator::FillBufferAudioRate() {
     original = bi_lp_state_1;
     folded = Interpolate1022(wav_bipolar_fold, original * wf_gain + (1UL << 31));
     sample.bipolar = original + ((folded - original) * wf_balance >> 15);
+    sample.bipolar = (sample.bipolar * final_gain) >> 16;
 
     // Unipolar version --------------------------------------------------------
     ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
@@ -494,7 +494,8 @@ void Generator::FillBufferAudioRate() {
     original = uni_lp_state_1 << 1;
     folded = Interpolate1022(wav_unipolar_fold, original * wf_gain) << 1;
     sample.unipolar = original + ((folded - original) * wf_balance >> 15);
-#else    
+    sample.unipolar = (sample.unipolar * final_gain) >> 16;
+#else
     sample.bipolar = (phase >> 16) - 32768;
     sample.unipolar = phase >> 16;
 #endif  // CORE_ONLY
