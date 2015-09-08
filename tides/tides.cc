@@ -100,7 +100,9 @@ void TIM1_UP_IRQHandler(void) {
         uint32_t uni = sample.unipolar;
         int32_t bi = sample.bipolar;
         uint32_t level = cv_scaler.level();
-        if (ui.mode() >= UI_MODE_CALIBRATION_C2) {
+        if (ui.mode() == UI_MODE_CALIBRATION_C2 ||
+            ui.mode() == UI_MODE_CALIBRATION_C4 ||
+            ui.mode() == UI_MODE_FACTORY_TESTING) {
           level = 65535;  // Bypass VCA in calibration mode!
         }
         uni = uni * level >> 16;
