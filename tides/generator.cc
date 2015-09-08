@@ -982,6 +982,12 @@ void Generator::FillBufferHarmonic() {
       previous_freeze_ = false;
     }
 
+    // clock input randomizes mode and range if not in PLL mode
+    if (control & CONTROL_CLOCK_RISING && !sync_) {
+      mode_ = static_cast<GeneratorMode>(Random::GetWord() % 3);
+      range_ = static_cast<GeneratorRange>(Random::GetWord() % 3);
+    }
+
     if (sync_) {
       if (control & CONTROL_CLOCK_RISING) {
         ++sync_edges_counter_;
