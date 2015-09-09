@@ -179,3 +179,29 @@ You can download it and read the full documentation here:
 
 Version 
 Version 1.0 
+* Tides changelog
+
+v0.9beta3
+=========
+
+- No more timeout for choosing a scale: one exits quantizer mode via a
+  long press on the Mode button.
+- Fixed a bug inhibiting permanent saving of the state of the module
+- Fixed a bug causing the level to be maxed out when switching
+  scales/mode
+- Reduced the size of internal parabola tables, which generate
+  saw/trianges at audio rate, to make space for new code. It should
+  be unnoticeable.
+- Function generator: When Smoothness is fully CCW, outputs are now
+  completely muted.
+- Quantizer: fixed glitches appearing when exactly in between two notes
+- Two-bumps: when not in PLL mode, clock randomizes both quality and
+  harmonics choice parameters.
+- Two-bumps: better gain computation. Should result in louder and more
+  consistent volumes.
+- Two-bumps: reduced slew on Pitch in PLL mode
+- Two-bumps: Change the order of decimation choices. It now goes: low
+  quality (green), medium (black), high (red), which respects the
+- Two-drunks: Fixed a bug causing discontinuities in the Bi output
+- Two-drunks: when not in PLL mode, clock randomizes the Range parameter.
+
