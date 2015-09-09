@@ -1015,7 +1015,7 @@ void Generator::FillBufferHarmonic() {
 
       // Fast tracking of the local oscillator to the external oscillator.
       local_osc_phase_increment_ += static_cast<int32_t>(
-          target_phase_increment_ - local_osc_phase_increment_) >> 8;
+	  target_phase_increment_ - local_osc_phase_increment_) >> 5;
       local_osc_phase_ += local_osc_phase_increment_;
       
       // Slow phase realignment between the master oscillator and the local
