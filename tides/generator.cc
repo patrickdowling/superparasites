@@ -1064,8 +1064,9 @@ void Generator::FillBufferHarmonic() {
     GeneratorSample s;
 
     // we normalize the values
-    if (gain <= 65535)
-      gain = 65535;		// avoids extreme amplifications
+    if (gain <= 65536)
+      gain = 65536;		// avoids extreme amplifications
+    gain += 256;
 
     s.bipolar = ((bipolar << 13) / gain) << 3;
     s.unipolar = (((unipolar << 13) / gain) << 3) + 32768;
