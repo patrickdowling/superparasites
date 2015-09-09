@@ -274,6 +274,9 @@ class Generator {
   bool walk_direction_[2];
   uint16_t value_[2];
 
+  int16_t old_slope_;
+  int16_t old_pitch_;
+
   bool sync_;
   FrequencyRatio frequency_ratio_;
   

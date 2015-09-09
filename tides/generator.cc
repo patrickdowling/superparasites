@@ -1223,9 +1223,10 @@ void Generator::FillBufferRandom() {
     
     // on significant slope or pitch variation
     if (phase_ < phase_increment_ &&
-        (abs(slope_ - smoothed_slope_) > 2048 ||
-         abs(pitch_ - previous_pitch_) > 128)) {
-      smoothed_slope_ = slope_;
+	(abs(slope_ - old_slope_) > 4096 ||
+	 abs(pitch_ - old_pitch_) > 512)) {
+      old_slope_ = slope_;
+      old_pitch_ = pitch_;
 
       // recompute delay and divider to avoid waiting for next phase
       // to hear the changes
