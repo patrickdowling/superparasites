@@ -1204,6 +1204,9 @@ void Generator::FillBufferRandom() {
       delay_counter_--;
     }
 
+    if ((control & CONTROL_CLOCK_RISING) && !sync_) {
+      range_ = static_cast<GeneratorRange>(Random::GetWord() % 3);
+    }
 
     // on clock in sync mode
     if ((control & CONTROL_CLOCK_RISING) && sync_ && sync_counter_) {
