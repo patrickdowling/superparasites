@@ -295,6 +295,7 @@ class Generator {
 
   bool running_;
   bool previous_freeze_;
+  bool previous_clock_;
 
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;

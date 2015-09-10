@@ -394,6 +394,13 @@ void Generator::FillBufferAudioRate() {
         phase = 0;
         running_ = false;
       }
+
+      // on clock falling edge
+      if (!(control & CONTROL_CLOCK) &&
+	  previous_clock_) {
+	sub_phase_ = 0;
+      }
+      previous_clock_ = control & CONTROL_CLOCK;
     }
     
     if (sync_) {
@@ -501,21 +508,20 @@ void Generator::FillBufferAudioRate() {
 #endif  // CORE_ONLY
     
     sample.flags = 0;
-    bool looped = mode_ == GENERATOR_MODE_LOOPING && wrap;
+
     if (compressed_phase >= end_of_attack || !running_) {
       sample.flags |= FLAG_END_OF_ATTACK;
     }
-    if (!running_ || looped) {
-      eor_counter_ = phase_increment < 44739242 ? 48 : 1;
-    }
-    if (eor_counter_) {
+
+    if (!(control & CONTROL_CLOCK) &&
+	sub_phase_ & 0x80000000) {
       sample.flags |= FLAG_END_OF_RELEASE;
-      --eor_counter_;
     }
     output_buffer_.Overwrite(sample);
     
     if (running_ && !sustained) {
       phase += phase_increment;
+      sub_phase_ += phase_increment >> 1;
       wrap = phase < phase_increment;
     }
   }
