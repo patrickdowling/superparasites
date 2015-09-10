@@ -55,9 +55,10 @@ struct Settings {
   uint8_t mode;
   uint8_t range;
   uint8_t sync;
+  uint8_t magic_number;  /* don't move that line around! */
   uint8_t quantize;
   uint8_t feature_mode;
-  uint8_t padding[3];
+  uint8_t padding[2];
 };
 
 class Ui {

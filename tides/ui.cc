@@ -37,6 +37,7 @@
 namespace tides {
 
 const int32_t kLongPressDuration = 1000;
+const uint8_t kMagicNumber = 42;
 
 using namespace stmlib;
 
@@ -62,7 +63,9 @@ void Ui::Init(Generator* generator, CvScaler* cv_scaler) {
   generator_ = generator;
   cv_scaler_ = cv_scaler;
   
-  if (!mode_storage.ParsimoniousLoad(&settings_, &version_token_)) {
+  if (!mode_storage.ParsimoniousLoad(&settings_, &version_token_) ||
+      settings_.magic_number != kMagicNumber) {
+    settings_.magic_number = kMagicNumber;
     mode_counter_ = 1;
     range_counter_ = 2;
     cv_scaler_->quantize_ = 0;
