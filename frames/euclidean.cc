@@ -43,13 +43,11 @@ using namespace stmlib;
 
 void Euclidean::Init() {
   value_ = 0;
-  level_ = value_ >> 8;
   dac_code_ = Keyframer::ConvertToDacCode(value_, 0);
   length_ = 16;
   fill_ = 0;
   rotate_ = 0;
   shape_ = 4000;
-  gate_ = false;
 }
 
 void Euclidean::Step() {
@@ -104,7 +102,6 @@ void Euclidean::Render() {
   value_ = value_ * value_ / 65535 * value_ / 65535;
 
   phase_++;
-  level_ = value_ >> 8;
   dac_code_ = Keyframer::ConvertToDacCode(value_, 0);
 }
 

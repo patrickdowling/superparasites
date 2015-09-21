@@ -43,7 +43,7 @@ class Euclidean {
   void Step();
 
   inline uint8_t level() const {
-    return level_;
+    return value_ >> 8;
   }
 
   inline uint8_t gate() const {
@@ -82,7 +82,6 @@ class Euclidean {
   uint8_t step_;
   uint32_t value_;
   uint32_t phase_;
-  uint8_t level_;
   bool gate_;
   uint16_t dac_code_;
 
