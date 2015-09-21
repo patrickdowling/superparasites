@@ -64,7 +64,8 @@ void Euclidean::Step() {
   }
 
   if (mask & pattern) {
-    phase_ = 0;
+    // we restart the envelope from its current point
+    phase_ = attack_ * static_case<uint32_t>(value_) / 65535;
     gate_ = true;
   } else {
     gate_ = false;
@@ -85,16 +86,15 @@ inline void Euclidean::ComputeAttackDecay(uint16_t shape, uint16_t* a, uint16_t*
 }
 
 void Euclidean::Render() {
-  uint16_t attack;
   uint16_t decay;
-  ComputeAttackDecay(shape_, &attack, &decay);
-  attack /= 3;
+  ComputeAttackDecay(shape_, &attack_, &decay);
+  attack_ /= 3;
   decay /= 3;
 
-  if (phase_ < attack) {
-    value_ = phase_ * 65535 / attack;
-  } else if (phase_ < attack + decay) {
-    value_ = 65535 - 65535 * (phase_ - attack) / decay;
+  if (phase_ < attack_) {
+    value_ = phase_ * 65535 / attack_;
+  } else if (phase_ < attack_ + decay) {
+    value_ = 65535 - 65535 * (phase_ - attack_) / decay;
   } else {
     value_ = 0;
   }

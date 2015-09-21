@@ -82,6 +82,7 @@ class Euclidean {
   uint8_t step_;
   uint32_t value_;
   uint32_t phase_;
+  uint16_t attack_;
   bool gate_;
   uint16_t dac_code_;
 
