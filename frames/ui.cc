@@ -44,6 +44,7 @@ const int32_t kLongPressDuration = 800;
 const int32_t kVeryLongPressDuration = 2000;
 const uint16_t kKeyframeGridTolerance = 2048;
 const uint8_t kDividersSteps = 7;
+const uint16_t kDeadZone = 2048; // 0..32767
 
 void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo, Euclidean euclidean[kNumChannels]) {
   factory_testing_switch_.Init();
@@ -500,7 +501,10 @@ void Ui::OnSwitchReleased(const Event& e) {
       step_random = 0;
       step_divider = (((32768 - data) * kDividersSteps >> 15) + 1) % kDividersSteps;
     } else {
-      step_random = (data - 32768) >> 7;
+      int16_t rnd = data - 32768;
+      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
+      CONSTRAIN(rnd, 0, 32768);
+      step_random = rnd >> 7;
       step_divider = 1;
     }
     break;
@@ -509,16 +513,25 @@ void Ui::OnSwitchReleased(const Event& e) {
       shift_random = 0;
       shift_divider = (((32768 - data) * kDividersSteps >> 15) + 1) % kDividersSteps;
     } else {
-      shift_random = (data - 32768) >> 7;
+      int16_t rnd = data - 32768;
+      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
+      CONSTRAIN(rnd, 0, 32768);
+      shift_random = rnd >> 7;
       shift_divider = 1;
     }
     break;
   case 3:
     if (data < 32768) {
       feedback_random = 0;
-      sequencer_random = (32768 - data) >> 7;
+      int16_t rnd = 32768 - data;
+      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
+      CONSTRAIN(rnd, 0, 32768);
+      sequencer_random = rnd >> 7;
     } else {
-      feedback_random = (data - 32768) >> 7;
+      int16_t rnd = data - 32768;
+      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
+      CONSTRAIN(rnd, 0, 32768);
+      feedback_random = rnd >> 7;
       sequencer_random = 0;
     }
     break;
