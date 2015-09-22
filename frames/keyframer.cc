@@ -65,7 +65,7 @@ void Keyframer::Reset() {
       settings_[i].easing_curve = EASING_CURVE_LINEAR;
       settings_[i].response = 0;
     }
-    extra_settings_ = 0;
+    feature_mode_ = 0;
     magic_number_ = kMagicNumber;
     dc_offset_frame_modulation_ = 32767;
     Clear();
@@ -79,8 +79,7 @@ void Keyframer::Init() {
 #endif  // TEST
 }
 
-void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
-  extra_settings_ = extra_settings;
+void Keyframer::Save(uint16_t slot) {
 #ifndef TEST
   if (slot == 0)
     storage.ParsimoniousSave(keyframes_, SETTINGS_SIZE, &version_token_);
@@ -89,7 +88,7 @@ void Keyframer::Save(uint32_t extra_settings, uint16_t slot) {
 #endif  // TEST
 }
 
-void Keyframer::Load(uint32_t &extra_settings, uint16_t slot) {
+void Keyframer::Load(uint16_t slot) {
 #ifndef TEST
   if (slot == 0){
     storage.ParsimoniousLoad(keyframes_, SETTINGS_SIZE, &version_token_);
@@ -103,7 +102,6 @@ void Keyframer::Load(uint32_t &extra_settings, uint16_t slot) {
       Reset();
   }
 #endif  // TEST
-  extra_settings = extra_settings_;
 }
 
 void Keyframer::Calibrate(int32_t dc_offset_frame_modulation) {

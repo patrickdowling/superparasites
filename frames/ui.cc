@@ -69,8 +69,7 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo, Euclidean euclidean[kNumC
   FindNearestKeyframe();
   active_keyframe_lock_ = false;
   
-  uint32_t ui_flags = keyframer_->extra_settings();
-  feature_mode_ = static_cast<FeatureMode>(ui_flags);
+  feature_mode_ = static_cast<FeatureMode>(keyframer_->feature_mode_);
 
   sequencer_step = 0;
   step_divider = 1;
@@ -417,9 +416,8 @@ void Ui::OnSwitchReleased(const Event& e) {
             FindNearestKeyframe();
           } else if (mode_ == UI_MODE_SAVE_CONFIRMATION) {
             // confirming save -> write to active slot
-            uint32_t ui_flags = 0;
-            ui_flags |= feature_mode_;
-            keyframer_->Save(ui_flags, active_slot_);
+            keyframer_->feature_mode_ = feature_mode_;
+            keyframer_->Save(active_slot_);
             mode_ = UI_MODE_SPLASH;
           } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
             mode_ = UI_MODE_NORMAL;
@@ -452,9 +450,8 @@ void Ui::OnSwitchReleased(const Event& e) {
             SyncWithPots();
             feature_mode_ = FEAT_MODE_KEYFRAMER;
           } else {
-            uint32_t ui_flags = 0;
-            keyframer_->Load(ui_flags, active_slot_);
-            feature_mode_ = static_cast<FeatureMode>(ui_flags);
+            keyframer_->Load(active_slot_);
+            feature_mode_ = static_cast<FeatureMode>(keyframer_->feature_mode_);
           }
           mode_ = UI_MODE_SPLASH;
         } else {

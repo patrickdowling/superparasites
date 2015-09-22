@@ -70,8 +70,8 @@ class Keyframer {
   ~Keyframer() { }
   
   void Init();
-  void Save(uint32_t extra_settings, uint16_t slot);
-  void Load(uint32_t &extra_settings, uint16_t slot);
+  void Save(uint16_t slot);
+  void Load(uint16_t slot);
 
   void Calibrate(int32_t dc_offset_frame_modulation);
   
@@ -137,7 +137,6 @@ class Keyframer {
   // In addition to the keyframer data, this extra word stores in
   // persistent storage things like sequencer mode on/off and
   // poly lfo mode on/off states.
-  inline uint32_t extra_settings() const { return extra_settings_; }
   inline int32_t dc_offset_frame_modulation() const {
     return dc_offset_frame_modulation_;
   }
@@ -149,14 +148,16 @@ class Keyframer {
   ChannelSettings settings_[kNumChannels];
   uint16_t num_keyframes_;
   uint16_t id_counter_;
-  uint32_t extra_settings_;
+ public:
+  uint8_t feature_mode_;
+ private:
   int32_t dc_offset_frame_modulation_;
   uint32_t magic_number_;
 
 #ifndef TEST
   enum SettingsSize {
     SETTINGS_SIZE = sizeof(keyframes_) + sizeof(settings_) +            \
-    sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(extra_settings_) + \
+    sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(feature_mode_) + \
     sizeof(dc_offset_frame_modulation_) + sizeof(magic_number_)
   };
 #endif  // TEST
