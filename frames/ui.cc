@@ -430,7 +430,7 @@ void Ui::OnSwitchReleased(const Event& e) {
           }
         }
         break;
-      
+
       case SWITCH_DELETE_FRAME:
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_ERASE_CONFIRMATION;
@@ -567,13 +567,17 @@ void Ui::ParseEuclidean(uint16_t control_id, int32_t data) {
     case 0:
     case 1:
     case 2:
-    case 3:
-      euclidean_[control_id].set_length((data >> 12) + 1);
-      break;
-      case kFrameAdcChannel:
+    case 3: 
+    {
+      uint8_t len = (data >> 12) + 1;
+      euclidean_[control_id].set_length(len);
+      keyframer_->euclidean_length_[control_id] = len;
+    }
+    break;
+    case kFrameAdcChannel:
       for (int i=0; i<kNumChannels; i++)
         euclidean_[i].set_rotate(data * i);
-        break;
+      break;
     }
   } else if (mode_ == UI_MODE_EDIT_SHAPE) {
     switch (control_id) {
@@ -581,8 +585,11 @@ void Ui::ParseEuclidean(uint16_t control_id, int32_t data) {
     case 1:
     case 2:
     case 3:
+    {
       euclidean_[control_id].set_shape(data);
-      break;
+      keyframer_->euclidean_shape_[control_id] = data;
+    }
+    break;
     case kFrameAdcChannel:
       for (int i=0; i<kNumChannels; i++)
         euclidean_[i].set_rotate(data * i);

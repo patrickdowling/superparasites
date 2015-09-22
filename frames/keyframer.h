@@ -150,6 +150,8 @@ class Keyframer {
   uint16_t id_counter_;
  public:
   uint8_t feature_mode_;
+  uint8_t euclidean_length_[kNumChannels];
+  uint16_t euclidean_shape_[kNumChannels];
  private:
   int32_t dc_offset_frame_modulation_;
   uint32_t magic_number_;
@@ -158,6 +160,7 @@ class Keyframer {
   enum SettingsSize {
     SETTINGS_SIZE = sizeof(keyframes_) + sizeof(settings_) +            \
     sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(feature_mode_) + \
+    sizeof(euclidean_length_) + sizeof(euclidean_shape_) + \
     sizeof(dc_offset_frame_modulation_) + sizeof(magic_number_)
   };
 #endif  // TEST
