@@ -207,7 +207,7 @@ int main(void) {
 
           // step
           for (int i=0; i<kNumChannels; i++)
-            euclidean[i].Step();
+            euclidean[i].Step(clock_counter);
 
           ui.rgb_led_.set_color(255, 255, 255);
 

@@ -50,18 +50,13 @@ void Euclidean::Init() {
   shape_ = 4000;
 }
 
-void Euclidean::Step() {
+void Euclidean::Step(int32_t clock) {
   uint8_t fill = length_ * fill_ / 61000;
   uint8_t rotate = length_ * rotate_ / 65000;
   CONSTRAIN(fill, 0, length_ + 1);
-  uint32_t mask = 1 << ((step_ + rotate) % length_);
+  uint32_t mask = 1 << ((clock + rotate) % length_);
   uint16_t offset = static_cast<uint16_t>(length_) * 32;
   uint32_t pattern = lut_euclidean[offset + fill];
-
-  ++step_;
-  if (step_ >= length_) {
-    step_ = 0;
-  }
 
   if (mask & pattern) {
     // we restart the envelope from its current point

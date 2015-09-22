@@ -40,7 +40,7 @@ class Euclidean {
   
   void Init();
   void Render();
-  void Step();
+  void Step(int32_t clock);
 
   inline uint8_t level() const {
     return value_ >> 8;
@@ -79,7 +79,6 @@ class Euclidean {
   uint16_t rotate_;
   uint16_t shape_;
 
-  uint8_t step_;
   uint32_t value_;
   uint32_t phase_;
   uint16_t attack_;
