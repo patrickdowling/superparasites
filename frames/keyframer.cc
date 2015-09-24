@@ -66,6 +66,10 @@ void Keyframer::Reset() {
       settings_[i].response = 0;
     }
     feature_mode_ = 0;
+    for (int i=0; i<kNumChannels; i++) {
+      euclidean_length_[i] = 16;
+      euclidean_shape_[i] = 4000;
+    }
     magic_number_ = kMagicNumber;
     dc_offset_frame_modulation_ = 32767;
     Clear();

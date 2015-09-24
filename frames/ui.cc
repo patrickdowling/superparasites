@@ -70,6 +70,10 @@ void Ui::Init(Keyframer* keyframer, PolyLfo* poly_lfo, Euclidean euclidean[kNumC
   active_keyframe_lock_ = false;
   
   feature_mode_ = static_cast<FeatureMode>(keyframer_->feature_mode_);
+  for (int i=0; i<kNumChannels; i++) {
+    euclidean_[i].set_length(keyframer_->euclidean_length_[i]);
+    euclidean_[i].set_shape(keyframer_->euclidean_shape_[i]);
+  }
 
   sequencer_step = 0;
   step_divider = 1;
@@ -452,6 +456,10 @@ void Ui::OnSwitchReleased(const Event& e) {
           } else {
             keyframer_->Load(active_slot_);
             feature_mode_ = static_cast<FeatureMode>(keyframer_->feature_mode_);
+            for (int i=0; i<kNumChannels; i++) {
+              euclidean_[i].set_length(keyframer_->euclidean_length_[i]);
+              euclidean_[i].set_shape(keyframer_->euclidean_shape_[i]);
+            }
           }
           mode_ = UI_MODE_SPLASH;
         } else {

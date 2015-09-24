@@ -155,13 +155,14 @@ class Keyframer {
  private:
   int32_t dc_offset_frame_modulation_;
   uint32_t magic_number_;
+  uint8_t padding_[3];
 
 #ifndef TEST
   enum SettingsSize {
     SETTINGS_SIZE = sizeof(keyframes_) + sizeof(settings_) +            \
     sizeof(num_keyframes_) + sizeof(id_counter_) + sizeof(feature_mode_) + \
     sizeof(euclidean_length_) + sizeof(euclidean_shape_) + \
-    sizeof(dc_offset_frame_modulation_) + sizeof(magic_number_)
+    sizeof(dc_offset_frame_modulation_) + sizeof(magic_number_) + sizeof(padding_)
   };
 #endif  // TEST
 
