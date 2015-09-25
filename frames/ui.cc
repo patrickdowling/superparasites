@@ -507,8 +507,7 @@ void Ui::OnSwitchReleased(const Event& e) {
       step_divider = (((32768 - data) * kDividersSteps >> 15) + 1) % kDividersSteps;
     } else {
       int16_t rnd = data - 32768;
-      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
-      CONSTRAIN(rnd, 0, 32768);
+      rnd = (rnd * rnd) >> 15;
       step_random = rnd >> 7;
       step_divider = 1;
     }
@@ -519,8 +518,7 @@ void Ui::OnSwitchReleased(const Event& e) {
       shift_divider = (((32768 - data) * kDividersSteps >> 15) + 1) % kDividersSteps;
     } else {
       int16_t rnd = data - 32768;
-      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
-      CONSTRAIN(rnd, 0, 32768);
+      rnd = (rnd * rnd) >> 15;
       shift_random = rnd >> 7;
       shift_divider = 1;
     }
@@ -529,13 +527,11 @@ void Ui::OnSwitchReleased(const Event& e) {
     if (data < 32768) {
       feedback_random = 0;
       int16_t rnd = 32768 - data;
-      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
-      CONSTRAIN(rnd, 0, 32768);
+      rnd = (rnd * rnd) >> 15;
       sequencer_random = rnd >> 7;
     } else {
       int16_t rnd = data - 32768;
-      rnd = (rnd - kDeadZone) * 32768L / (32768 - kDeadZone);
-      CONSTRAIN(rnd, 0, 32768);
+      rnd = (rnd * rnd) >> 15;
       feedback_random = rnd >> 7;
       sequencer_random = 0;
     }
