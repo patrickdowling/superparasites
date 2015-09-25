@@ -94,10 +94,10 @@ void Euclidean::Render() {
     value_ = 0;
   }
 
-  value_ = value_ * value_ / 65535 * value_ / 65535;
+  uint16_t val = value_ * value_ / 65535 * value_ / 65535;
 
   phase_++;
-  dac_code_ = Keyframer::ConvertToDacCode(value_, 0);
+  dac_code_ = Keyframer::ConvertToDacCode(val, 0);
 }
 
 }  // namespace frames
