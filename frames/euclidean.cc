@@ -70,13 +70,13 @@ void Euclidean::Step(int32_t clock) {
 inline void Euclidean::ComputeAttackDecay(uint16_t shape, uint16_t* a, uint16_t* d) {
   if (shape < 32768) {
     *a = 0;
-    *d = 15 * (shape >> 3) + 2288; // 2288..63728 (TODO fix and >)
+    *d = 15 * (shape >> 3) + 1024; // 1024..62868
   } else if (shape < 49152) {
-    *a = (shape - 32768) << 1;	// 2..32768
-    *d = 65535 - ((shape - 32768) >> 1) * 3; // 65535..40959
+    *a = (shape - 32768) << 1;	// 2..32766
+    *d = 65535 - ((shape - 32768) >> 4) * 31; // 65535..33791
   } else {
-    *a = 32768 - ((shape - 49152) >> 2) * 5; // 32768..12293 (TODO smaller)
-    *d = 65535 - ((shape - 32768) >> 1) * 3; // 40595..16384 (TODO smaller)
+    *a = 32768 - ((shape - 49152) >> 2) * 7; // 32768..4117
+    *d = 65535 - ((shape - 32768) >> 4) * 31; // 33791..2048
   }
 }
 
@@ -84,7 +84,7 @@ void Euclidean::Render() {
   uint16_t decay;
   ComputeAttackDecay(shape_, &attack_, &decay);
   attack_ /= 3;
-  decay /= 3;
+  decay /= 2;
 
   if (phase_ < attack_) {
     value_ = phase_ * 65535 / attack_;
