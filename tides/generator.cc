@@ -115,7 +115,8 @@ void Generator::Init() {
   local_osc_phase_increment_ = phase_increment_;
   target_phase_increment_ = phase_increment_;
 
-  RandomizeHarmonicPhase();
+  center1_ = center2_ = 0;
+
   RandomizeHarmonicDistribution();
 }
 
@@ -917,8 +918,6 @@ void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize * 3; // moar CPU
   
-  int32_t center1 = static_cast<int32_t>(slope_ + 32768);
-  int32_t center2 = static_cast<int32_t>(shape_ + 32768);
   // 0 < width < 65535
   int32_t width = static_cast<int32_t>(smoothness_) * 2;
   // Scaling:
@@ -944,8 +943,8 @@ void Generator::FillBufferHarmonic() {
     // 0 < x < 65535
     int32_t x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
 
-    int32_t peak1 = ComputePeak(center1, width, x);
-    int32_t peak2 = ComputePeak(center2, width, x);
+    int32_t peak1 = ComputePeak(center1_, width, x);
+    int32_t peak2 = ComputePeak(center2_, width, x);
     peak1 /= 2;                 // second peak has half the gain
 
     int32_t a = peak1 > peak2 ? peak1 : peak2;
@@ -983,7 +982,6 @@ void Generator::FillBufferHarmonic() {
     if (control & CONTROL_GATE_RISING) {
       phase_ = 0;
       sub_phase_ = 0;
-      RandomizeHarmonicPhase();
     }
 
     if (control & CONTROL_FREEZE) {
@@ -1030,6 +1028,9 @@ void Generator::FillBufferHarmonic() {
       phase_increment_ = local_osc_phase_increment_ + (phase_error >> 13);
     }
 
+    center1_ += ((slope_ + 32768) - center1_) >> 4;
+    center2_ += ((shape_ + 32768) - center2_) >> 4;
+
     int32_t bipolar = 0;
     int32_t unipolar = 0;
     int32_t gain = 0;
@@ -1039,7 +1040,7 @@ void Generator::FillBufferHarmonic() {
       smoothed_envelope_[harm] += (envelope[harm] - smoothed_envelope_[harm]) >> 4;
       gain += smoothed_envelope_[harm];
 
-      uint32_t phase = phase_ + initial_phase_[harm];
+      uint32_t phase = phase_;
       switch (mode_) {
       case GENERATOR_MODE_AR:
         phase = phase_ << harm;
@@ -1051,6 +1052,8 @@ void Generator::FillBufferHarmonic() {
         phase = phase_ * ((harm << 1) + 1);
         break;
       }
+
+      phase += ((harm & 1 ? center1_ : center2_) << 15) * harm;
 
       // decimate the phase, as set by the Range button
       if (range_ == GENERATOR_RANGE_LOW)
@@ -1087,11 +1090,6 @@ void Generator::FillBufferHarmonic() {
     sub_phase_ += phase_increment_ >> 1;
     phase_ += phase_increment_;
   }
-}
-
-void Generator::RandomizeHarmonicPhase() {
-  for (uint8_t i=0; i<kNumHarmonics; i++)
-    initial_phase_[i] = Random::GetWord() >> 16;
 }
 
 void Generator::RandomizeHarmonicDistribution() {
