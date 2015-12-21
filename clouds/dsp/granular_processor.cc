@@ -394,9 +394,7 @@ void GranularProcessor::Process(
   // Apply the simple post-processing reverb.
   if (playback_mode_ != PLAYBACK_MODE_OLIVERB &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR) {
-    float reverb_amount = parameters_.reverb * 0.95f;
-    reverb_amount += feedback * (2.0f - feedback) * freeze_lp_;
-    CONSTRAIN(reverb_amount, 0.0f, 1.0f);
+    float reverb_amount = parameters_.reverb;
 
     reverb_.set_amount(reverb_amount * 0.54f);
     reverb_.set_diffusion(0.7f);
