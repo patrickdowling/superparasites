@@ -228,17 +228,6 @@ class FxEngine {
       accumulator_ = stmlib::SoftLimit(accumulator_);
     }
 
-    inline void Follow(float& env, float att, float rel) {
-      float abs = fabsf(accumulator_);
-      env += (env < abs ? att : rel) * (abs - env);
-    }
-
-    inline void Limit(float envelope, float limit) {
-      if (envelope > limit) {
-        accumulator_ *= limit / envelope;
-      }
-    }
-
     template<typename D>
     inline void Interpolate(D& d, float offset, float scale) {
       STATIC_ASSERT(D::base + D::length <= size, delay_memory_full);
