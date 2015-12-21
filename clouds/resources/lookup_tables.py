@@ -125,8 +125,8 @@ Quantizer for pitch.
 
 PITCH_TABLE_SIZE = 1025
 pitch = numpy.zeros((PITCH_TABLE_SIZE, ))
-notches = [-24, -12, -12, -7, -4, -3, -1, -0.1, 0,
-           0, 0.1, 1, 3, 4, 7, 12, 12, 24]
+notches = [-24, -12, -7, -4, -3, -1, -0.1, 0,
+           0.1, 1, 3, 4, 7, 12, 12, 24]
 n = len(notches) - 1
 for i in xrange(n):
   start_index = int(float(i) / n * PITCH_TABLE_SIZE)
