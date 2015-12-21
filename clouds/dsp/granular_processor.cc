@@ -391,6 +391,18 @@ void GranularProcessor::Process(
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
   
+  const float post_gain = 1.2f;
+  float dry_wet = dry_wet_;
+  float dry_wet_increment = (parameters_.dry_wet - dry_wet) / static_cast<float>(size);
+  for (size_t i = 0; i < size; ++i) {
+    dry_wet += dry_wet_increment;
+    float l = static_cast<float>(input[i].l) / 32768.0f;
+    float r = static_cast<float>(input[i].r) / 32768.0f;
+    out_[i].l = l + ((out_[i].l * post_gain - l) * dry_wet);
+    out_[i].r = r + ((out_[i].r * post_gain - r) * dry_wet);
+  }
+  dry_wet_ = dry_wet;
+  
   // Apply the simple post-processing reverb.
   if (playback_mode_ != PLAYBACK_MODE_OLIVERB &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR) {
@@ -405,18 +417,11 @@ void GranularProcessor::Process(
     reverb_.Process(out_, size);
   }
 
-  const float post_gain = 1.2f;
-  float dry_wet = dry_wet_;
-  float dry_wet_increment = (parameters_.dry_wet - dry_wet) / static_cast<float>(size);
   for (size_t i = 0; i < size; ++i) {
-    dry_wet += dry_wet_increment;
-    int32_t dry_wet_int = dry_wet * 32767.0f;
-    int32_t l = SoftConvert(out_[i].l * post_gain);
-    int32_t r = SoftConvert(out_[i].r * post_gain);
-    output[i].l = input[i].l + ((l - input[i].l) * dry_wet_int >> 15);
-    output[i].r = input[i].r + ((r - input[i].r) * dry_wet_int >> 15);
+    output[i].l = SoftConvert(out_[i].l);
+    output[i].r = SoftConvert(out_[i].r);
   }
-  dry_wet_ = dry_wet;
+
   // TOC
 }
 
