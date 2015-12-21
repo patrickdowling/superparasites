@@ -79,9 +79,10 @@ uint32_t PolyLfo::FrequencyToPhaseIncrement(int32_t frequency) {
   uint32_t b = lut_increments[(index >> 5) + 1];
   return (a + ((b - a) * (index & 0x1f) >> 5)) << shifts;
 }
-
+  
 void PolyLfo::Render(int32_t frequency) {
-  uint16_t rainbow_index = frequency < 0 ? 0 : (frequency > 65535 ? 65535 : frequency);
+  if (frequency < 0) frequency = 0;
+  uint16_t rainbow_index = frequency > 65535 ? 65535 : frequency;
   for (uint8_t i = 0; i < 3; ++i) {
     int16_t a = rainbow_[rainbow_index >> 12][i];
     int16_t b = rainbow_[(rainbow_index >> 12) + 1][i];

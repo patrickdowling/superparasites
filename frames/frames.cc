@@ -174,7 +174,7 @@ int main(void) {
           (ui.frame_modulation() - dc_offset_frame_modulation) << 1;
       frame += frame_modulation;
       if (ui.feature_mode() == Ui::FEAT_MODE_POLY_LFO) {
-        poly_lfo.Render(frame);
+	poly_lfo.Render(frame);	
         if (poly_lfo.level(0) > 128) {
           trigger_output.High();
         } else {
