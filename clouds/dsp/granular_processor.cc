@@ -370,8 +370,8 @@ void GranularProcessor::Process(
         (cutoff < 0.5f ? -0.5f : cutoff - 1.0f) * 216.0f);
     CONSTRAIN(lp_cutoff, 0.0f, 0.499f);
     CONSTRAIN(hp_cutoff, 0.0f, 0.499f);
-    float lpq = 1.0f + 2.0f * (1.0f - feedback) * (0.5f - lp_cutoff);
-    lp_filter_[0].set_f_q<FREQUENCY_FAST>(lp_cutoff, lpq);
+
+    lp_filter_[0].set_f_q<FREQUENCY_FAST>(lp_cutoff, 0.9f);
     lp_filter_[0].Process<FILTER_MODE_LOW_PASS>(
         &out_[0].l, &out_[0].l, size, 2);
 
@@ -379,7 +379,7 @@ void GranularProcessor::Process(
     lp_filter_[1].Process<FILTER_MODE_LOW_PASS>(
         &out_[0].r, &out_[0].r, size, 2);
 
-    hp_filter_[0].set_f_q<FREQUENCY_FAST>(hp_cutoff, 1.0f);
+    hp_filter_[0].set_f_q<FREQUENCY_FAST>(hp_cutoff, 0.9f);
     hp_filter_[0].Process<FILTER_MODE_HIGH_PASS>(
         &out_[0].l, &out_[0].l, size, 2);
 
