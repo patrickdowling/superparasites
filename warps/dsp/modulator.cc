@@ -184,15 +184,11 @@ void Modulator::ProcessFreqShifter(
   feedback_sample_ = feedback_sample;
   previous_parameters_ = parameters_;
 }
-
-void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
-  if (bypass_) {
-    copy(&input[0], &input[size], &output[0]);
-    return;
-  } else if (feature_mode_ == FEATURE_MODE_FREQUENCY_SHIFTER) {
-    ProcessFreqShifter(input, output, size);
-    return;
-  }
+  
+void Modulator::ProcessMeta(
+    ShortFrame* input,
+    ShortFrame* output,
+    size_t size) {
   float* carrier = buffer_[0];
   float* modulator = buffer_[1];
   float* main_output = buffer_[0];
@@ -340,6 +336,23 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     ++output;
   }
   previous_parameters_ = parameters_;
+}
+  
+void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
+  if (bypass_) {
+    copy(&input[0], &input[size], &output[0]);
+    return;
+  }
+
+  switch (feature_mode_) {
+  case FEATURE_MODE_META:
+    ProcessMeta(input, output, size);
+    break;
+    
+  case FEATURE_MODE_FREQUENCY_SHIFTER:
+    ProcessFreqShifter(input, output, size);
+    break;
+  }
 }
 
 

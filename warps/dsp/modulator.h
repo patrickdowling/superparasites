@@ -143,6 +143,7 @@ class Modulator {
   void Init(float sample_rate);
   void Process(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
   inline const Parameters& parameters() { return parameters_; }
   
