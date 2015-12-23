@@ -40,6 +40,8 @@ namespace warps {
 using namespace std;
 using namespace stmlib;
 
+const float kXmodCarrierGain = 0.5f;
+
 void Modulator::Init(float sample_rate) {
   bypass_ = false;
   feature_mode_ = FEATURE_MODE_META;
@@ -230,9 +232,7 @@ void Modulator::ProcessMeta(
     OscillatorShape xmod_shape = static_cast<OscillatorShape>(
         parameters_.carrier_shape - 1);
     OscillatorShape vocoder_shape = static_cast<OscillatorShape>(
-        parameters_.carrier_shape + 1);
-    
-    const float kXmodCarrierGain = 0.5f;
+        parameters_.carrier_shape + 1);    
 
     // Outside of the transition zone between the cross-modulation and vocoding
     // algorithm, we need to render only one of the two oscillators.
@@ -337,6 +337,77 @@ void Modulator::ProcessMeta(
   }
   previous_parameters_ = parameters_;
 }
+
+void Modulator::ProcessXFade(ShortFrame* input, ShortFrame* output, size_t size) {
+  float* carrier = buffer_[0];
+  float* modulator = buffer_[1];
+  float* main_output = buffer_[0];
+  float* aux_output = buffer_[2];
+  float* oversampled_carrier = src_buffer_[0];
+  float* oversampled_modulator = src_buffer_[1];
+  float* oversampled_output = src_buffer_[0];
+  
+  if (!parameters_.carrier_shape) {
+    fill(&aux_output[0], &aux_output[size], 0.0f);
+  }
+  
+  // Convert audio inputs to float and apply VCA/saturation (5.8% per channel)
+  short* input_samples = &input->l;
+  for (int32_t i = parameters_.carrier_shape ? 1 : 0; i < 2; ++i) {
+      amplifier_[i].Process(
+          parameters_.channel_drive[i],
+          1.0f,
+          input_samples + i,
+          buffer_[i],
+          aux_output,
+          2,
+          size);
+  }
+  
+  // If necessary, render carrier. Otherwise, sum signals 1 and 2 for aux out.
+  if (parameters_.carrier_shape) {
+    // Scale phase-modulation input.
+    for (size_t i = 0; i < size; ++i) {
+      internal_modulation_[i] = static_cast<float>(input[i].l) / 32768.0f;
+    }
+    
+    OscillatorShape xmod_shape = static_cast<OscillatorShape>(
+        parameters_.carrier_shape - 1);
+    xmod_oscillator_.Render(
+          xmod_shape,
+          parameters_.note,
+          internal_modulation_,
+          aux_output,
+          size);
+    for (size_t i = 0; i < size; ++i) {
+      carrier[i] = aux_output[i] * kXmodCarrierGain;
+    }
+  }
+  
+  src_up_[0].Process(carrier, oversampled_carrier, size);
+  src_up_[1].Process(modulator, oversampled_modulator, size);
+
+  ProcessXmod<ALGORITHM_XFADE>(
+        previous_parameters_.skewed_modulation_parameter(),
+        parameters_.skewed_modulation_parameter(),
+        oversampled_modulator,
+        oversampled_carrier,
+        oversampled_output,
+        size * kOversampling);
+  
+  src_down_.Process(oversampled_output, main_output, size * kOversampling);
+
+  // Convert back to integer and clip.
+  while (size--) {
+    output->l = Clip16(static_cast<int32_t>(*main_output * 32768.0f));
+    output->r = Clip16(static_cast<int32_t>(*aux_output * 16384.0f));
+    ++main_output;
+    ++aux_output;
+    ++output;
+  }
+  previous_parameters_ = parameters_;
+
+}
   
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   if (bypass_) {
@@ -345,13 +416,33 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   }
 
   switch (feature_mode_) {
-  case FEATURE_MODE_META:
-    ProcessMeta(input, output, size);
+
+  case FEATURE_MODE_XFADE:
+    ProcessXFade(input, output, size);
     break;
+    
+  case FEATURE_MODE_FOLD:
+    break;
+    
+  case FEATURE_MODE_RING_MOD:
+    break;  
     
   case FEATURE_MODE_FREQUENCY_SHIFTER:
     ProcessFreqShifter(input, output, size);
     break;
+    
+  case FEATURE_MODE_XOR:
+    break;
+    
+  case FEATURE_MODE_COMPARATOR:
+    break;
+    
+  case FEATURE_MODE_VOCODER:
+    break;
+    
+  case FEATURE_MODE_META:
+    ProcessMeta(input, output, size);
+    break;    
   }
 }
 

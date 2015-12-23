@@ -142,6 +142,8 @@ class Modulator {
 
   void Init(float sample_rate);
   void Process(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessXFade(ShortFrame* input, ShortFrame* output, size_t size);
+  /* void Process(ShortFrame* input, ShortFrame* output, size_t size); */
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
@@ -150,7 +152,7 @@ class Modulator {
   inline bool bypass() const { return bypass_; }
   inline void set_bypass(bool bypass) { bypass_ = bypass; }
 
-  inline bool feature_mode() const { return feature_mode_; }
+  inline FeatureMode feature_mode() const { return feature_mode_; }
   inline void set_feature_mode(FeatureMode feature_mode) { feature_mode_ = feature_mode; }
   
  private:
@@ -198,6 +200,25 @@ class Modulator {
         balance += balance_increment;
         size--;
       }
+    }
+  }
+  
+  template<XmodAlgorithm algorithm>
+  void ProcessXmod(
+      float parameter,
+      float parameter_end,
+      const float* in_1,
+      const float* in_2,
+      float* out,
+      size_t size) {
+    float step = 1.0f / static_cast<float>(size);
+    float parameter_increment = (parameter_end - parameter) * step;
+    while (size) {
+      const float x_1 = *in_1++;
+      const float x_2 = *in_2++;
+      *out++ = Xmod<algorithm>(x_1, x_2, parameter);
+      parameter += parameter_increment;
+      size--;
     }
   }
   
