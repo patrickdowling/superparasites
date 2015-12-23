@@ -42,7 +42,7 @@ using namespace stmlib;
 
 void Modulator::Init(float sample_rate) {
   bypass_ = false;
-  easter_egg_ = false;
+  feature_mode_ = FEATURE_MODE_META;
   
   for (int32_t i = 0; i < 2; ++i) {
     amplifier_[i].Init();
@@ -66,7 +66,7 @@ void Modulator::Init(float sample_rate) {
   feedback_sample_ = 0.0f;
 }
 
-void Modulator::ProcessEasterEgg(
+void Modulator::ProcessFreqShifter(
     ShortFrame* input,
     ShortFrame* output,
     size_t size) {
@@ -76,13 +76,13 @@ void Modulator::ProcessEasterEgg(
   
   // Generate the I/Q components.
   if (parameters_.carrier_shape) {
-    float d = parameters_.frequency_shift_pot - 0.5f;
+    float d = parameters_.raw_algorithm_pot - 0.5f;
     float linear_modulation_amount = 1.0f - 14.0f * d * d;
     if (linear_modulation_amount < 0.0f) {
       linear_modulation_amount = 0.0f;
     }
-    float frequency = parameters_.frequency_shift_pot;
-    frequency += linear_modulation_amount * parameters_.frequency_shift_cv;
+    float frequency = parameters_.raw_algorithm_pot;
+    frequency += linear_modulation_amount * parameters_.raw_algorithm_cv;
     
     float direction = frequency >= 0.5f ? 1.0f : -1.0f;
     frequency = 2.0f * fabs(frequency - 0.5f);
@@ -90,7 +90,7 @@ void Modulator::ProcessEasterEgg(
         ? frequency * frequency * frequency * 62.5f
         : 4.0f * SemitonesToRatio(180.0f * (frequency - 0.4f));
     frequency *= SemitonesToRatio(
-        parameters_.frequency_shift_cv * 60.0f * \
+        parameters_.raw_algorithm_cv * 60.0f * \
             (1.0f - linear_modulation_amount) * direction);
     frequency *= direction;
     
@@ -103,8 +103,8 @@ void Modulator::ProcessEasterEgg(
     quadrature_transform_[0].Process(carrier, carrier_i, carrier_q, size);
     
     ParameterInterpolator phase_shift(
-        &previous_parameters_.phase_shift,
-        parameters_.phase_shift,
+        &previous_parameters_.raw_algorithm,
+        parameters_.raw_algorithm,
         size);
   
     for (size_t i = 0; i < size; ++i) {
@@ -189,8 +189,8 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   if (bypass_) {
     copy(&input[0], &input[size], &output[0]);
     return;
-  } else if (easter_egg_) {
-    ProcessEasterEgg(input, output, size);
+  } else if (feature_mode_ == FEATURE_MODE_FREQUENCY_SHIFTER) {
+    ProcessFreqShifter(input, output, size);
     return;
   }
   float* carrier = buffer_[0];

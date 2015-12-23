@@ -55,7 +55,7 @@ const uint8_t Ui::palette_[10][3] = {
 };
 
 /* static */
-const uint8_t Ui::easter_egg_palette_[10][3] = {
+const uint8_t Ui::freq_shifter_palette_[10][3] = {
   { 0, 0, 64 },
   { 0, 0, 255 },
   { 0, 255, 192 },
@@ -68,6 +68,8 @@ const uint8_t Ui::easter_egg_palette_[10][3] = {
   { 255, 0, 0 },
 };
 
+const float kAlgoChangeThreshold = 0.01f;
+  
 void Ui::Init(Settings* settings, CvScaler* cv_scaler, Modulator* modulator) {
   leds_.Init();
   switches_.Init();
@@ -77,12 +79,18 @@ void Ui::Init(Settings* settings, CvScaler* cv_scaler, Modulator* modulator) {
   cv_scaler_ = cv_scaler;
   modulator_ = modulator;
   
-  modulator_->set_easter_egg(settings_->state().boot_in_easter_egg_mode);
+  modulator_->set_feature_mode(static_cast<FeatureMode>(settings_->state().feature_mode));
+  feature_mode_ = modulator_->feature_mode();
   carrier_shape_ = settings_->state().carrier_shape;
-  UpdateCarrierShape();
+  UpdateSettings();
+
+  last_algo_pot_ = 0.0f;
+  feature_mode_changed_ = false;
 }
 
-void Ui::UpdateCarrierShape() {
+void Ui::UpdateSettings() {
+  modulator_->set_feature_mode(static_cast<FeatureMode>(feature_mode_));
+  settings_->mutable_state()->feature_mode = feature_mode_;
   modulator_->mutable_parameters()->carrier_shape = carrier_shape_;
   settings_->mutable_state()->carrier_shape = carrier_shape_;
 }
@@ -101,7 +109,7 @@ void Ui::Poll() {
   if (switches_.pressed(0) && \
       press_time_ &&
       (system_clock.milliseconds() - press_time_) >= 4800) {
-    if (cv_scaler_->ready_for_calibration()) {
+    if (!feature_mode_changed_ && cv_scaler_->ready_for_calibration()) {
       queue_.AddEvent(CONTROL_SWITCH, 1, 0);
       press_time_ = 0;
     }
@@ -122,13 +130,22 @@ void Ui::Poll() {
         float zone;
         const Parameters& p = modulator_->parameters();
         const uint8_t (*palette)[3];
-        if (modulator_->easter_egg()) {
-          zone = p.phase_shift;
-          palette = easter_egg_palette_;
-        } else {
-          zone = p.modulation_algorithm;
-          palette = palette_;
-        }
+
+	switch (modulator_->feature_mode()) {
+	case FEATURE_MODE_FREQUENCY_SHIFTER:
+	  {
+	    zone = p.raw_algorithm;
+	    palette = freq_shifter_palette_;
+	  }
+	  break;
+	case FEATURE_MODE_META:
+	  {
+	    zone = p.modulation_algorithm;
+	    palette = palette_;
+	  }
+	  break;
+	}
+
         zone *= 8.0f;
         MAKE_INTEGRAL_FRACTIONAL(zone);
         int32_t zone_fractional_i = static_cast<int32_t>(
@@ -144,7 +161,24 @@ void Ui::Poll() {
             carrier_shape_ > 0 && carrier_shape_ <= 2 ? 255 : 0);
       }
       break;
-    
+
+    case UI_MODE_FEATURE_SWITCH:
+      {
+        const Parameters& p = modulator_->parameters();
+	if (p.raw_algorithm_pot >= last_algo_pot_ + kAlgoChangeThreshold ||
+	    p.raw_algorithm_pot <= last_algo_pot_ - kAlgoChangeThreshold)
+	  feature_mode_changed_ = true;
+
+	if (feature_mode_changed_) {
+	  feature_mode_ = static_cast<uint8_t>(p.raw_algorithm_pot * 8.0f);
+	  uint8_t saw = 255 - (system_clock.milliseconds() & 127);
+	  leds_.set_main((palette_[feature_mode_][0] * saw) >> 8,
+			 (palette_[feature_mode_][1] * saw) >> 8,
+			 (palette_[feature_mode_][2] * saw) >> 8);
+	}
+      }
+      break;
+      
     case UI_MODE_CALIBRATION_1:
       leds_.set_main(0, blink ? 255 : 0, blink ? 64 : 0);
       leds_.set_osc(blink ? 255 : 0, blink ? 255 : 0);
@@ -159,17 +193,6 @@ void Ui::Poll() {
     case UI_MODE_CALIBRATION_ERROR:
       leds_.set_osc(blink ? 255 : 0, 0);
       leds_.set_main(blink ? 255 : 0, 0, 0);
-      break;
-    
-    case UI_MODE_EASTER_EGG_DANCE:
-      {
-        leds_.set_osc(0, blink ? 255 : 0);
-        uint8_t color = (system_clock.milliseconds() >> 9) % 9;
-        leds_.set_main(
-            easter_egg_palette_[color][0],
-            easter_egg_palette_[color][1],
-            easter_egg_palette_[color][2]);
-      }
       break;
   }
   
@@ -186,40 +209,17 @@ void Ui::Poll() {
   leds_.Write();
 }
 
-bool Ui::DetectSecretHandshake() {
-  for (int32_t i = 0; i < 5; ++i) {
-    secret_handshake_[i] = secret_handshake_[i + 1];
-  }
-  secret_handshake_[5] = cv_scaler_->easter_egg_digit();
-  uint8_t expected[6] = { 2, 4, 3, 6, 1, 5 };
-  return equal(
-      &secret_handshake_[0],
-      &secret_handshake_[6],
-      &expected[0]);
-}
-
 void Ui::OnSwitchPressed(const Event& e) {
   switch (e.control_id) {
     case 0:
-      if (mode_ == UI_MODE_CALIBRATION_1) {
-        CalibrateC1();
-      } else if (mode_ == UI_MODE_CALIBRATION_2) {
-        CalibrateC3();
-      } else {
-        if (!DetectSecretHandshake()) {
-          carrier_shape_ = (carrier_shape_ + 1) & 3;
-        } else {
-          bool easter = !modulator_->easter_egg();
-          modulator_->set_easter_egg(easter);
-          settings_->mutable_state()->boot_in_easter_egg_mode = easter;
-          carrier_shape_ = 1;
-          mode_ = UI_MODE_EASTER_EGG_DANCE;
-        }
-        UpdateCarrierShape();
-        settings_->Save();
+      {
+	if (mode_ == UI_MODE_NORMAL) {
+	  last_algo_pot_ = modulator_->parameters().raw_algorithm_pot;
+	  mode_ = UI_MODE_FEATURE_SWITCH;
+	}
       }
       break;
-    
+      
     case 1:
       StartCalibration();
       break;
@@ -230,7 +230,24 @@ void Ui::OnSwitchPressed(const Event& e) {
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
-  
+  switch (e.control_id) {   
+    case 0:
+      if (mode_ == UI_MODE_CALIBRATION_1) {
+        CalibrateC1();
+      } else if (mode_ == UI_MODE_CALIBRATION_2) {
+        CalibrateC3();
+      } else {
+	mode_ = UI_MODE_NORMAL;
+	if (feature_mode_changed_)
+	  feature_mode_changed_ = false;
+	else {	
+	  carrier_shape_ = (carrier_shape_ + 1) & 3;
+	}
+	UpdateSettings();
+	settings_->Save();
+      }
+      break;
+  }
 }
 
 void Ui::StartCalibration() {
@@ -264,7 +281,7 @@ void Ui::DoEvents() {
       }
     }
   }
-  if (mode_ == UI_MODE_EASTER_EGG_DANCE || mode_ == UI_MODE_CALIBRATION_ERROR) {
+  if (mode_ == UI_MODE_CALIBRATION_ERROR) {
     if (queue_.idle_time() > 6000) {
       mode_ = UI_MODE_NORMAL;
     }
@@ -300,7 +317,7 @@ uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
         CalibrateC1();
       } else {
         carrier_shape_ = 0;
-        UpdateCarrierShape();
+        UpdateSettings();
         CalibrateC3();
       }
       break;

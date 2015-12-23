@@ -41,16 +41,9 @@ enum OscillatorShape {
   OSCILLATOR_SHAPE_NOISE_LP
 };
 
-enum ModulationAlgorithm {
-  MODULATION_ALGORITHM_XFADE,
-  MODULATION_ALGORITHM_FOLD,
-  MODULATION_ALGORITHM_ANALOG_RINGMOD,
-  MODULATION_ALGORITHM_DIGITAL_RINGMOD,
-  MODULATION_ALGORITHM_XOR,
-  MODULATION_ALGORITHM_COMPARE,
-  MODULATION_ALGORITHM_SPECTRAL,
-  MODULATION_ALGORITHM_MORPH,
-  MODULATION_ALGORITHM_VOCODER
+enum FeatureMode {
+  FEATURE_MODE_META,
+  FEATURE_MODE_FREQUENCY_SHIFTER,
 };
 
 struct Parameters {
@@ -58,10 +51,10 @@ struct Parameters {
   float modulation_algorithm;
   float modulation_parameter;
   
-  // Easter egg parameters.
-  float frequency_shift_pot;
-  float frequency_shift_cv;
-  float phase_shift;
+  // Raw parameters.
+  float raw_algorithm_pot;
+  float raw_algorithm_cv;
+  float raw_algorithm;
   float note;
 
   int32_t carrier_shape;  // 0 = external

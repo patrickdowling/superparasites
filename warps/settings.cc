@@ -50,7 +50,7 @@ void Settings::Init() {
     data_.calibration_data.normalization_detection_threshold[0] = 0.85f;
     data_.calibration_data.normalization_detection_threshold[1] = 0.85f;
     data_.state.carrier_shape = 1;
-    data_.state.boot_in_easter_egg_mode = 0;
+    data_.state.feature_mode = 0;
     freshly_baked_ = true;
     Save();
   }

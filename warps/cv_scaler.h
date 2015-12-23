@@ -120,17 +120,6 @@ class CvScaler {
          adc_.float_value(ADC_LEVEL_1_CV) > 0.7f;
   }
   
-  inline uint8_t easter_egg_digit() const {
-    if (lp_state_[ADC_LEVEL_1_POT] < 0.05f && \
-        lp_state_[ADC_LEVEL_2_POT] < 0.05f && \
-        lp_state_[ADC_PARAMETER_POT] < 0.05f) {
-      return static_cast<uint8_t>(
-          UnwrapPot(lp_state_[ADC_ALGORITHM_POT]) * 8.0f + 0.5f);
-    } else {
-      return 0;
-    }
-  }
-  
   inline uint8_t adc_value(size_t index) const {
     return adc_.value(index) >> 8;
   }

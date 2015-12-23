@@ -166,17 +166,17 @@ void CvScaler::Read(Parameters* p) {
     CONSTRAIN(p->modulation_algorithm, 0.0f, 1.0f);
   }
   
-  // Easter egg parameter mappings.
-  p->frequency_shift_pot = lp_state_[ADC_ALGORITHM_POT];
-  float frequency_shift_cv = -lp_state_[ADC_ALGORITHM_CV];
-  frequency_shift_cv += calibration_data_->offset[ADC_ALGORITHM_CV];
+  // Raw parameter mappings (no scaling).
+  p->raw_algorithm_pot = UnwrapPot(lp_state_[ADC_ALGORITHM_POT]);
+  float raw_algorithm_cv = -lp_state_[ADC_ALGORITHM_CV];
+  raw_algorithm_cv += calibration_data_->offset[ADC_ALGORITHM_CV];
   
-  p->frequency_shift_cv = frequency_shift_cv * 2.0f;
-  CONSTRAIN(p->frequency_shift_cv, -1.0f, 1.0f);
+  p->raw_algorithm_cv = raw_algorithm_cv * 2.0f;
+  CONSTRAIN(p->raw_algorithm_cv, -1.0f, 1.0f);
 
-  float phase_shift = lp_state_[ADC_ALGORITHM_POT] + frequency_shift_cv * 2.0f;
-  CONSTRAIN(phase_shift, 0.0f, 1.0f);
-  p->phase_shift = phase_shift;
+  float raw_algorithm = lp_state_[ADC_ALGORITHM_POT] + raw_algorithm_cv * 2.0f;
+  CONSTRAIN(raw_algorithm, 0.0f, 1.0f);
+  p->raw_algorithm = raw_algorithm;
 
   // Internal oscillator parameters.
   float note;

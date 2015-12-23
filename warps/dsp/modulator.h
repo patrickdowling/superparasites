@@ -142,15 +142,15 @@ class Modulator {
 
   void Init(float sample_rate);
   void Process(ShortFrame* input, ShortFrame* output, size_t size);
-  void ProcessEasterEgg(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
   inline const Parameters& parameters() { return parameters_; }
   
   inline bool bypass() const { return bypass_; }
   inline void set_bypass(bool bypass) { bypass_ = bypass; }
 
-  inline bool easter_egg() const { return easter_egg_; }
-  inline void set_easter_egg(bool easter_egg) { easter_egg_ = easter_egg; }
+  inline bool feature_mode() const { return feature_mode_; }
+  inline void set_feature_mode(FeatureMode feature_mode) { feature_mode_ = feature_mode; }
   
  private:
   template<XmodAlgorithm algorithm_1, XmodAlgorithm algorithm_2>
@@ -206,7 +206,8 @@ class Modulator {
   static float Diode(float x);
   
   bool bypass_;
-  bool easter_egg_;
+  
+  FeatureMode feature_mode_;
   
   Parameters parameters_;
   Parameters previous_parameters_;
