@@ -103,6 +103,7 @@ class Ui {
   
   static const uint8_t palette_[10][3];
   static const uint8_t freq_shifter_palette_[10][3];
+  static const uint8_t feature_mode_palette_[10][3];
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

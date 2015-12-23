@@ -55,6 +55,20 @@ const uint8_t Ui::palette_[10][3] = {
 };
 
 /* static */
+const uint8_t Ui::feature_mode_palette_[10][3] = {
+  { 255, 64, 0 },
+  { 0, 192, 64 },
+  { 255, 0, 64 },
+  { 0, 255, 192 },
+  { 64, 255, 0 },
+  { 0, 0, 255 },
+  { 255, 255, 0 },
+  { 255, 0, 255 },
+  { 0, 255, 192 },
+  { 255, 0, 0 },
+};
+
+/* static */
 const uint8_t Ui::freq_shifter_palette_[10][3] = {
   { 0, 0, 64 },
   { 0, 0, 255 },
@@ -171,10 +185,12 @@ void Ui::Poll() {
 
 	if (feature_mode_changed_) {
 	  feature_mode_ = static_cast<uint8_t>(p.raw_algorithm_pot * 8.0f);
-	  uint8_t saw = 255 - (system_clock.milliseconds() & 127);
-	  leds_.set_main((palette_[feature_mode_][0] * saw) >> 8,
-			 (palette_[feature_mode_][1] * saw) >> 8,
-			 (palette_[feature_mode_][2] * saw) >> 8);
+	  int8_t ramp = system_clock.milliseconds() & 127;
+	  uint8_t tri = (system_clock.milliseconds() & 255) < 128 ?
+	    127 + ramp : 255 - ramp;
+	  leds_.set_main((feature_mode_palette_[feature_mode_][0] * tri) >> 8,
+			 (feature_mode_palette_[feature_mode_][1] * tri) >> 8,
+			 (feature_mode_palette_[feature_mode_][2] * tri) >> 8);
 	}
       }
       break;
