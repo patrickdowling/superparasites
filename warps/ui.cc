@@ -177,11 +177,12 @@ void Ui::Poll() {
       {
         const Parameters& p = modulator_->parameters();
 	if (p.raw_algorithm_pot >= last_algo_pot_ + kAlgoChangeThreshold ||
-	    p.raw_algorithm_pot <= last_algo_pot_ - kAlgoChangeThreshold)
+	    p.raw_algorithm_pot <= last_algo_pot_ - kAlgoChangeThreshold) {
 	  feature_mode_changed_ = true;
+	}
 
 	if (feature_mode_changed_) {
-	  feature_mode_ = static_cast<uint8_t>(p.raw_algorithm_pot * 8.0f);
+	  feature_mode_ = static_cast<uint8_t>(p.raw_algorithm_pot * 8.0f + 0.5f);
 	  int8_t ramp = system_clock.milliseconds() & 127;
 	  uint8_t tri = (system_clock.milliseconds() & 255) < 128 ?
 	    127 + ramp : 255 - ramp;

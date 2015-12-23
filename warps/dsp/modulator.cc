@@ -440,6 +440,9 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   case FEATURE_MODE_VOCODER:
     break;
     
+  case FEATURE_MODE_WHAT:
+    break;
+    
   case FEATURE_MODE_META:
     ProcessMeta(input, output, size);
     break;    
