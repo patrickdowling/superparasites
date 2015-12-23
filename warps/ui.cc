@@ -146,17 +146,14 @@ void Ui::Poll() {
         const uint8_t (*palette)[3];
 
 	switch (modulator_->feature_mode()) {
-	case FEATURE_MODE_FREQUENCY_SHIFTER:
-	  {
-	    zone = p.raw_algorithm;
-	    palette = freq_shifter_palette_;
-	  }
-	  break;
 	case FEATURE_MODE_META:
-	  {
-	    zone = p.modulation_algorithm;
-	    palette = palette_;
-	  }
+	  zone = p.modulation_algorithm;
+	  palette = palette_;
+	  break;
+
+	default:
+	  zone = p.raw_algorithm;
+	  palette = freq_shifter_palette_;
 	  break;
 	}
 
