@@ -121,6 +121,7 @@ enum XmodAlgorithm {
   ALGORITHM_DIGITAL_RING_MODULATION,
   ALGORITHM_XOR,
   ALGORITHM_COMPARATOR,
+  ALGORITHM_XFADE_CHEBYSCHEV,
   ALGORITHM_NOP,
   ALGORITHM_LAST
 };
@@ -142,8 +143,8 @@ class Modulator {
 
   void Init(float sample_rate);
   void Process(ShortFrame* input, ShortFrame* output, size_t size);
-  void ProcessXFade(ShortFrame* input, ShortFrame* output, size_t size);
-  /* void Process(ShortFrame* input, ShortFrame* output, size_t size); */
+  template<XmodAlgorithm algorithm>
+  void Process1(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
@@ -205,25 +206,32 @@ class Modulator {
   
   template<XmodAlgorithm algorithm>
   void ProcessXmod(
-      float parameter,
-      float parameter_end,
+      float p_1,
+      float p_1_end,
+      float p_2,
+      float p_2_end,
       const float* in_1,
       const float* in_2,
       float* out,
       size_t size) {
     float step = 1.0f / static_cast<float>(size);
-    float parameter_increment = (parameter_end - parameter) * step;
+    float p_1_increment = (p_1_end - p_1) * step;
+    float p_2_increment = (p_2_end - p_2) * step;
     while (size) {
       const float x_1 = *in_1++;
       const float x_2 = *in_2++;
-      *out++ = Xmod<algorithm>(x_1, x_2, parameter);
-      parameter += parameter_increment;
+      *out++ = Xmod<algorithm>(x_1, x_2, p_1, p_2);
+      p_1 += p_1_increment;
+      p_2 += p_2_increment;
       size--;
     }
   }
   
   template<XmodAlgorithm algorithm>
   static float Xmod(float x_1, float x_2, float parameter);
+
+  template<XmodAlgorithm algorithm>
+  static float Xmod(float x_1, float x_2, float p_1, float p_2);
   
   static float Diode(float x);
   

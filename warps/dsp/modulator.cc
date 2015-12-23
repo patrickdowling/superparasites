@@ -338,7 +338,9 @@ void Modulator::ProcessMeta(
   previous_parameters_ = parameters_;
 }
 
-void Modulator::ProcessXFade(ShortFrame* input, ShortFrame* output, size_t size) {
+  
+template<XmodAlgorithm algorithm>
+void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
   float* carrier = buffer_[0];
   float* modulator = buffer_[1];
   float* main_output = buffer_[0];
@@ -387,7 +389,9 @@ void Modulator::ProcessXFade(ShortFrame* input, ShortFrame* output, size_t size)
   src_up_[0].Process(carrier, oversampled_carrier, size);
   src_up_[1].Process(modulator, oversampled_modulator, size);
 
-  ProcessXmod<ALGORITHM_XFADE>(
+  ProcessXmod<algorithm>(
+        previous_parameters_.modulation_algorithm,
+        parameters_.modulation_algorithm,
         previous_parameters_.skewed_modulation_parameter(),
         parameters_.skewed_modulation_parameter(),
         oversampled_modulator,
@@ -418,7 +422,7 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   switch (feature_mode_) {
 
   case FEATURE_MODE_XFADE:
-    ProcessXFade(input, output, size);
+    Process1<ALGORITHM_XFADE_CHEBYSCHEV>(input, output, size);
     break;
     
   case FEATURE_MODE_FOLD:
@@ -469,6 +473,34 @@ inline float Modulator::Xmod<ALGORITHM_XFADE>(
   float fade_in = Interpolate(lut_xfade_in, parameter, 256.0f);
   float fade_out = Interpolate(lut_xfade_out, parameter, 256.0f);
   return x_1 * fade_in + x_2 * fade_out;
+}
+  
+template<>
+inline float Modulator::Xmod<ALGORITHM_XFADE_CHEBYSCHEV>(
+    float x_1, float x_2, float p_1, float p_2) {
+  float x = Xmod<ALGORITHM_XFADE>(x_1, x_2, p_2);  
+
+  const float att = 1.0f;
+  const float rel = 0.000005f;
+  
+  static float env = 1.0f;
+  float abs = fabs(x);
+  env += (env < abs ? att : rel) * (abs - env);
+  float amp = 1.0f / env;
+
+  x *= amp;
+  
+  float n = p_1 * 3.0f;
+  float tn1 = x;
+  float tn = 2.0f * x * x - 1;
+  while (n >= 1.0) {
+    float temp = tn;
+    tn = 2.0f * x * tn - tn1;
+    tn1 = temp;
+    n--;
+  }
+
+  return (tn1 + (tn - tn1) * n) / amp;
 }
 
 /* static */
