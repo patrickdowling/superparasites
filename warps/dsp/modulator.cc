@@ -480,7 +480,7 @@ inline float Modulator::Xmod<ALGORITHM_XFADE_CHEBYSCHEV>(
     float x_1, float x_2, float p_1, float p_2) {
   float x = Xmod<ALGORITHM_XFADE>(x_1, x_2, p_2);  
 
-  const float att = 1.0f;
+  const float att = 0.01f;
   const float rel = 0.000005f;
   
   static float env = 1.0f;
@@ -493,7 +493,7 @@ inline float Modulator::Xmod<ALGORITHM_XFADE_CHEBYSCHEV>(
   float n = p_1 * 3.0f;
   float tn1 = x;
   float tn = 2.0f * x * x - 1;
-  while (n >= 1.0) {
+  while (n > 1.0) {
     float temp = tn;
     tn = 2.0f * x * tn - tn1;
     tn1 = temp;
