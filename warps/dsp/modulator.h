@@ -116,12 +116,13 @@ class SaturatingAmplifier {
 
 enum XmodAlgorithm {
   ALGORITHM_XFADE,
+  ALGORITHM_XFADE_CHEBYSCHEV,
   ALGORITHM_FOLD,
   ALGORITHM_ANALOG_RING_MODULATION,
   ALGORITHM_DIGITAL_RING_MODULATION,
+  ALGORITHM_RING_MODULATION,
   ALGORITHM_XOR,
   ALGORITHM_COMPARATOR,
-  ALGORITHM_XFADE_CHEBYSCHEV,
   ALGORITHM_NOP,
   ALGORITHM_LAST
 };
@@ -146,6 +147,7 @@ class Modulator {
   template<XmodAlgorithm algorithm>
   void Process1(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessVocoder(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
   inline const Parameters& parameters() { return parameters_; }
