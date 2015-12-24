@@ -45,6 +45,7 @@ namespace warps {
 
 const size_t kMaxBlockSize = 96;
 const size_t kOversampling = 6;
+const size_t kLessOversampling = 4;
 const size_t kNumOscillators = 1;
 
 typedef struct { short l; short r; } ShortFrame;
@@ -116,13 +117,15 @@ class SaturatingAmplifier {
 
 enum XmodAlgorithm {
   ALGORITHM_XFADE,
-  ALGORITHM_XFADE_CHEBYSCHEV,
   ALGORITHM_FOLD,
   ALGORITHM_ANALOG_RING_MODULATION,
   ALGORITHM_DIGITAL_RING_MODULATION,
   ALGORITHM_RING_MODULATION,
   ALGORITHM_XOR,
   ALGORITHM_COMPARATOR,
+  ALGORITHM_COMPARATOR8,
+  ALGORITHM_CHEBYSCHEV,
+  ALGORITHM_COMPARATOR_CHEBYSCHEV,
   ALGORITHM_NOP,
   ALGORITHM_LAST
 };
@@ -234,6 +237,8 @@ class Modulator {
 
   template<XmodAlgorithm algorithm>
   static float Xmod(float x_1, float x_2, float p_1, float p_2);
+  template<XmodAlgorithm algorithm>
+  static float Mod(float x, float p);
   
   static float Diode(float x);
   
@@ -251,6 +256,8 @@ class Modulator {
   
   SampleRateConverter<SRC_UP, kOversampling, 48> src_up_[2];
   SampleRateConverter<SRC_DOWN, kOversampling, 48> src_down_;
+  SampleRateConverter<SRC_UP, kLessOversampling, 48> src_up2_[2];
+  SampleRateConverter<SRC_DOWN, kLessOversampling, 48> src_down2_[2];
 
   Vocoder vocoder_;
   QuadratureTransform quadrature_transform_[2];

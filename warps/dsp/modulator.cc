@@ -49,6 +49,8 @@ void Modulator::Init(float sample_rate) {
   for (int32_t i = 0; i < 2; ++i) {
     amplifier_[i].Init();
     src_up_[i].Init();
+    src_up2_[i].Init();
+    src_down2_[i].Init();
     quadrature_transform_[i].Init(lut_ap_poles, LUT_AP_POLES_SIZE);
   }
   src_down_.Init();
@@ -452,8 +454,8 @@ void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
     }
   }
   
-  src_up_[0].Process(carrier, oversampled_carrier, size);
-  src_up_[1].Process(modulator, oversampled_modulator, size);
+  src_up2_[0].Process(carrier, oversampled_carrier, size);
+  src_up2_[1].Process(modulator, oversampled_modulator, size);
 
   ProcessXmod<algorithm>(
         previous_parameters_.modulation_algorithm,
@@ -463,9 +465,9 @@ void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
         oversampled_modulator,
         oversampled_carrier,
         oversampled_output,
-        size * kOversampling);
+        size * kLessOversampling);
   
-  src_down_.Process(oversampled_output, main_output, size * kOversampling);
+  src_down2_[0].Process(oversampled_output, main_output, size * kLessOversampling);
 
   // Convert back to integer and clip.
   while (size--) {
@@ -488,7 +490,7 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   switch (feature_mode_) {
 
   case FEATURE_MODE_XFADE:
-    Process1<ALGORITHM_XFADE_CHEBYSCHEV>(input, output, size);
+    Process1<ALGORITHM_XFADE>(input, output, size);
     break;
     
   case FEATURE_MODE_FOLD:
@@ -508,6 +510,7 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     break;
     
   case FEATURE_MODE_COMPARATOR:
+    Process1<ALGORITHM_COMPARATOR_CHEBYSCHEV>(input, output, size);
     break;
     
   case FEATURE_MODE_VOCODER:
@@ -544,23 +547,33 @@ inline float Modulator::Xmod<ALGORITHM_XFADE>(
   float fade_out = Interpolate(lut_xfade_out, parameter, 256.0f);
   return x_1 * fade_in + x_2 * fade_out;
 }
+
   
 template<>
-inline float Modulator::Xmod<ALGORITHM_XFADE_CHEBYSCHEV>(
+inline float Modulator::Xmod<ALGORITHM_XFADE>(
     float x_1, float x_2, float p_1, float p_2) {
-  float x = Xmod<ALGORITHM_XFADE>(x_1, x_2, p_2);  
+  float x = Xmod<ALGORITHM_XFADE>(x_1, x_2, p_2);
+
+  return x;
+}
+
+template<>
+inline float Modulator::Mod<ALGORITHM_CHEBYSCHEV>(
+    float x, float p) {
 
   const float att = 0.01f;
   const float rel = 0.000005f;
-  
-  static float env = 1.0f;
-  float abs = fabs(x);
-  env += (env < abs ? att : rel) * (abs - env);
-  float amp = 1.0f / env;
 
-  x *= amp;
+  static float envelope_;
   
-  float n = p_1 * 3.0f;
+  float error = fabs(x) - envelope_;
+  envelope_ += (error > 0.0f ? att : rel) * error;
+  float amp = 1.0f / envelope_;
+
+  const float degree = 6.0f;
+  
+  x *= amp;  
+  float n = p * degree;
   float tn1 = x;
   float tn = 2.0f * x * x - 1;
   while (n > 1.0) {
@@ -638,13 +651,6 @@ inline float Modulator::Xmod<ALGORITHM_XOR>(
   return sum + (mod - sum) * parameter;
 }
 
-uint16_t rotr (uint16_t n, unsigned int c)
-{
-  const unsigned int mask = (8*sizeof(n)-1);
-  c &= mask;
-  return (n>>c) | (n<<( (-c)&mask ));
-}
-
 /* static */
 template<>
 inline float Modulator::Xmod<ALGORITHM_XOR>(
@@ -685,6 +691,54 @@ inline float Modulator::Xmod<ALGORITHM_COMPARATOR>(
   float b = sequence[x_integral + 1];
   
   return a + (b - a) * x_fractional;
+}
+
+/* static */
+template<>
+inline float Modulator::Xmod<ALGORITHM_COMPARATOR8>(
+    float modulator, float carrier, float parameter) {
+  float x = parameter * 6.995f;
+  MAKE_INTEGRAL_FRACTIONAL(x);
+  float y_1, y_2;
+  
+  if (x_integral == 0) {
+    y_1 = modulator + carrier;
+    y_2 = modulator < carrier ? modulator : carrier;
+  } else if (x_integral == 1) {
+    y_1 = modulator < carrier ? modulator : carrier;
+    y_2 = (modulator < carrier ? fabs(carrier) : fabs(modulator)) * 2.0f - 1.0f;
+  } else if (x_integral == 2) {
+    y_1 = (modulator < carrier ? fabs(carrier) : fabs(modulator)) * 2.0f - 1.0f;
+    y_2 = modulator < carrier ? -carrier : modulator;
+  } else if (x_integral == 3) {
+    y_1 = modulator < carrier ? -carrier : modulator;
+    y_2 = fabs(modulator) > fabs(carrier) ? modulator : carrier;
+  } else if (x_integral == 4) {
+    y_1 = fabs(modulator) > fabs(carrier) ? modulator : carrier;
+    y_2 = fabs(modulator) > fabs(carrier)
+      ? fabs(modulator)
+      : -fabs(carrier);
+  } else if (x_integral == 5) {
+    y_1 = fabs(modulator) > fabs(carrier)
+      ? fabs(modulator)
+      : -fabs(carrier);
+    y_2 = carrier > 0.05f ? carrier : modulator;
+  } else {
+    y_1 = carrier > 0.05f ? carrier : modulator;
+    y_2 = carrier > 0.05f ? carrier : -fabs(modulator);
+  }
+  
+  return y_1 + (y_2 - y_1) * x_fractional;
+}
+
+/* static */
+template<>
+inline float Modulator::Xmod<ALGORITHM_COMPARATOR_CHEBYSCHEV>(
+    float x_1, float x_2, float p_1, float p_2) {
+  
+  float x = Xmod<ALGORITHM_COMPARATOR8>(x_1, x_2, p_1);
+  x = Mod<ALGORITHM_CHEBYSCHEV>(x, p_2);
+  return 0.8f * x;
 }
 
 /* static */
