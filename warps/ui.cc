@@ -122,7 +122,7 @@ void Ui::Poll() {
   
   if (switches_.pressed(0) && \
       press_time_ &&
-      (system_clock.milliseconds() - press_time_) >= 4800) {
+      (system_clock.milliseconds() - press_time_) >= 7800) {
     if (!feature_mode_changed_ && cv_scaler_->ready_for_calibration()) {
       queue_.AddEvent(CONTROL_SWITCH, 1, 0);
       press_time_ = 0;
