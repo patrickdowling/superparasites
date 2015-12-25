@@ -126,6 +126,7 @@ enum XmodAlgorithm {
   ALGORITHM_COMPARATOR8,
   ALGORITHM_CHEBYSCHEV,
   ALGORITHM_COMPARATOR_CHEBYSCHEV,
+  ALGORITHM_BITCRUSHER,
   ALGORITHM_NOP,
   ALGORITHM_LAST
 };
@@ -151,6 +152,7 @@ class Modulator {
   void Process1(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessVocoder(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
   inline const Parameters& parameters() { return parameters_; }
@@ -231,12 +233,57 @@ class Modulator {
       size--;
     }
   }
+
+  template<XmodAlgorithm algorithm>
+  void ProcessXmod(
+      float p_1,
+      float p_1_end,
+      float p_2,
+      float p_2_end,
+      const float* in_1,
+      const float* in_2,
+      float* out_1,
+      float* out_2,
+      size_t size) {
+    float step = 1.0f / static_cast<float>(size);
+    float p_1_increment = (p_1_end - p_1) * step;
+    float p_2_increment = (p_2_end - p_2) * step;
+    while (size) {
+      const float x_1 = *in_1++;
+      const float x_2 = *in_2++;
+      *out_1++ = Xmod<algorithm>(x_1, x_2, p_1, p_2, out_2++); /* TODO error */
+      p_1 += p_1_increment;
+      p_2 += p_2_increment;
+      size--;
+    }
+  }
   
   template<XmodAlgorithm algorithm>
   static float Xmod(float x_1, float x_2, float parameter);
 
   template<XmodAlgorithm algorithm>
   static float Xmod(float x_1, float x_2, float p_1, float p_2);
+
+  template<XmodAlgorithm algorithm>
+  static float Xmod(float x_1, float x_2, float p_1, float p_2, float *out_2);
+
+  template<XmodAlgorithm algorithm>
+  void ProcessMod(
+      float p,
+      float p_end,
+      const float* in,
+      float* out,
+      size_t size) {
+    float step = 1.0f / static_cast<float>(size);
+    float p_increment = (p_end - p) * step;
+    while (size) {
+      const float x = *in++;
+      *out++ = Mod<algorithm>(x, p);
+      p += p_increment;
+      size--;
+    }
+  }
+
   template<XmodAlgorithm algorithm>
   static float Mod(float x, float p);
   

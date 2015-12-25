@@ -480,6 +480,101 @@ void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
   previous_parameters_ = parameters_;
 
 }
+void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t size) {
+  float* carrier = buffer_[0];
+  float* modulator = buffer_[1];
+  float* main_output = buffer_[0];
+  float* aux_output = buffer_[2];
+  
+  if (!parameters_.carrier_shape) {
+    fill(&aux_output[0], &aux_output[size], 0.0f);
+  }
+  
+  // Convert audio inputs to float and apply VCA/saturation (5.8% per channel)
+  short* input_samples = &input->l;
+  for (int32_t i = parameters_.carrier_shape ? 1 : 0; i < 2; ++i) {
+      amplifier_[i].Process(
+          parameters_.channel_drive[i],
+          1.0f,
+          input_samples + i,
+          buffer_[i],
+          aux_output,
+          2,
+          size);
+  }
+  
+  // If necessary, render carrier. Otherwise, sum signals 1 and 2 for aux out.
+  if (parameters_.carrier_shape) {
+    // Scale phase-modulation input.
+    for (size_t i = 0; i < size; ++i) {
+      internal_modulation_[i] = static_cast<float>(input[i].l) / 32768.0f;
+    }
+    
+    OscillatorShape xmod_shape = static_cast<OscillatorShape>(
+        parameters_.carrier_shape - 1);
+    xmod_oscillator_.Render(
+          xmod_shape,
+          parameters_.note,
+          internal_modulation_,
+          aux_output,
+          size);
+    for (size_t i = 0; i < size; ++i) {
+      carrier[i] = aux_output[i] * kXmodCarrierGain;
+    }
+  }
+  
+  ProcessXmod<ALGORITHM_BITCRUSHER>(
+        previous_parameters_.modulation_algorithm,
+        parameters_.modulation_algorithm,
+        previous_parameters_.skewed_modulation_parameter(),
+        parameters_.skewed_modulation_parameter(),
+        carrier,
+	modulator,
+        main_output,
+	aux_output,
+        size);
+
+  // Convert back to integer and clip.
+  while (size--) {
+    output->l = Clip16(static_cast<int32_t>(*main_output * 32768.0f));
+    output->r = Clip16(static_cast<int32_t>(*aux_output * 16384.0f));
+    ++main_output;
+    ++aux_output;
+    ++output;
+  }
+  previous_parameters_ = parameters_;
+
+}
+
+  
+void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size) {
+  ShortFrame *buffer = (ShortFrame*)src_buffer_;
+  size_t buf_size = kMaxBlockSize * kOversampling * 2 - 1;
+
+  static size_t cursor = 0;
+  static ShortFrame feedback = {0, 0};
+
+  while (size--) {
+    float fb = parameters_.skewed_modulation_parameter();
+    output->l = input->l + fb * feedback.l;
+    output->r = input->r + fb * feedback.r;
+    buffer[cursor].l = output->l;
+    buffer[cursor].r = output->l;
+
+    float time = static_cast<float>(buf_size) * parameters_.modulation_algorithm;
+    MAKE_INTEGRAL_FRACTIONAL(time);
+
+    ShortFrame a = buffer[cursor + time_integral];
+    ShortFrame b = buffer[cursor + time_integral + 1];
+
+    feedback.l = a.l + (b.l - a.l) * time_fractional;
+    feedback.r = a.r + (b.r - a.r) * time_fractional;
+    
+    input++;
+    output++;
+    cursor++;
+  }
+}
   
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   if (bypass_) {
@@ -505,8 +600,8 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     ProcessFreqShifter(input, output, size);
     break;
     
-  case FEATURE_MODE_XOR:
-    Process1<ALGORITHM_XOR>(input, output, size);
+  case FEATURE_MODE_BITCRUSHER:
+    ProcessBitcrusher(input, output, size);
     break;
     
   case FEATURE_MODE_COMPARATOR:
@@ -653,23 +748,33 @@ inline float Modulator::Xmod<ALGORITHM_XOR>(
 
 /* static */
 template<>
-inline float Modulator::Xmod<ALGORITHM_XOR>(
-    float x_1, float x_2, float p_1, float p_2) {
+inline float Modulator::Xmod<ALGORITHM_BITCRUSHER>(
+    float x_1, float x_2, float p_1, float p_2, float *y_2) {
   short x_1_short = Clip16(static_cast<int32_t>(x_1 * 32768.0f));
   short x_2_short = Clip16(static_cast<int32_t>(x_2 * 32768.0f));
-  float ops[9];
-  ops[0] = (x_1_short + x_2_short) | 0b110010100;
-  ops[1] = (x_1_short + x_2_short) | 0b11011100100;
-  ops[2] = (x_1_short + x_2_short) | 0b01101011001010;
-  ops[3] = ~(x_1_short & x_2_short);
-  ops[4] = x_1_short ^ x_2_short;
-  ops[5] = (x_1_short & 0b1010101010101010) | (x_2_short & 0b0101010101010101);
-  ops[6] = (x_1_short | 0b1010101010101010) & (x_2_short | 0b0101010101010101);
-  ops[7] = (x_1_short | 0b1111000011110000) & (x_2_short | 0b0000111100001111);
-  ops[8] = (x_1_short | 0b1111111100000000) & (x_2_short | 0b0000000011111111);
-  float mod = Interpolate(ops, p_1, 8.0f) / 32768.0f;
-  float sum = (x_1 + x_2) * 0.7f;
-  return sum + (mod - sum) * p_2;
+
+  const float steps = 37.0f;
+  float z = p_1 * p_1 * steps;
+  MAKE_INTEGRAL_FRACTIONAL(z);
+  
+  short z_short_1 = Clip16(static_cast<int32_t>(z_integral/steps * 32768.0f));
+  short z_short_2 = Clip16(static_cast<int32_t>((z_integral + 1.0f)/steps * 32768.0f));
+  
+  short x_1_mod_1 = x_1_short | z_short_1;
+  short x_1_mod_2 = x_1_short | z_short_2;
+  short x_1_mod = x_1_mod_1 + (x_1_mod_2 - x_1_mod_1) * z_fractional;
+  
+  short x_2_mod_1 = x_2_short | z_short_1;
+  short x_2_mod_2 = x_2_short | z_short_2;
+  short x_2_mod = x_2_mod_1 + (x_2_mod_2 - x_2_mod_1) * z_fractional;
+
+  *y_2 = static_cast<float>(x_1_mod) / 32768.0f;
+  
+  float ops[3];
+  ops[0] = static_cast<float>(x_1_mod + x_2_mod) / 32768.0f;
+  ops[1] = static_cast<float>(~x_1_mod & x_2_mod) / 32768.0f;
+  ops[2] = static_cast<float>(x_1_mod ^ x_2_mod) / 32768.0f;
+  return Interpolate(ops, p_2, 2.0f);
 }
 
 /* static */
