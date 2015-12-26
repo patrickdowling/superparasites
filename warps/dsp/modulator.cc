@@ -620,10 +620,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     } else if (parameters_.carrier_shape == 0) {
       // open feedback loop
       fb_l = fb * 1.1f * in_r;
-      fb_r = static_cast<float>(feedback.r) / 32768.0f;
-      fb_l = fb * 1.1f * in_r;
+      fb_r = static_cast<float>(feedback.l) / 32768.0f;
       in_r = 0.0f;
-      output->r = fb_r;
     } else {
       // classic dual delay
       fb_l = static_cast<float>(feedback.l) / 32768.0f * fb * 1.1f;
@@ -636,6 +634,9 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].l = output->l;
     buffer[cursor].r = output->r;
 
+    if (parameters_.carrier_shape == 0)
+      output->r = feedback.r;
+    
     float lfo_time = time + Interpolate(lut_sin, lfo_phase, 1024.0f) * lfo_amplitude;
     
     ONE_POLE(lp_time, lfo_time, 0.0005f);
