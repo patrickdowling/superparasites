@@ -595,8 +595,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_r *= fb * 1.1f;
     }
     
-    output->l = Clip16(SoftLimit(in_l + fb_l) * 32768.0f);
-    output->r = Clip16(SoftLimit(in_r + fb_r) * 32768.0f);
+    output->l = Clip16((in_l + fb_l) * 32768.0f);
+    output->r = Clip16((in_r + fb_r) * 32768.0f);
 
     buffer[cursor].l = output->l;
     buffer[cursor].r = output->r;
