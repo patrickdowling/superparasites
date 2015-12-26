@@ -153,6 +153,7 @@ class Modulator {
   void ProcessFreqShifter(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessVocoder(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t size);
+  void ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size);
   void ProcessMeta(ShortFrame* input, ShortFrame* output, size_t size);
   inline Parameters* mutable_parameters() { return &parameters_; }
   inline const Parameters& parameters() { return parameters_; }
@@ -297,23 +298,31 @@ class Modulator {
   Parameters previous_parameters_;
   
   SaturatingAmplifier amplifier_[2];
+
   Oscillator xmod_oscillator_;
   Oscillator vocoder_oscillator_;
   QuadratureOscillator quadrature_oscillator_;
-  
   SampleRateConverter<SRC_UP, kOversampling, 48> src_up_[2];
   SampleRateConverter<SRC_DOWN, kOversampling, 48> src_down_;
   SampleRateConverter<SRC_UP, kLessOversampling, 48> src_up2_[2];
   SampleRateConverter<SRC_DOWN, kLessOversampling, 48> src_down2_[2];
-
   Vocoder vocoder_;
-  QuadratureTransform quadrature_transform_[2];
-  
+  QuadratureTransform quadrature_transform_[2];  
+
+  /* everything that follows will be used as delay buffer */
+  ShortFrame delay_buffer_[8192+4096];  
   float internal_modulation_[kMaxBlockSize];
   float buffer_[3][kMaxBlockSize];
   float src_buffer_[2][kMaxBlockSize * kOversampling];
-
   float feedback_sample_;
+
+  enum DelaySize {
+    DELAY_SIZE = (sizeof(delay_buffer_)
+		  + sizeof(internal_modulation_)
+		  + sizeof(buffer_)
+		  + sizeof(src_buffer_)
+		  + sizeof(feedback_sample_)) / sizeof(ShortFrame) - 4
+  };
   
   static XmodFn xmod_table_[];
   

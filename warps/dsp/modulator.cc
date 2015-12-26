@@ -548,31 +548,50 @@ void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t 
 
   
 void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size) {
-  ShortFrame *buffer = (ShortFrame*)src_buffer_;
-  size_t buf_size = kMaxBlockSize * kOversampling * 2 - 1;
+  ShortFrame *buffer = delay_buffer_;
 
   static size_t cursor = 0;
   static ShortFrame feedback = {0, 0};
-
+  static float lp_algorithm = 0.0f;
+  
   while (size--) {
-    float fb = parameters_.skewed_modulation_parameter();
-    output->l = input->l + fb * feedback.l;
-    output->r = input->r + fb * feedback.r;
-    buffer[cursor].l = output->l;
-    buffer[cursor].r = output->l;
-
-    float time = static_cast<float>(buf_size) * parameters_.modulation_algorithm;
+    float time = static_cast<float>(DELAY_SIZE) * lp_algorithm;
     MAKE_INTEGRAL_FRACTIONAL(time);
 
-    ShortFrame a = buffer[cursor + time_integral];
-    ShortFrame b = buffer[cursor + time_integral + 1];
+    float fb = parameters_.modulation_parameter;
+    
+    float in_l = static_cast<float>(input->l) / 32768.0f;
+    float in_r = static_cast<float>(input->r) / 32768.0f;
+    float fb_l = static_cast<float>(feedback.l) / 32768.0f;
+    float fb_r = static_cast<float>(feedback.r) / 32768.0f;
+    
+    output->l = Clip16(SoftLimit(in_l + fb * fb_l) * 32768.0f);
+    output->r = Clip16(SoftLimit(in_r + fb * fb_r) * 32768.0f);
+
+    buffer[cursor].l = output->l;
+    buffer[cursor].r = output->r;
+
+    ShortFrame a = buffer[(cursor + time_integral + 1) % DELAY_SIZE];
+    ShortFrame b = buffer[(cursor + time_integral + 2) % DELAY_SIZE];
 
     feedback.l = a.l + (b.l - a.l) * time_fractional;
     feedback.r = a.r + (b.r - a.r) * time_fractional;
+
+    
+    if (parameters_.carrier_shape == 2) {
+      short r = feedback.r;
+      feedback.r = feedback.l;
+      feedback.l = r;
+    } else if (parameters_.carrier_shape == 1) {
+      feedback.l = -feedback.l;
+      feedback.r = -feedback.r;
+    }
+    
+    ONE_POLE(lp_algorithm, parameters_.modulation_algorithm, 0.01f)
     
     input++;
     output++;
-    cursor++;
+    cursor = (cursor + 1) % DELAY_SIZE;
   }
 }
   
@@ -612,7 +631,8 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     ProcessVocoder(input, output, size);
     break;
     
-  case FEATURE_MODE_WHAT:
+  case FEATURE_MODE_DELAY:
+    ProcessDelay(input, output, size);
     break;
     
   case FEATURE_MODE_META:
