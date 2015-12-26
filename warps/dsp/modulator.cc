@@ -625,6 +625,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       in_r = 0.0f;
       output->r = fb_r;
     } else {
+      // classic dual delay
       fb_l = static_cast<float>(feedback.l) / 32768.0f * fb * 1.1f;
       fb_r = static_cast<float>(feedback.r) / 32768.0f * fb * 1.1f;
     }
@@ -635,20 +636,21 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].l = output->l;
     buffer[cursor].r = output->r;
 
-    ONE_POLE(lp_time, time, 0.001f);
-    float lfo_time = lp_time + Interpolate(lut_sin, lfo_phase, 1024.0f) * lfo_amplitude;
+    float lfo_time = time + Interpolate(lut_sin, lfo_phase, 1024.0f) * lfo_amplitude;
     
-    CONSTRAIN(lfo_time, kMinDelay, DELAY_SIZE - 1);
-    MAKE_INTEGRAL_FRACTIONAL(lfo_time);
+    ONE_POLE(lp_time, lfo_time, 0.0005f);
+    
+    CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 1);
+    MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
-    int16_t index = cursor - lfo_time_integral;
+    int16_t index = cursor - lp_time_integral;
     if (index < 0) index += DELAY_SIZE - 1;
     
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
 
-    feedback.l = a.l + (b.l - a.l) * lfo_time_fractional;
-    feedback.r = a.r + (b.r - a.r) * lfo_time_fractional;
+    feedback.l = a.l + (b.l - a.l) * lp_time_fractional;
+    feedback.r = a.r + (b.r - a.r) * lp_time_fractional;
     
     time += time_increment;
     fb += fb_increment;
