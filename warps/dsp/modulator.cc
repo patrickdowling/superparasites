@@ -615,8 +615,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_l = fb * (2.0f - fb) * 1.1f * feedback_filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
       fb_r = fb * (2.0f - fb) * 1.1f * feedback_filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
       // apply saturation
-      fb_l = SoftLimit(fb_l * 1.5f + 0.1f) / 1.5f - SoftLimit(0.1f);
-      fb_r = SoftLimit(fb_r * 1.5f + 0.1f) / 1.5f - SoftLimit(0.1f);
+      fb_l = SoftLimit(fb_l * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
+      fb_r = SoftLimit(fb_r * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
     } else if (parameters_.carrier_shape == 0) {
       // open feedback loop
       fb_l = fb * 1.1f * in_r;
