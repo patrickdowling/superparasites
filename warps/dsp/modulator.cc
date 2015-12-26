@@ -68,6 +68,11 @@ void Modulator::Init(float sample_rate) {
   previous_parameters_.note = 48.0f;
 
   feedback_sample_ = 0.0f;
+
+  feedback_filter_[0].Init();
+  feedback_filter_[1].Init();
+  feedback_filter_[2].Init();
+  feedback_filter_[3].Init();
 }
 
 void Modulator::ProcessFreqShifter(
@@ -552,47 +557,78 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   static size_t cursor = 0;
   static ShortFrame feedback = {0, 0};
-  static float lp_algorithm = 0.0f;
+
+  float time = static_cast<float>(DELAY_SIZE) * previous_parameters_.modulation_algorithm;
+  float time_end = static_cast<float>(DELAY_SIZE) * parameters_.modulation_algorithm;
+
+  float fb = previous_parameters_.modulation_parameter;
+  float fb_end = parameters_.modulation_parameter;
+
+  float step = 1.0f / static_cast<float>(size);
+  float time_increment = (time_end - time) * step;
+  float fb_increment = (fb_end - fb) * step;
+
+  feedback_filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
+  feedback_filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
   
   while (size--) {
-    float time = static_cast<float>(DELAY_SIZE) * lp_algorithm;
-    MAKE_INTEGRAL_FRACTIONAL(time);
-
-    float fb = parameters_.modulation_parameter;
     
     float in_l = static_cast<float>(input->l) / 32768.0f;
     float in_r = static_cast<float>(input->r) / 32768.0f;
     float fb_l = static_cast<float>(feedback.l) / 32768.0f;
     float fb_r = static_cast<float>(feedback.r) / 32768.0f;
+
+    if (parameters_.carrier_shape == 2) {
+      feedback_filter_[2].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
+      feedback_filter_[3].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
+      fb_l = feedback_filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_l);
+      fb_r = feedback_filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_r);
+      fb_l = fb * (2.0f - fb) * 1.1f * feedback_filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
+      fb_r = fb * (2.0f - fb) * 1.1f * feedback_filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
+      fb_l = SoftLimit(fb_l * 1.5f + 0.1f) / 1.5f - SoftLimit(0.1f);
+      fb_r = SoftLimit(fb_r * 1.5f + 0.1f) / 1.5f - SoftLimit(0.1f);
+    } else if (parameters_.carrier_shape == 0) {
+      fb_l = fb * 1.1f * in_r;
+      fb_r = fb_r - in_r;
+    } else {
+      fb_l *= fb * 1.1f;
+      fb_r *= fb * 1.1f;
+    }
     
-    output->l = Clip16(SoftLimit(in_l + fb * fb_l) * 32768.0f);
-    output->r = Clip16(SoftLimit(in_r + fb * fb_r) * 32768.0f);
+    output->l = Clip16(SoftLimit(in_l + fb_l) * 32768.0f);
+    output->r = Clip16(SoftLimit(in_r + fb_r) * 32768.0f);
 
     buffer[cursor].l = output->l;
     buffer[cursor].r = output->r;
 
+    MAKE_INTEGRAL_FRACTIONAL(time);
+    
     ShortFrame a = buffer[(cursor + time_integral + 1) % DELAY_SIZE];
     ShortFrame b = buffer[(cursor + time_integral + 2) % DELAY_SIZE];
 
     feedback.l = a.l + (b.l - a.l) * time_fractional;
     feedback.r = a.r + (b.r - a.r) * time_fractional;
 
-    
     if (parameters_.carrier_shape == 2) {
+      // simulate tape hiss with bitwise mangling and pot noise
+      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) >> 11;
+      feedback.l |= seed;
+      feedback.r |= seed;
+    } else if (parameters_.carrier_shape == 3) {
+      // invert feedback channels (ping-pong)
       short r = feedback.r;
       feedback.r = feedback.l;
       feedback.l = r;
-    } else if (parameters_.carrier_shape == 1) {
-      feedback.l = -feedback.l;
-      feedback.r = -feedback.r;
     }
     
-    ONE_POLE(lp_algorithm, parameters_.modulation_algorithm, 0.01f)
-    
+    time += time_increment;
+    fb += fb_increment;
     input++;
     output++;
     cursor = (cursor + 1) % DELAY_SIZE;
   }
+
+  previous_parameters_ = parameters_;
 }
   
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {

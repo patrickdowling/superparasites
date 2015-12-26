@@ -31,6 +31,7 @@
 
 #include "stmlib/stmlib.h"
 #include "stmlib/dsp/dsp.h"
+#include "stmlib/dsp/filter.h"
 #include "stmlib/dsp/parameter_interpolator.h"
 
 #include "warps/dsp/oscillator.h"
@@ -308,6 +309,8 @@ class Modulator {
   SampleRateConverter<SRC_DOWN, kLessOversampling, 48> src_down2_[2];
   Vocoder vocoder_;
   QuadratureTransform quadrature_transform_[2];  
+
+  stmlib::OnePole feedback_filter_[4];
 
   /* everything that follows will be used as delay buffer */
   ShortFrame delay_buffer_[8192+4096];  
