@@ -559,9 +559,17 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static ShortFrame feedback = {0, 0};
   static float lp_time = 0.0f;
 
-  float time = static_cast<float>(DELAY_SIZE) * previous_parameters_.modulation_algorithm;
-  float time_end = static_cast<float>(DELAY_SIZE) * parameters_.modulation_algorithm;
-
+  const size_t kMinDelay = 80;
+  
+  float time = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
+    * previous_parameters_.modulation_algorithm
+    * previous_parameters_.modulation_algorithm
+    + kMinDelay;
+  float time_end = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
+    * parameters_.modulation_algorithm
+    * parameters_.modulation_algorithm
+    + kMinDelay;
+  
   float fb = previous_parameters_.modulation_parameter;
   float fb_end = parameters_.modulation_parameter;
 
@@ -603,6 +611,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].r = output->r;
 
     ONE_POLE(lp_time, time, 0.001f);
+    CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 1);
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
     int16_t index = cursor - lp_time_integral;
