@@ -557,6 +557,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   static size_t cursor = 0;
   static ShortFrame feedback = {0, 0};
+  static float lp_time = 0.0f;
 
   float time = static_cast<float>(DELAY_SIZE) * previous_parameters_.modulation_algorithm;
   float time_end = static_cast<float>(DELAY_SIZE) * parameters_.modulation_algorithm;
@@ -601,13 +602,17 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].l = output->l;
     buffer[cursor].r = output->r;
 
-    MAKE_INTEGRAL_FRACTIONAL(time);
-    
-    ShortFrame a = buffer[(cursor + time_integral + 1) % DELAY_SIZE];
-    ShortFrame b = buffer[(cursor + time_integral + 2) % DELAY_SIZE];
+    ONE_POLE(lp_time, time, 0.001f);
+    MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
-    feedback.l = a.l + (b.l - a.l) * time_fractional;
-    feedback.r = a.r + (b.r - a.r) * time_fractional;
+    int16_t index = cursor - lp_time_integral;
+    if (index < 0) index += DELAY_SIZE - 1;
+    
+    ShortFrame a = buffer[index];
+    ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
+
+    feedback.l = a.l + (b.l - a.l) * lp_time_fractional;
+    feedback.r = a.r + (b.r - a.r) * lp_time_fractional;
 
     if (parameters_.carrier_shape == 2) {
       // simulate tape hiss with bitwise mangling and pot noise
