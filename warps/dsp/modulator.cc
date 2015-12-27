@@ -602,7 +602,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_r = static_cast<float>(feedback.l) / 32768.0f * fb * 1.1f;
     } else if (parameters_.carrier_shape == 2) {
       // simulate tape hiss with bitwise mangling and pot noise
-      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) >> 11;
+      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) & 0b11111;
       feedback.l |= seed;
       feedback.r |= seed;
       fb_l = static_cast<float>(feedback.l) / 32768.0f;
