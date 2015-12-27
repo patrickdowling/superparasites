@@ -310,7 +310,7 @@ class Modulator {
   Vocoder vocoder_;
   QuadratureTransform quadrature_transform_[2];  
 
-  stmlib::OnePole feedback_filter_[4];
+  stmlib::OnePole filter_[4];
 
   /* everything that follows will be used as delay buffer */
   ShortFrame delay_buffer_[8192+4096];  

@@ -69,10 +69,10 @@ void Modulator::Init(float sample_rate) {
 
   feedback_sample_ = 0.0f;
 
-  feedback_filter_[0].Init();
-  feedback_filter_[1].Init();
-  feedback_filter_[2].Init();
-  feedback_filter_[3].Init();
+  filter_[0].Init();
+  filter_[1].Init();
+  filter_[2].Init();
+  filter_[3].Init();
 }
 
 void Modulator::ProcessFreqShifter(
@@ -586,8 +586,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float time_increment = (time_end - time) * step;
   float fb_increment = (fb_end - fb) * step;
 
-  feedback_filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
-  feedback_filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
+  filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
+  filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
   
   while (size--) {
     
@@ -608,13 +608,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_l = static_cast<float>(feedback.l) / 32768.0f;
       fb_r = static_cast<float>(feedback.r) / 32768.0f;
       // apply filters: fixed high-pass and varying low-pass with attenuation
-      feedback_filter_[2].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
-      feedback_filter_[3].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
-      fb_l = feedback_filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_l);
-      fb_r = feedback_filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_r);
-      fb_l = fb * (2.0f - fb) * 1.1f * feedback_filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
-      fb_r = fb * (2.0f - fb) * 1.1f * feedback_filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
-      // apply saturation
+      filter_[2].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
+      filter_[3].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
+      fb_l = filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_l);
+      fb_r = filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_r);
+      fb_l = fb * (2.0f - fb) * 1.1f * filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
+      fb_r = fb * (2.0f - fb) * 1.1f * filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
+      // apply soft saturation with a bit of bias
       fb_l = SoftLimit(fb_l * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
       fb_r = SoftLimit(fb_r * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
     } else if (parameters_.carrier_shape == 0) {
