@@ -155,7 +155,7 @@ void TestModulator() {
 }
 
 void TestEasterEgg() {
-  FILE* fp_in = fopen("audio_samples/sines.wav", "rb");
+  FILE* fp_in = fopen("audio_samples/piano.wav", "rb");
   
   WavWriter wav_writer(2, kSampleRate, 15);
   wav_writer.Open("warps_out.wav");
@@ -164,7 +164,7 @@ void TestEasterEgg() {
   
   Modulator modulator;
   modulator.Init(kSampleRate);
-  modulator.set_feature_mode(FEATURE_MODE_XFADE);
+  modulator.set_feature_mode(FEATURE_MODE_DOPPLER);
   
   Parameters* p = modulator.mutable_parameters();
   
@@ -178,11 +178,11 @@ void TestEasterEgg() {
     float noise = (Random::GetFloat() - 0.5f) / 128.0f;
     filtered_noise += (noise - filtered_noise) * 0.1f;
     
-    p->modulation_algorithm = 0.0f + 1.0f * triangle + 0.0f * filtered_noise;
+    p->modulation_algorithm = 0.5f + 0.0f * triangle + 0.0f * filtered_noise;
     p->carrier_shape = 1;
-    p->channel_drive[0] = 1.0f;
-    p->channel_drive[1] = 1.0f;
-    p->modulation_parameter = 0.0f + 0.0f * square;
+    p->channel_drive[0] = 0.2f;
+    p->channel_drive[1] = 0.9f;
+    p->modulation_parameter = 1.0f + 0.0f * square;
     p->note = 50.0f + phi;
 
     ShortFrame input[kBlockSize];

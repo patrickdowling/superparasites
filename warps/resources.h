@@ -69,6 +69,7 @@ extern const float fb_4435_32000[];
 extern const float fb_5588_32000[];
 extern const float fb_7040_96000[];
 extern const float lut_sin[];
+extern const float lut_arcsin[];
 extern const float lut_xfade_in[];
 extern const float lut_xfade_out[];
 extern const float lut_bipolar_fold[];
@@ -124,19 +125,21 @@ extern const float wav_buzzy_q[];
 #define FB_7040_96000_SIZE 7
 #define LUT_SIN 0
 #define LUT_SIN_SIZE 1281
-#define LUT_XFADE_IN 1
+#define LUT_ARCSIN 1
+#define LUT_ARCSIN_SIZE 257
+#define LUT_XFADE_IN 2
 #define LUT_XFADE_IN_SIZE 257
-#define LUT_XFADE_OUT 2
+#define LUT_XFADE_OUT 3
 #define LUT_XFADE_OUT_SIZE 257
-#define LUT_BIPOLAR_FOLD 3
+#define LUT_BIPOLAR_FOLD 4
 #define LUT_BIPOLAR_FOLD_SIZE 4097
-#define LUT_MIDI_TO_F_HIGH 4
+#define LUT_MIDI_TO_F_HIGH 5
 #define LUT_MIDI_TO_F_HIGH_SIZE 256
-#define LUT_MIDI_TO_F_LOW 5
+#define LUT_MIDI_TO_F_LOW 6
 #define LUT_MIDI_TO_F_LOW_SIZE 256
-#define LUT_POT_CURVE 6
+#define LUT_POT_CURVE 7
 #define LUT_POT_CURVE_SIZE 513
-#define LUT_AP_POLES 7
+#define LUT_AP_POLES 8
 #define LUT_AP_POLES_SIZE 17
 #define WAV_SINE_I 0
 #define WAV_SINE_I_SIZE 1025

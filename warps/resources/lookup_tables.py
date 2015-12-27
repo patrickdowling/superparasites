@@ -42,7 +42,13 @@ size = 1024
 t = np.arange(0, size + size / 4 + 1) / float(size) * np.pi * 2
 lookup_tables.append(('sin', np.sin(t)))
 
+"""----------------------------------------------------------------------------
+Arcsine table.
+----------------------------------------------------------------------------"""
 
+size = 256
+t = np.arange(-size/2, size/2+1) / float(size)*2
+lookup_tables.append(('arcsin', np.arcsin(t)*2/np.pi))
 
 """----------------------------------------------------------------------------
 XFade table

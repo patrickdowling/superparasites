@@ -665,6 +665,107 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   previous_parameters_ = parameters_;
 }
   
+void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t size) {
+  ShortFrame *buffer = delay_buffer_;
+
+  static size_t cursor = 0;
+  static float lfo_phase = 0.0f;
+  static float distance = 1.0f;
+  static float angle = 1.0f;
+
+  float x = previous_parameters_.raw_algorithm * 2.0f - 1.0f;
+  float x_end = parameters_.raw_algorithm * 2.0f - 1.0f;
+    
+  float y = previous_parameters_.modulation_parameter;
+  float y_end = parameters_.modulation_parameter;
+
+  float lfo_freq = parameters_.channel_drive[0]
+    * parameters_.channel_drive[0]
+    * 50.0f;
+  float lfo_amplitude = parameters_.channel_drive[1];
+  
+  float step = 1.0f / static_cast<float>(size);
+  float x_increment = (x_end - x) * step;
+  float y_increment = (y_end - y) * step;
+
+  int8_t shape = parameters_.carrier_shape;
+
+  float slew_coef = 
+    shape == 0 ? 0.1f :
+    shape == 1 ? 0.005f :
+    shape == 2 ? 0.0007f :
+    shape == 3 ? 0.0001f : 0;
+
+  float atten_factor = 
+    shape == 0 ? 0.5f :
+    shape == 1 ? 4.0f :
+    shape == 2 ? 8.0f :
+    shape == 3 ? 15.0f : 0;
+
+  float room_size =
+    shape == 0 ? 100 :
+    shape == 1 ? (DELAY_SIZE - 1) / 10.0f :
+    shape == 2 ? (DELAY_SIZE - 1) / 5.0f :
+    shape == 3 ? (DELAY_SIZE - 1) / 2.0f : 0;
+
+  while (size--) {    
+
+    // write input to buffer
+    buffer[cursor].l = input->l;
+    buffer[cursor].r = input->r;
+
+    // LFOs
+    float lfo_x = Interpolate(lut_sin, lfo_phase, 1024.0f) * lfo_amplitude;
+    float lfo_y = Interpolate(lut_sin + 256, lfo_phase, 1024.0f) * lfo_amplitude;
+
+    float x_lfo = x + lfo_x + 0.05f;
+    float y_lfo = y + lfo_y;
+    CONSTRAIN(x_lfo, -1.0f, 1.0f);
+    CONSTRAIN(y_lfo, -1.0f, 1.0f);
+
+    // compute angular coordinates
+    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(2)
+    float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
+    di /= 1.1413;    
+    
+    ONE_POLE(distance, di, slew_coef);
+    ONE_POLE(angle, an, slew_coef);
+    
+    float scaled_distance = distance * room_size;
+    
+    MAKE_INTEGRAL_FRACTIONAL(scaled_distance);
+
+    int16_t index = cursor - scaled_distance_integral;
+    if (index < 0) index += DELAY_SIZE - 1;
+    
+    ShortFrame a = buffer[index];
+    ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
+
+    short l = a.l + (b.l - a.l) * scaled_distance_fractional;
+    short r = a.r + (b.r - a.r) * scaled_distance_fractional;
+    
+    // distance attenuation
+    l /= 1.0f + atten_factor * distance * distance;
+    r /= 1.0f + atten_factor * distance * distance;
+    
+    float fade_in = Interpolate(lut_xfade_in, (angle + 1.0f) / 2.0f, 256.0f);
+    float fade_out = Interpolate(lut_xfade_out, (angle + 1.0f) / 2.0f, 256.0f);
+    
+    output->l = r * fade_in + l * fade_out;
+    output->r = l * fade_in + r * fade_out;
+
+    x += x_increment;
+    y += y_increment;
+    lfo_phase += lfo_freq / 96000.0f;
+    if (lfo_phase > 1.0f) lfo_phase--;
+    input++;
+    output++;
+    cursor = (cursor + 1) % DELAY_SIZE;
+  }
+
+  previous_parameters_ = parameters_;
+}
+  
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
   if (bypass_) {
     copy(&input[0], &input[size], &output[0]);
@@ -673,8 +774,8 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
 
   switch (feature_mode_) {
 
-  case FEATURE_MODE_XFADE:
-    Process1<ALGORITHM_XFADE>(input, output, size);
+  case FEATURE_MODE_DOPPLER:
+    ProcessDoppler(input, output, size);
     break;
     
   case FEATURE_MODE_FOLD:
@@ -731,15 +832,6 @@ inline float Modulator::Xmod<ALGORITHM_XFADE>(
   float fade_in = Interpolate(lut_xfade_in, parameter, 256.0f);
   float fade_out = Interpolate(lut_xfade_out, parameter, 256.0f);
   return x_1 * fade_in + x_2 * fade_out;
-}
-
-  
-template<>
-inline float Modulator::Xmod<ALGORITHM_XFADE>(
-    float x_1, float x_2, float p_1, float p_2) {
-  float x = Xmod<ALGORITHM_XFADE>(x_1, x_2, p_2);
-
-  return x;
 }
 
 template<>
