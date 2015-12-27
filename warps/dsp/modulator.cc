@@ -563,12 +563,12 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   const size_t kMinDelay = 80;
   
   float time = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
-    * previous_parameters_.modulation_algorithm
-    * previous_parameters_.modulation_algorithm
+    * previous_parameters_.raw_algorithm
+    * previous_parameters_.raw_algorithm
     + kMinDelay;
   float time_end = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
-    * parameters_.modulation_algorithm
-    * parameters_.modulation_algorithm
+    * parameters_.raw_algorithm
+    * parameters_.raw_algorithm
     + kMinDelay;
   
   float fb = previous_parameters_.modulation_parameter;
