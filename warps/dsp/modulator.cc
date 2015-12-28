@@ -645,7 +645,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
     int16_t index = cursor - lp_time_integral;
-    if (index < 0) index += DELAY_SIZE - 1;
+    if (index < 0) index += DELAY_SIZE;
     
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
