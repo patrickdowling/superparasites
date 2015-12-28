@@ -729,7 +729,7 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     MAKE_INTEGRAL_FRACTIONAL(scaled_distance);
 
     int16_t index = cursor - scaled_distance_integral;
-    if (index < 0) index += DELAY_SIZE - 1;
+    if (index < 0) index += DELAY_SIZE;
     
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1 : index - 1];
