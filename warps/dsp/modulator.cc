@@ -723,19 +723,21 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f); // -1..1;
     ONE_POLE(distance, di, 0.001f);
     ONE_POLE(angle, an, 0.001f);
-    
-    float scaled_distance = distance * room_size;
-    
-    MAKE_INTEGRAL_FRACTIONAL(scaled_distance);
 
-    int16_t index = cursor - scaled_distance_integral;
+    // float binaural_delay = angle * (96000.0f / 1000.0f); // -1ms..1ms
+    float delay_l = distance * room_size;// + (angle > 0 ? binaural_delay : 0);
+    // float delay_r = distance * room_size + (angle < 0 ? -binaural_delay : 0);
+    
+    MAKE_INTEGRAL_FRACTIONAL(delay_l);
+
+    int16_t index = cursor - delay_l_integral;
     if (index < 0) index += DELAY_SIZE;
     
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1 : index - 1];
 
-    short l = a.l + (b.l - a.l) * scaled_distance_fractional;
-    short r = a.r + (b.r - a.r) * scaled_distance_fractional;
+    short l = a.l + (b.l - a.l) * delay_l_fractional;
+    short r = a.r + (b.r - a.r) * delay_l_fractional;
     
     // distance attenuation
     l /= 1.0f + atten_factor * distance * distance;
