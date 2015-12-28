@@ -723,8 +723,8 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
     di /= 2.237;		// sqrt(5)
     
-    ONE_POLE(distance, di, 0.01f);
-    ONE_POLE(angle, an, 0.01f);
+    ONE_POLE(distance, di, 0.001f);
+    ONE_POLE(angle, an, 0.001f);
     
     float scaled_distance = distance * room_size;
     
@@ -734,7 +734,7 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     if (index < 0) index += DELAY_SIZE - 1;
     
     ShortFrame a = buffer[index];
-    ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
+    ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1 : index - 1];
 
     short l = a.l + (b.l - a.l) * scaled_distance_fractional;
     short r = a.r + (b.r - a.r) * scaled_distance_fractional;
