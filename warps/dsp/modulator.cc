@@ -690,12 +690,6 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
 
   int8_t shape = parameters_.carrier_shape;
 
-  float slew_coef = 
-    shape == 0 ? 0.1f :
-    shape == 1 ? 0.005f :
-    shape == 2 ? 0.0007f :
-    shape == 3 ? 0.0001f : 0;
-
   float atten_factor = 
     shape == 0 ? 0.5f :
     shape == 1 ? 4.0f :
@@ -728,8 +722,8 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
     di /= 1.1413;    
     
-    ONE_POLE(distance, di, slew_coef);
-    ONE_POLE(angle, an, slew_coef);
+    ONE_POLE(distance, di, 0.01f);
+    ONE_POLE(angle, an, 0.01f);
     
     float scaled_distance = distance * room_size;
     
