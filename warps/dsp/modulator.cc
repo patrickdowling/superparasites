@@ -641,7 +641,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     
     ONE_POLE(lp_time, lfo_time, 0.0005f);
     
-    CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 1);
+    CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 2);
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
     int16_t index = cursor - lp_time_integral;
