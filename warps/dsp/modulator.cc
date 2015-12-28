@@ -679,7 +679,6 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
   float y = previous_parameters_.modulation_parameter * 2.0f;
   float y_end = parameters_.modulation_parameter * 2.0f;
 
-  // TODO ramp on these params
   float lfo_freq = parameters_.channel_drive[0]
     * parameters_.channel_drive[0]
     * 50.0f;
@@ -719,17 +718,19 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     CONSTRAIN(y_lfo, -1.0f, 2.0f);
 
     // compute angular coordinates
-    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(5)
+    float di = sqrtf(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(5)
     float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
     di /= 2.237;		// sqrt(5)
     
     ONE_POLE(distance, di, 0.001f);
     ONE_POLE(angle, an, 0.001f);
 
-    float binaural_delay = angle * (96000.0f / 1000.0f); // -1ms..1ms
+    // compute binaural delay
+    float binaural_delay = angle * (96000.0f * 0.0015f); // -1.5ms..1.5ms
     float delay_l = distance * room_size + (angle > 0 ? binaural_delay : 0);
     float delay_r = distance * room_size + (angle < 0 ? -binaural_delay : 0);
     
+    // linear delay interpolation    
     MAKE_INTEGRAL_FRACTIONAL(delay_l);
     MAKE_INTEGRAL_FRACTIONAL(delay_r);
 
