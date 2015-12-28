@@ -726,30 +726,40 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     ONE_POLE(distance, di, 0.001f);
     ONE_POLE(angle, an, 0.001f);
 
-    // float binaural_delay = angle * (96000.0f / 1000.0f); // -1ms..1ms
-    float delay_l = distance * room_size;// + (angle > 0 ? binaural_delay : 0);
-    // float delay_r = distance * room_size + (angle < 0 ? -binaural_delay : 0);
+    float binaural_delay = angle * (96000.0f / 1000.0f); // -1ms..1ms
+    float delay_l = distance * room_size + (angle > 0 ? binaural_delay : 0);
+    float delay_r = distance * room_size + (angle < 0 ? -binaural_delay : 0);
     
     MAKE_INTEGRAL_FRACTIONAL(delay_l);
+    MAKE_INTEGRAL_FRACTIONAL(delay_r);
 
-    int16_t index = cursor - delay_l_integral;
-    if (index < 0) index += DELAY_SIZE;
+    int16_t index_l = cursor - delay_l_integral;
+    if (index_l < 0) index_l += DELAY_SIZE;
+    int16_t index_r = cursor - delay_r_integral;
+    if (index_r < 0) index_r += DELAY_SIZE;
     
-    ShortFrame a = buffer[index];
-    ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1 : index - 1];
+    ShortFrame a_l = buffer[index_l];
+    ShortFrame b_l = buffer[index_l == 0 ? DELAY_SIZE - 1 : index_l - 1];
+    ShortFrame a_r = buffer[index_r];
+    ShortFrame b_r = buffer[index_r == 0 ? DELAY_SIZE - 1 : index_r - 1];
 
-    short l = a.l + (b.l - a.l) * delay_l_fractional;
-    short r = a.r + (b.r - a.r) * delay_l_fractional;
+    short s1_l = a_l.l + (b_l.l - a_l.l) * delay_l_fractional;
+    short s2_l = a_l.r + (b_l.r - a_l.r) * delay_l_fractional;
+    short s1_r = a_r.l + (b_r.l - a_r.l) * delay_r_fractional;
+    short s2_r = a_r.r + (b_r.r - a_r.r) * delay_r_fractional;
     
     // distance attenuation
-    l /= 1.0f + atten_factor * distance * distance;
-    r /= 1.0f + atten_factor * distance * distance;
+    float atten = 1.0f + atten_factor * distance * distance;
+    s1_l /= atten;
+    s2_l /= atten;
+    s1_r /= atten;
+    s2_r /= atten;
     
     float fade_in = Interpolate(lut_xfade_in, (angle + 1.0f) / 2.0f, 256.0f);
     float fade_out = Interpolate(lut_xfade_out, (angle + 1.0f) / 2.0f, 256.0f);
     
-    output->l = r * fade_in + l * fade_out;
-    output->r = l * fade_in + r * fade_out;
+    output->l = s2_l * fade_in + s1_l * fade_out;
+    output->r = s1_r * fade_in + s2_r * fade_out;
 
     x += x_increment;
     y += y_increment;
