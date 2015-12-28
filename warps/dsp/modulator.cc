@@ -676,9 +676,10 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
   float x = previous_parameters_.raw_algorithm * 2.0f - 1.0f;
   float x_end = parameters_.raw_algorithm * 2.0f - 1.0f;
     
-  float y = previous_parameters_.modulation_parameter;
-  float y_end = parameters_.modulation_parameter;
+  float y = previous_parameters_.modulation_parameter * 2.0f;
+  float y_end = parameters_.modulation_parameter * 2.0f;
 
+  // TODO ramp on these params
   float lfo_freq = parameters_.channel_drive[0]
     * parameters_.channel_drive[0]
     * 50.0f;
@@ -709,18 +710,18 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     buffer[cursor].r = input->r;
 
     // LFOs
-    float lfo_x = Interpolate(lut_sin, lfo_phase, 1024.0f) * lfo_amplitude;
-    float lfo_y = Interpolate(lut_sin + 256, lfo_phase, 1024.0f) * lfo_amplitude;
+    float sin = Interpolate(lut_sin, lfo_phase, 1024.0f);
+    float cos = Interpolate(lut_sin + 256, lfo_phase, 1024.0f);
 
-    float x_lfo = x + lfo_x + 0.05f;
-    float y_lfo = y + lfo_y;
+    float x_lfo = x + sin * lfo_amplitude + 0.05f; // offset avoids discontinuity at 0
+    float y_lfo = y + cos  * lfo_amplitude;
     CONSTRAIN(x_lfo, -1.0f, 1.0f);
-    CONSTRAIN(y_lfo, -1.0f, 1.0f);
+    CONSTRAIN(y_lfo, -1.0f, 2.0f);
 
     // compute angular coordinates
-    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(2)
+    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(5)
     float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
-    di /= 1.1413;    
+    di /= 2.237;		// sqrt(5)
     
     ONE_POLE(distance, di, 0.01f);
     ONE_POLE(angle, an, 0.01f);
