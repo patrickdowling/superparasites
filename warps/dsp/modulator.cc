@@ -719,10 +719,8 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
     CONSTRAIN(y_lfo, -1.0f, 2.0f);
 
     // compute angular coordinates
-    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo); // 0..sqrt(5)
-    float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f);
-    di /= 2.237;		// sqrt(5)
-    
+    float di = sqrt(x_lfo * x_lfo + y_lfo * y_lfo) / 2.237; // 0..1
+    float an = Interpolate(lut_arcsin, (x_lfo/di + 1.0f) * 0.5f, 256.0f); // -1..1;
     ONE_POLE(distance, di, 0.001f);
     ONE_POLE(angle, an, 0.001f);
     
