@@ -88,7 +88,8 @@ void TIM1_UP_IRQHandler(void) {
     ++refresh;
   }
   
-  if (ui.feature_mode() == Ui::FEAT_MODE_KEYFRAMER) {
+  if (ui.feature_mode() == Ui::FEAT_MODE_KEYFRAMER ||
+      ui.feature_mode() == Ui::FEAT_MODE_KEYFRAME_LOOPER ) {
     int16_t position = keyframer.position();
     if (previous_position != position) {
       previous_position = position;
@@ -151,6 +152,8 @@ inline uint16_t fold_add(uint16_t a, int16_t b) {
 
 int32_t lp_frame = 0;
 
+uint32_t phase = 0;
+
 int main(void) {
   Init();
   
@@ -174,7 +177,7 @@ int main(void) {
           (ui.frame_modulation() - dc_offset_frame_modulation) << 1;
       frame += frame_modulation;
       if (ui.feature_mode() == Ui::FEAT_MODE_POLY_LFO) {
-	poly_lfo.Render(frame);	
+        poly_lfo.Render(frame);
         if (poly_lfo.level(0) > 128) {
           trigger_output.High();
         } else {
@@ -305,7 +308,22 @@ int main(void) {
           frame = lp_frame;
         }
 
-        keyframer.Evaluate(frame);
+        if (ui.feature_mode() == Ui::FEAT_MODE_KEYFRAME_LOOPER) {
+          int32_t speed = frame_modulation; // -32768..32767
+          int32_t frequency = speed > 0 ? speed : -speed;
+          uint32_t phase_increment = PolyLfo::FrequencyToPhaseIncrement(frequency);
+          if (speed > 0) {
+            phase += phase_increment;
+          } else {
+            phase -= phase_increment;
+          }
+        }
+
+        if (ui.feature_mode() == Ui::FEAT_MODE_KEYFRAME_LOOPER) {
+          keyframer.Evaluate(phase >> 16);
+        } else {
+          keyframer.Evaluate(frame);
+        }
 
         if (ui.feature_mode() != Ui::FEAT_MODE_SEQ_SHIFT_REGISTER) {
           // sequencer or keyframer mode
