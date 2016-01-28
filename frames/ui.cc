@@ -163,6 +163,10 @@ void Ui::Poll() {
       switch (feature_mode_) {
       case FEAT_MODE_KEYFRAMER:
         break;
+      case FEAT_MODE_KEYFRAME_LOOPER:
+        rgb_led_.set_color(255, 0, 0);
+        rgb_led_.Dim(animation_counter_);
+        break;
       case FEAT_MODE_SEQ_MAIN:
         channel_leds_.set_channel(0, 255); break;
       case FEAT_MODE_SEQ_SHIFT_REGISTER:
@@ -394,7 +398,8 @@ void Ui::OnSwitchReleased(const Event& e) {
         if (e.data > kVeryLongPressDuration) {
           mode_ = UI_MODE_SAVE_CONFIRMATION;
         } else if (e.data > kLongPressDuration) {
-          if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
+          if (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+              feature_mode_ == FEAT_MODE_KEYFRAME_LOOPER) {
             mode_ = UI_MODE_EDIT_EASING;
             active_channel_ = -1;
           } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
@@ -405,6 +410,7 @@ void Ui::OnSwitchReleased(const Event& e) {
         } else {
           if (mode_ == UI_MODE_NORMAL &&
               (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+               feature_mode_ == FEAT_MODE_KEYFRAME_LOOPER ||
                feature_mode_ == FEAT_MODE_SEQ_MAIN ||
                feature_mode_ == FEAT_MODE_SEQ_SHIFT_REGISTER)) {
             if (active_keyframe_ == -1) {
@@ -441,7 +447,8 @@ void Ui::OnSwitchReleased(const Event& e) {
         } else if (e.data > kLongPressDuration) {
           if (feature_mode_ == FEAT_MODE_SEQ_MAIN) {
             feature_mode_ = FEAT_MODE_SEQ_STEP_EDIT;
-          } else if (feature_mode_ == FEAT_MODE_KEYFRAMER) {
+          } else if (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+                     feature_mode_ == FEAT_MODE_KEYFRAME_LOOPER) {
             mode_ = UI_MODE_EDIT_RESPONSE;
             active_channel_ = -1;
           } else if (feature_mode_ == FEAT_MODE_EUCLIDEAN) {
@@ -465,6 +472,7 @@ void Ui::OnSwitchReleased(const Event& e) {
         } else {
           if (mode_ == UI_MODE_NORMAL &&
               (feature_mode_ == FEAT_MODE_KEYFRAMER ||
+               feature_mode_ == FEAT_MODE_KEYFRAME_LOOPER ||
                feature_mode_ == FEAT_MODE_SEQ_MAIN ||
                feature_mode_ == FEAT_MODE_SEQ_SHIFT_REGISTER)) {
             if (active_keyframe_ != -1) {
@@ -629,7 +637,9 @@ void Ui::OnPotChanged(const Event& e) {
   } else if (mode_ == UI_MODE_FEATURE_SWITCH) {
     switch (e.control_id) {
       case kFrameAdcChannel:
-        feature_mode_ = FEAT_MODE_KEYFRAMER;
+        feature_mode_ = e.data > 60000 ?
+          FEAT_MODE_KEYFRAME_LOOPER :
+          FEAT_MODE_KEYFRAMER;
         SyncWithPots();
         break;
       case 0:
