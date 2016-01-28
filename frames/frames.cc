@@ -230,11 +230,6 @@ int main(void) {
         dac.Write(2, euclidean[2].dac_code());
         dac.Write(3, euclidean[3].dac_code());
       } else {
-        if (frame < 0) {
-          frame = 0;
-        } else if (frame > 65535) {
-          frame = 65535;
-        }
 
         if (ui.feature_mode() == Ui::FEAT_MODE_SEQ_SHIFT_REGISTER ||
             ui.feature_mode() == Ui::FEAT_MODE_SEQ_STEP_EDIT ||
