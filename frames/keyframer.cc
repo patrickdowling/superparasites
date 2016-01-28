@@ -261,35 +261,43 @@ void Keyframer::Evaluate(uint16_t timestamp) {
     uint16_t position = FindKeyframe(timestamp);
     position_ = position;
 
-    // Check for the areas before the first keyframe, and after the last
-    // keyframe.
-    if (position == 0 || position == num_keyframes_) {
-      const Keyframe& source = keyframes_[position == 0 ? 0 : num_keyframes_ - 1];
-      copy(source.values, source.values + kNumChannels, levels_);
-      const uint8_t* palette = palette_[source.id & (kNumPaletteEntries - 1)];
-      copy(palette, palette + 3, color_);
+    // This is where the real interpolation takes place.
+    volatile int8_t a_index = position == 0 ? num_keyframes_ - 1 :
+      (position - 1) % num_keyframes_;
+    int8_t b_index = position % num_keyframes_;
+    volatile const Keyframe& a = keyframes_[a_index];
+    volatile const Keyframe& b = keyframes_[b_index];
+
+    volatile uint32_t scale;
+    if (a.timestamp > b.timestamp) {
+      // wraparound
+      uint16_t rest = UINT16_MAX - a.timestamp;
+      if (timestamp > a.timestamp) {
+        scale = timestamp - a.timestamp;
+      } else /* if (timestamp < b.timestamp) */ {
+        scale = rest + timestamp;
+      }
+      scale <<= 16;
+      scale /= rest + b.timestamp;
     } else {
-      // This is where the real interpolation takes place.
-      const Keyframe& a = keyframes_[position - 1];
-      const Keyframe& b = keyframes_[position];
-      uint32_t scale = timestamp - a.timestamp;
+      // normal
+      scale = timestamp - a.timestamp;
       scale <<= 16;
       scale /= (b.timestamp - a.timestamp);
-      for (uint8_t i = 0; i < kNumChannels; ++i) {
-        int32_t from = a.values[i];
-        int32_t to = b.values[i];
-        levels_[i] = Easing(from, to, scale, settings_[i].easing_curve);
-      }
-      for (uint8_t i = 0; i < 3; ++i) {
-        uint8_t a_color = palette_[a.id & (kNumPaletteEntries - 1)][i];
-        uint8_t b_color = palette_[b.id & (kNumPaletteEntries - 1)][i];
-        color_[i] = a_color + ((b_color - a_color) * scale >> 16);
-      }
     }
-    uint16_t t_this = timestamp - \
-        (position == 0 ? 0 : keyframes_[position - 1].timestamp);
-    uint16_t t_next = keyframes_[position].timestamp - timestamp;
-    nearest_keyframe_ = t_next < t_this ? position + 1 : position;
+
+    for (uint8_t i = 0; i < kNumChannels; ++i) {
+      int32_t from = a.values[i];
+      int32_t to = b.values[i];
+      levels_[i] = Easing(from, to, scale, settings_[i].easing_curve);
+    }
+    for (uint8_t i = 0; i < 3; ++i) {
+      uint8_t a_color = palette_[a.id & (kNumPaletteEntries - 1)][i];
+      uint8_t b_color = palette_[b.id & (kNumPaletteEntries - 1)][i];
+      color_[i] = a_color + ((b_color - a_color) * scale >> 16);
+    }
+
+    nearest_keyframe_ = scale < 32768 ? a_index + 1 : b_index + 1;
   }
   
   for (uint16_t i = 0; i < kNumChannels; ++i) {
