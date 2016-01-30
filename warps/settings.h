@@ -31,8 +31,6 @@
 
 #include "stmlib/stmlib.h"
 
-#include "warps/drivers/adc.h"
-
 namespace warps {
   
 struct CalibrationData {

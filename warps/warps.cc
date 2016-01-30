@@ -103,7 +103,6 @@ void Init() {
   codec.set_line_input_gain(24);  // Max input level: 16Vpp.
   
   if (settings.freshly_baked()) {
-    cv_scaler.SelfCalibrate();
 #ifdef PROFILE_INTERRUPT
     DebugPin::Init();
 #else

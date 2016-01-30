@@ -137,6 +137,8 @@ void Ui::Poll() {
   }
   
   bool blink = (system_clock.milliseconds() & 127) > 64;
+  bool slow_blink = (system_clock.milliseconds() & 255) > 128;
+
   switch (mode_) {
     case UI_MODE_NORMAL:
       {
@@ -145,17 +147,17 @@ void Ui::Poll() {
         const Parameters& p = modulator_->parameters();
         const uint8_t (*palette)[3];
 
-	switch (modulator_->feature_mode()) {
-	case FEATURE_MODE_META:
-	  zone = p.modulation_algorithm;
-	  palette = palette_;
-	  break;
+        switch (modulator_->feature_mode()) {
+        case FEATURE_MODE_META:
+          zone = p.modulation_algorithm;
+          palette = palette_;
+          break;
 
-	default:
-	  zone = p.raw_algorithm;
-	  palette = freq_shifter_palette_;
-	  break;
-	}
+        default:
+          zone = p.raw_algorithm;
+          palette = freq_shifter_palette_;
+          break;
+        }
 
         zone *= 8.0f;
         MAKE_INTEGRAL_FRACTIONAL(zone);
@@ -193,18 +195,28 @@ void Ui::Poll() {
       }
       break;
       
-    case UI_MODE_CALIBRATION_1:
+    case UI_MODE_CALIBRATION_C1:
       leds_.set_main(0, blink ? 255 : 0, blink ? 64 : 0);
       leds_.set_osc(blink ? 255 : 0, blink ? 255 : 0);
       break;
 
-    case UI_MODE_CALIBRATION_2:
+    case UI_MODE_CALIBRATION_C3:
       leds_.set_main(blink ? 255 : 0, 0, blink ? 32 : 0);
       leds_.set_osc(blink ? 255 : 0, 0);
       break;
-    
-    case UI_MODE_PANIC:
+
+    case UI_MODE_CALIBRATION_LOW:
+      leds_.set_main(slow_blink ? 255 : 0, 0, 0);
+      leds_.set_osc(slow_blink ? 255 : 0, 0);
+      break;
+
+    case UI_MODE_CALIBRATION_HIGH:
+      leds_.set_main(0, slow_blink ? 255 : 0, 0);
+      leds_.set_osc(0, slow_blink ? 255 : 0);
+      break;
+
     case UI_MODE_CALIBRATION_ERROR:
+    case UI_MODE_PANIC:
       leds_.set_osc(blink ? 255 : 0, 0);
       leds_.set_main(blink ? 255 : 0, 0, 0);
       break;
@@ -226,53 +238,74 @@ void Ui::Poll() {
 void Ui::OnSwitchPressed(const Event& e) {
   switch (e.control_id) {
     case 0:
-      {
-	if (mode_ == UI_MODE_NORMAL) {
-	  last_algo_pot_ = modulator_->parameters().raw_algorithm_pot;
-	  mode_ = UI_MODE_FEATURE_SWITCH;
-	}
+      switch (mode_) {
+        case UI_MODE_CALIBRATION_C1:
+          CalibrateC1();
+          break;
+        case UI_MODE_CALIBRATION_C3:
+          CalibrateC3();
+          break;
+        case UI_MODE_CALIBRATION_LOW:
+          CalibrateLow();
+          break;
+        case UI_MODE_CALIBRATION_HIGH:
+          CalibrateHigh();
+          break;
+        case UI_MODE_NORMAL:
+          last_algo_pot_ = modulator_->parameters().raw_algorithm_pot;
+          mode_ = UI_MODE_FEATURE_SWITCH;
+          break;
+        default:
+          break;
       }
       break;
-      
+    
     case 1:
       StartCalibration();
       break;
-    
+      
+    case 2:
+      StartNormalizationCalibration();
+      break;
+
     default:
       break;
   }
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
-  switch (e.control_id) {   
-    case 0:
-      if (mode_ == UI_MODE_CALIBRATION_1) {
-        CalibrateC1();
-      } else if (mode_ == UI_MODE_CALIBRATION_2) {
-        CalibrateC3();
-      } else {
-	mode_ = UI_MODE_NORMAL;
-	if (feature_mode_changed_)
-	  feature_mode_changed_ = false;
-	else {	
-	  carrier_shape_ = (carrier_shape_ + 1) & 3;
-	}
-	UpdateSettings();
-	settings_->Save();
-      }
-      break;
-  }
+   switch (e.control_id) {
+     case 0:
+       if (mode_ == UI_MODE_CALIBRATION_C1 ||
+           mode_ == UI_MODE_CALIBRATION_C3 ||
+           mode_ == UI_MODE_CALIBRATION_LOW ||
+           mode_ == UI_MODE_CALIBRATION_HIGH) {
+         CalibrateC1();
+       } else if (mode_ == UI_MODE_CALIBRATION_C3) {
+         CalibrateC3();
+       } else {
+         mode_ = UI_MODE_NORMAL;
+         if (feature_mode_changed_) {
+           feature_mode_changed_ = false;
+         }
+         else {
+           carrier_shape_ = (carrier_shape_ + 1) & 3;
+         }
+         UpdateSettings();
+         settings_->Save();
+       }
+   }
 }
 
 void Ui::StartCalibration() {
   cv_scaler_->StartCalibration();
-  mode_ = UI_MODE_CALIBRATION_1;
+  mode_ = UI_MODE_CALIBRATION_C1;
 }
 
 void Ui::CalibrateC1() {
   cv_scaler_->CalibrateC1();
   cv_scaler_->CalibrateOffsets();
-  mode_ = UI_MODE_CALIBRATION_2;
+  mode_ = UI_MODE_CALIBRATION_C3;
 }
 
 void Ui::CalibrateC3() {
@@ -282,6 +315,26 @@ void Ui::CalibrateC3() {
   } else {
     mode_ = UI_MODE_CALIBRATION_ERROR;
   }
+}
+
+void Ui::StartNormalizationCalibration() {
+  cv_scaler_->StartNormalizationCalibration();
+  mode_ = UI_MODE_CALIBRATION_LOW;
+}
+
+void Ui::CalibrateLow() {
+  cv_scaler_->CalibrateLow();
+  mode_ = UI_MODE_CALIBRATION_HIGH;
+}
+
+void Ui::CalibrateHigh() {
+  if (cv_scaler_->CalibrateHigh()) {
+    settings_->Save();
+    mode_ = UI_MODE_NORMAL;
+  } else {
+    mode_ = UI_MODE_CALIBRATION_ERROR;
+  }
+  
 }
 
 void Ui::DoEvents() {
@@ -316,6 +369,10 @@ uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
       reply = cv_scaler_->adc_value(argument);
       break;
       
+    case FACTORY_TESTING_READ_NORMALIZATION:
+      reply = cv_scaler_->normalization(argument);
+      break;
+      
     case FACTORY_TESTING_READ_GATE:
       return switches_.pressed(argument);
       break;
@@ -325,14 +382,34 @@ uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
       break;
       
     case FACTORY_TESTING_CALIBRATE:
-      if (argument == 0) {
-        StartCalibration();
-      } else if (argument == 1) {
-        CalibrateC1();
-      } else {
-        carrier_shape_ = 0;
-        UpdateSettings();
-        CalibrateC3();
+      {
+        switch (argument) {
+          case 0:
+            StartCalibration();
+            break;
+            
+          case 1:
+            CalibrateC1();
+            break;
+            
+          case 2:
+            CalibrateC3();
+            break;
+            
+          case 3:
+            StartNormalizationCalibration();
+            break;
+
+          case 4:
+            CalibrateLow();
+            break;
+            
+          case 5:
+            CalibrateHigh();
+            carrier_shape_ = 0;
+            UpdateSettings();
+            break;
+        }
       }
       break;
   }

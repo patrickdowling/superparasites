@@ -88,7 +88,7 @@ void TIM1_UP_IRQHandler(void) {
   if (ui.mode() == UI_MODE_FACTORY_TESTING) {
     if (dac.ready()) {
       dac.Write(saw_counter >> 16, saw_counter >> 16);
-      saw_counter += 8589935;
+      saw_counter += 8947848;
       gate_output.Write(saw_counter & 0x80000000, saw_counter & 0x80000000);
     }
   } else {
@@ -96,7 +96,7 @@ void TIM1_UP_IRQHandler(void) {
       ++dac_divider;
       if (dac_divider >= generator.clock_divider()) {
         dac_divider = 0;
-        GeneratorSample sample = generator.Process(gate_input.Read());
+        const GeneratorSample& sample = generator.Process(gate_input.Read());
         uint32_t uni = sample.unipolar;
         int32_t bi = sample.bipolar;
         uint32_t level = cv_scaler.level();
@@ -158,7 +158,7 @@ int main(void) {
       generator.set_shape(cv_scaler.shape());
       generator.set_slope(cv_scaler.slope());
       generator.set_smoothness(cv_scaler.smoothness());
-      generator.FillBuffer();
+      generator.Process();
       if (debug_rendering) {
         gate_output.Write(false, false);
       }

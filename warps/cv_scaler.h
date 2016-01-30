@@ -84,10 +84,9 @@ class CvScaler {
   
   void DetectAudioNormalization(Codec::Frame* in, size_t size);
   
-  void SelfCalibrate();
-  
   void StartCalibration() {
     normalization_probe_enabled_ = false;
+    normalization_probe_forced_state_ = false;
   }
   
   void CalibrateC1() {
@@ -115,13 +114,54 @@ class CvScaler {
     return success;
   }
   
+  void StartNormalizationCalibration() {
+    normalization_probe_enabled_ = false;
+    normalization_probe_forced_state_ = false;
+  }
+  
+  void CalibrateLow() {
+    cv_low_[0] = adc_.float_value(ADC_LEVEL_1_CV);
+    cv_low_[1] = adc_.float_value(ADC_LEVEL_2_CV);
+    normalization_probe_forced_state_ = true;
+  }
+  
+  bool CalibrateHigh() {
+    bool success = true;
+    for (int i = 0; i < 2; ++i) {
+      float high = adc_.float_value(ADC_LEVEL_1_CV + i);
+      float threshold = (cv_low_[i] + high) * 0.5f;
+      bool within_range = threshold >= 0.8f && threshold <= 0.9f;
+      if (within_range) {
+        calibration_data_->normalization_detection_threshold[i] = threshold;
+      }
+      success = success && within_range;
+    }
+    normalization_probe_enabled_ = true;
+    return success;
+  }
+  
   inline bool ready_for_calibration() const {
     return adc_.float_value(ADC_LEVEL_2_CV) > 0.8f && \
          adc_.float_value(ADC_LEVEL_1_CV) > 0.7f;
   }
   
+  inline uint8_t easter_egg_digit() const {
+    if (lp_state_[ADC_LEVEL_1_POT] < 0.05f && \
+        lp_state_[ADC_LEVEL_2_POT] < 0.05f && \
+        lp_state_[ADC_PARAMETER_POT] < 0.05f) {
+      return static_cast<uint8_t>(
+          UnwrapPot(lp_state_[ADC_ALGORITHM_POT]) * 8.0f + 0.5f);
+    } else {
+      return 0;
+    }
+  }
+  
   inline uint8_t adc_value(size_t index) const {
     return adc_.value(index) >> 8;
+  }
+  
+  inline uint8_t normalization(size_t index) const {
+    return normalization_detector_[index].normalized() ? 255 : 0;
   }
   
   float UnwrapPot(float x) const;
@@ -136,15 +176,17 @@ class CvScaler {
 
   bool normalization_probe_value_[2];
   bool normalization_probe_enabled_;
-  
+  bool normalization_probe_forced_state_;
+
   float lp_state_[ADC_LAST];
   float note_cv_;
   float note_pot_;
   float note_pot_quantized_;
   float cv_c1_;
-  
+
   uint16_t self_calibration_state_;
-  
+  float cv_low_[2];
+
   DISALLOW_COPY_AND_ASSIGN(CvScaler);
 };
 

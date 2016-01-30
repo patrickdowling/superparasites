@@ -46,8 +46,10 @@ class Settings;
 enum UiMode {
   UI_MODE_NORMAL,
   UI_MODE_FEATURE_SWITCH,
-  UI_MODE_CALIBRATION_1,
-  UI_MODE_CALIBRATION_2,
+  UI_MODE_CALIBRATION_C1,
+  UI_MODE_CALIBRATION_C3,
+  UI_MODE_CALIBRATION_LOW,
+  UI_MODE_CALIBRATION_HIGH,
   UI_MODE_CALIBRATION_ERROR,
   UI_MODE_PANIC,
 };
@@ -57,7 +59,8 @@ enum FactoryTestingCommand {
   FACTORY_TESTING_READ_CV,
   FACTORY_TESTING_READ_GATE,
   FACTORY_TESTING_SET_BYPASS,
-  FACTORY_TESTING_CALIBRATE
+  FACTORY_TESTING_CALIBRATE,
+  FACTORY_TESTING_READ_NORMALIZATION
 };
 
 class Ui {
@@ -80,8 +83,11 @@ class Ui {
   void StartCalibration();
   void CalibrateC1();
   void CalibrateC3();
+  void StartNormalizationCalibration();
+  void CalibrateLow();
+  void CalibrateHigh();
+
   void UpdateSettings();
-  bool DetectSecretHandshake();
 
   stmlib::EventQueue<16> queue_;
   
@@ -104,7 +110,7 @@ class Ui {
   static const uint8_t palette_[10][3];
   static const uint8_t freq_shifter_palette_[10][3];
   static const uint8_t feature_mode_palette_[10][3];
-  
+
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 

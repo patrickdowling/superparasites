@@ -55,7 +55,6 @@ void CvScaler::Init(CalibrationData* calibration_data) {
     normalization_detector_[i].Init(0.01f, 0.5f);
   }
   
-  self_calibration_state_ = 0;
   normalization_probe_enabled_ = true;
 }
 
@@ -75,38 +74,7 @@ float CvScaler::UnwrapPot(float x) const {
     destination = value; \
   }
 
-void CvScaler::SelfCalibrate() {
-  self_calibration_state_ = 255;
-}
-
 void CvScaler::DetectNormalization() {
-  if (self_calibration_state_) {
-    if (self_calibration_state_ > 128) {
-      normalization_probe_.Low();
-    } else {
-      normalization_probe_.High();
-    }
-    
-    if (self_calibration_state_ == 192) {
-      calibration_data_->normalization_detection_threshold[0] = adc_.float_value(ADC_LEVEL_1_CV) * 0.5F;
-      calibration_data_->normalization_detection_threshold[1] = adc_.float_value(ADC_LEVEL_2_CV) * 0.5F;
-    }
-
-    if (self_calibration_state_ == 64) {
-      calibration_data_->normalization_detection_threshold[0] += adc_.float_value(ADC_LEVEL_1_CV) * 0.5F;
-      calibration_data_->normalization_detection_threshold[1] += adc_.float_value(ADC_LEVEL_2_CV) * 0.5F;
-      CONSTRAIN(calibration_data_->normalization_detection_threshold[0],
-          0.8f,
-          0.9f);
-      CONSTRAIN(calibration_data_->normalization_detection_threshold[1],
-          0.8f,
-          0.9f);
-    }
-    --self_calibration_state_;
-    return;
-  }
-  
-  
   // Check if the value read by the ADC is correlated with the noise sent to the
   // switch. If so, we can conclude that nothing is connected in the input.
   float x = normalization_probe_value_[1] ? 1.0f : -1.0f;
@@ -122,11 +90,10 @@ void CvScaler::DetectNormalization() {
   // Flip normalization probe for next round.
   normalization_probe_value_[1] = normalization_probe_value_[0];
   normalization_probe_value_[0] = (Random::GetWord() >> 31) & 1;
-  if (normalization_probe_value_[0] && normalization_probe_enabled_) {
-    normalization_probe_.High();
-  } else {
-    normalization_probe_.Low();
-  }
+  bool new_state = normalization_probe_enabled_
+      ? normalization_probe_value_[0]
+      : normalization_probe_forced_state_;
+  normalization_probe_.Write(new_state);
 }
 
 void CvScaler::DetectAudioNormalization(Codec::Frame* in, size_t size) {

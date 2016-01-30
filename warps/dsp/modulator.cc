@@ -45,7 +45,7 @@ const float kXmodCarrierGain = 0.5f;
 void Modulator::Init(float sample_rate) {
   bypass_ = false;
   feature_mode_ = FEATURE_MODE_META;
-  
+
   for (int32_t i = 0; i < 2; ++i) {
     amplifier_[i].Init();
     src_up_[i].Init();
@@ -92,7 +92,7 @@ void Modulator::ProcessFreqShifter(
     }
     float frequency = parameters_.raw_algorithm_pot;
     frequency += linear_modulation_amount * parameters_.raw_algorithm_cv;
-    
+
     float direction = frequency >= 0.5f ? 1.0f : -1.0f;
     frequency = 2.0f * fabs(frequency - 0.5f);
     frequency = frequency <= 0.4f
@@ -193,7 +193,7 @@ void Modulator::ProcessFreqShifter(
   feedback_sample_ = feedback_sample;
   previous_parameters_ = parameters_;
 }
-  
+
 void Modulator::ProcessVocoder(
     ShortFrame* input,
     ShortFrame* output,
@@ -305,7 +305,7 @@ void Modulator::ProcessMeta(
     OscillatorShape xmod_shape = static_cast<OscillatorShape>(
         parameters_.carrier_shape - 1);
     OscillatorShape vocoder_shape = static_cast<OscillatorShape>(
-        parameters_.carrier_shape + 1);    
+        parameters_.carrier_shape + 1);
 
     // Outside of the transition zone between the cross-modulation and vocoding
     // algorithm, we need to render only one of the two oscillators.
@@ -411,7 +411,7 @@ void Modulator::ProcessMeta(
   previous_parameters_ = parameters_;
 }
 
-  
+
 template<XmodAlgorithm algorithm>
 void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
   float* carrier = buffer_[0];
@@ -775,10 +775,6 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
 }
   
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
-  if (bypass_) {
-    copy(&input[0], &input[size], &output[0]);
-    return;
-  }
 
   switch (feature_mode_) {
 
@@ -819,7 +815,6 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     break;    
   }
 }
-
 
 /* static */
 inline float Modulator::Diode(float x) {

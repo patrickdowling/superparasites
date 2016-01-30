@@ -165,7 +165,7 @@ class Modulator {
 
   inline FeatureMode feature_mode() const { return feature_mode_; }
   inline void set_feature_mode(FeatureMode feature_mode) { feature_mode_ = feature_mode; }
-  
+
  private:
   template<XmodAlgorithm algorithm_1, XmodAlgorithm algorithm_2>
   void ProcessXmod(
@@ -289,13 +289,13 @@ class Modulator {
 
   template<XmodAlgorithm algorithm>
   static float Mod(float x, float p);
-  
+
   static float Diode(float x);
   
   bool bypass_;
-  
+
   FeatureMode feature_mode_;
-  
+
   Parameters parameters_;
   Parameters previous_parameters_;
   
@@ -327,7 +327,7 @@ class Modulator {
 		  + sizeof(src_buffer_)
 		  + sizeof(feedback_sample_)) / sizeof(ShortFrame) - 4
   };
-  
+
   static XmodFn xmod_table_[];
   
   DISALLOW_COPY_AND_ASSIGN(Modulator);

@@ -48,6 +48,7 @@ class QuadratureOscillator {
     frequency_ = 0.0f;
     shape_ = 0.0f;
     note_ = 0.0f;
+    phase_ = 0.0f;
   }
   
   void Render(

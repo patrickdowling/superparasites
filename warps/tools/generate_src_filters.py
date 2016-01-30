@@ -108,6 +108,7 @@ def make_header_guard_name(name):
   return name + '_' if name else ''
   
 
+
 def generate_filters(options):
   output_file = options.output_file
   out = file(output_file, 'w') if output_file else sys.stderr

@@ -54,6 +54,12 @@ void Settings::Init() {
     freshly_baked_ = true;
     Save();
   }
+  for (int i = 0; i < 2; ++i) {
+    if (data_.calibration_data.normalization_detection_threshold[i] > 0.9f ||
+        data_.calibration_data.normalization_detection_threshold[i] < 0.8f) {
+      data_.calibration_data.normalization_detection_threshold[i] = 0.85f;
+    }
+  }
 }
 
 void Settings::Save() {

@@ -51,11 +51,21 @@ class NormalizationProbe {
     gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIOC, &gpio_init);
   }
+
   static inline void High() {
     GPIOC->BSRRL = GPIO_Pin_8;
   }
+  
   static inline void Low() {
     GPIOC->BSRRH = GPIO_Pin_8;
+  }
+  
+  static inline void Write(bool value) {
+    if (value) {
+      High();
+    } else {
+      Low();
+    }
   }
 
  private:
