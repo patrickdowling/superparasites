@@ -880,7 +880,7 @@ inline float Modulator::Xmod<ALGORITHM_FOLD>(
   sum += x_1 * x_2 * 0.25f;
   sum *= 0.02f + parameter;
   const float kScale = 2048.0f / ((1.0f + 1.0f + 0.25f) * 1.02f);
-  return Interpolate(lut_bipolar_fold + 2048, sum, kScale);
+  return Interpolate(lut_bipolar_fold + 2048, sum, kScale) * -0.8f;
 }
 
 /* static */
