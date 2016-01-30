@@ -775,6 +775,10 @@ void Modulator::ProcessDoppler(ShortFrame* input, ShortFrame* output, size_t siz
 }
   
 void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
+  if (bypass_) {
+    copy(&input[0], &input[size], &output[0]);
+    return;
+  }
 
   switch (feature_mode_) {
 
