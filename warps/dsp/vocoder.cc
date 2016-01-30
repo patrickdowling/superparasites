@@ -124,7 +124,7 @@ void Vocoder::Process(
   }
 
   carrier_filter_bank_.Synthesize(out, size);
-  limiter_.Process(out, 1.4f, size);
+  limiter_.Process(out, 1.6f, size);
 }
 
 }  // namespace warps
