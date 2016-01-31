@@ -965,11 +965,12 @@ inline float Modulator::Xmod<ALGORITHM_BITCRUSHER>(
 
   *y_2 = static_cast<float>(x_1_mod) / 32768.0f;
   
-  float ops[3];
+  float ops[4];
   ops[0] = static_cast<float>(x_1_mod + x_2_mod) / 32768.0f;
-  ops[1] = static_cast<float>(~x_1_mod & x_2_mod) / 32768.0f;
+  ops[1] = static_cast<float>(x_1_mod | x_2_mod) / 32768.0f;
   ops[2] = static_cast<float>(x_1_mod ^ x_2_mod) / 32768.0f;
-  return Interpolate(ops, p_2, 2.0f);
+  ops[3] = static_cast<float>(x_1_mod << (x_2_mod >> 12)) / 32768.0f;
+  return Interpolate(ops, p_2, 3.0f);
 }
 
 /* static */
