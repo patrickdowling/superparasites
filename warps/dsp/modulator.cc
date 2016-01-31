@@ -592,8 +592,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float time_increment = (time_end - time) * step;
   float fb_increment = (fb_end - fb) * step;
 
-  filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
-  filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.0005f);
+  filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
+  filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   
   while (size--) {
     
@@ -608,7 +608,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_r = static_cast<float>(feedback.l) / 32768.0f * fb * 1.1f;
     } else if (parameters_.carrier_shape == 2) {
       // simulate tape hiss with bitwise mangling and pot noise
-      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) & 0b11111;
+      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) & 0b110111;
       feedback.l |= seed;
       feedback.r |= seed;
       fb_l = static_cast<float>(feedback.l) / 32768.0f;
@@ -621,8 +621,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_l = fb * (2.0f - fb) * 1.1f * filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
       fb_r = fb * (2.0f - fb) * 1.1f * filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
       // apply soft saturation with a bit of bias
-      fb_l = SoftLimit(fb_l * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
-      fb_r = SoftLimit(fb_r * 1.3f + 0.1f) / 1.3f - SoftLimit(0.1f);
+      fb_l = SoftLimit(fb_l * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
+      fb_r = SoftLimit(fb_r * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
     } else if (parameters_.carrier_shape == 0) {
       // open feedback loop
       fb_l = fb * 1.1f * in_r;
