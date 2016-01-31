@@ -858,7 +858,7 @@ inline float Modulator::Mod<ALGORITHM_CHEBYSCHEV>(
   
   float error = fabs(x) - envelope_;
   envelope_ += (error > 0.0f ? att : rel) * error;
-  float amp = 1.0f / envelope_;
+  float amp = 0.9f / envelope_;
 
   const float degree = 6.0f;
   
