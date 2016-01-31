@@ -396,10 +396,12 @@ void GranularProcessor::Process(
   float dry_wet_increment = (parameters_.dry_wet - dry_wet) / static_cast<float>(size);
   for (size_t i = 0; i < size; ++i) {
     dry_wet += dry_wet_increment;
+    float fade_in = Interpolate(lut_xfade_in, dry_wet, 256.0f);
+    float fade_out = Interpolate(lut_xfade_out, dry_wet, 256.0f);
     float l = static_cast<float>(input[i].l) / 32768.0f;
     float r = static_cast<float>(input[i].r) / 32768.0f;
-    out_[i].l = l + ((out_[i].l * post_gain - l) * dry_wet);
-    out_[i].r = r + ((out_[i].r * post_gain - r) * dry_wet);
+    out_[i].l = l * fade_out + out_[i].l * post_gain * fade_in;
+    out_[i].r = r * fade_out + out_[i].r * post_gain * fade_in;
   }
   dry_wet_ = dry_wet;
   
