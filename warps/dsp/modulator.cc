@@ -527,12 +527,18 @@ void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t 
       carrier[i] = aux_output[i] * kXmodCarrierGain;
     }
   }
-  
+
+  // make sure it dry: parameter doesn't go to 0.0f apparently
+  float mod_1 = (parameters_.modulation_parameter - 0.05f) / 0.95f;
+  float mod_2 = (previous_parameters_.modulation_parameter - 0.05f) / 0.95f;
+  CONSTRAIN(mod_1, 0.0f, 1.0f);
+  CONSTRAIN(mod_2, 0.0f, 1.0f);
+
   ProcessXmod<ALGORITHM_BITCRUSHER>(
         previous_parameters_.modulation_algorithm,
         parameters_.modulation_algorithm,
-        previous_parameters_.skewed_modulation_parameter(),
-        parameters_.skewed_modulation_parameter(),
+        mod_1,
+        mod_2,
         carrier,
 	modulator,
         main_output,
