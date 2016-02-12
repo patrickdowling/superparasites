@@ -253,8 +253,10 @@ void GranularProcessor::ProcessGranular(
       }
 
       float d = parameters_.density;
-      d *= d * d * d * d * d;
-      resonestor_.set_feedback(d * d * d * d * d * d * 20.0f);
+      d *= d * d;
+      d *= d * d;
+      d *= d * d;
+      resonestor_.set_feedback(d * 20.0f);
 
       resonestor_.Process(output, size);
     }
