@@ -74,9 +74,9 @@ extern const float lut_quantized_pitch[];
 #define LUT_SIN 0
 #define LUT_SIN_SIZE 1281
 #define LUT_XFADE_IN 1
-#define LUT_XFADE_IN_SIZE 257
+#define LUT_XFADE_IN_SIZE 17
 #define LUT_XFADE_OUT 2
-#define LUT_XFADE_OUT_SIZE 257
+#define LUT_XFADE_OUT_SIZE 17
 #define LUT_WINDOW 3
 #define LUT_WINDOW_SIZE 4097
 #define LUT_SINE_WINDOW_4096 4

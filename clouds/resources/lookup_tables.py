@@ -47,8 +47,8 @@ lookup_tables.append(('sin', numpy.sin(t)))
 XFade table
 ----------------------------------------------------------------------------"""
 
-size = 257
-t = numpy.arange(0, size) / float(size)
+size = 17
+t = numpy.arange(0, size) / float(size-1)
 t = 1.04 * t - 0.02
 t[t < 0] = 0
 t[t >= 1] = 1
@@ -63,7 +63,6 @@ Grain window.
 size = 4096
 t = numpy.arange(0, size + 1) / float(size)
 lookup_tables.append(('window', 1.0 - (numpy.cos(t * numpy.pi) + 1) / 2))
-
 
 
 """----------------------------------------------------------------------------
