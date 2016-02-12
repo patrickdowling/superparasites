@@ -160,11 +160,11 @@ class Resonestor {
     /* set LP/BP filters frequencies and feedback */
     for (int p=0; p<4; p++) {
       float freq = 1.0f / comb_period_[p][voice_];
-      bp1_[p][voice_].set_f_q<FREQUENCY_ACCURATE>(freq, narrow_[voice_]);
+      bp1_[p][voice_].set_f_q<FREQUENCY_FAST>(freq, narrow_[voice_]);
       bp2_[p][voice_].set(bp1_[p][voice_]);
       float lp_freq = (2.0f * freq + 1.0f) * damp_[voice_];
       CONSTRAIN(lp_freq, 0.0f, 1.0f);
-      lp_[p][voice_].set_f_q<FREQUENCY_ACCURATE>(lp_freq, 0.4f);
+      lp_[p][voice_].set_f_q<FREQUENCY_FAST>(lp_freq, 0.4f);
       comb_feedback_[p][voice_] = powf(feedback_[voice_], comb_period_[p][voice_] / 32000.0f);
     }
 
