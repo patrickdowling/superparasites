@@ -333,7 +333,7 @@ class Resonestor {
   }
 
  private:
-  typedef FxEngine<16384, FORMAT_12_BIT> E;
+  typedef FxEngine<16384, FORMAT_16_BIT> E;
   E engine_;
 
   /* parameters: */
