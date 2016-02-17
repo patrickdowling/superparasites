@@ -246,6 +246,29 @@ int32_t Generator::ComputeAntialiasAttenuation(
   return p;
 }
 
+void Generator::FillBuffer() {
+/*     if (feature_mode_ == FEAT_MODE_FUNCTION) { */
+/* #ifndef WAVETABLE_HACK */
+/*       if (range_ == GENERATOR_RANGE_HIGH) { */
+/*         FillBufferAudioRate(); */
+/*       } else { */
+/*         FillBufferControlRate(); */
+/*       } */
+/* #else */
+/*       FillBufferWavetable(); */
+/* #endif */
+/*     } else if (feature_mode_ == FEAT_MODE_HARMONIC) { */
+    if (mode_ == GENERATOR_MODE_LOOPING)
+      FillBufferHarmonic<GENERATOR_MODE_LOOPING>();
+    else if (mode_ == GENERATOR_MODE_AR)
+      FillBufferHarmonic<GENERATOR_MODE_AR>();
+    else if (mode_ == GENERATOR_MODE_AD)
+      FillBufferHarmonic<GENERATOR_MODE_AD>();
+    /* } else if (feature_mode_ == FEAT_MODE_RANDOM) { */
+    /*   FillBufferRandom(); */
+    /* } */
+  }
+
 // There are to our knowledge three ways of generating an "asymmetric" ramp:
 //
 // 1. Use the difference between two parabolic waves.
@@ -912,6 +935,7 @@ int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
   return peak;
 }
 
+template<GeneratorMode mode>
 void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize;
@@ -963,9 +987,9 @@ void Generator::FillBufferHarmonic() {
 
     uint32_t pi = phase_increment_ >> 16;
     pi =
-      mode_ == GENERATOR_MODE_AR ? pi << harm :
-      mode_ == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
-      mode_ == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
+      mode == GENERATOR_MODE_AR ? pi << harm :
+      mode == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
+      mode == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
       UINT32_MAX;
 
     if (pi > kCutoffHigh || pi == 0)
@@ -1053,13 +1077,13 @@ void Generator::FillBufferHarmonic() {
       unipolar += (tn * envelope_[harm_permut_[harm]]) >> 16;
 
       int32_t t = tn;
-      if (mode_ == GENERATOR_MODE_AR) { // power of two harmonics
+      if (mode == GENERATOR_MODE_AR) { // power of two harmonics
         if (harm == 16) break;
         if ((harm & 3) == 0)
           tn = Interpolate1121(wav_sine2048, phase_ << harm);
         else
           tn = 2 * ((tn * tn) >> 15) - 32768;
-      } else if (mode_ == GENERATOR_MODE_AD) { // odd harmonics
+      } else if (mode == GENERATOR_MODE_AD) { // odd harmonics
         tn = ((sine * tn) >> 14) - tn1;
         tn1 = t;
         t = tn;

@@ -178,25 +178,9 @@ class Generator {
       return true;
     }
   }
-  
-  inline void FillBuffer() {
-    if (feature_mode_ == FEAT_MODE_FUNCTION) {
-#ifndef WAVETABLE_HACK
-      if (range_ == GENERATOR_RANGE_HIGH) {
-        FillBufferAudioRate();
-      } else {
-        FillBufferControlRate();
-      }
-#else
-      FillBufferWavetable();
-#endif
-    } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
-      FillBufferHarmonic();
-    } else if (feature_mode_ == FEAT_MODE_RANDOM) {
-      FillBufferRandom();
-    }
-  }
-  
+
+  void FillBuffer();
+
   uint32_t clock_divider() const {
     return clock_divider_;
   }
@@ -215,7 +199,7 @@ class Generator {
   void FillBufferAudioRate();
   void FillBufferControlRate();
   void FillBufferWavetable();
-  void FillBufferHarmonic();
+  template<GeneratorMode mode> void FillBufferHarmonic();
   void FillBufferRandom();
   int32_t ComputeAntialiasAttenuation(
         int16_t pitch,
@@ -300,7 +284,7 @@ class Generator {
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 
-  static const uint8_t kNumHarmonics = 28;
+  static const uint8_t kNumHarmonics = 38;
 
   uint16_t envelope_[kNumHarmonics];
   uint16_t envelope_increment_[kNumHarmonics];
