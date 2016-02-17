@@ -158,7 +158,7 @@ int main(void) {
       generator.set_shape(cv_scaler.shape());
       generator.set_slope(cv_scaler.slope());
       generator.set_smoothness(cv_scaler.smoothness());
-      generator.Process();
+      generator.FillBuffer();
       if (debug_rendering) {
         gate_output.Write(false, false);
       }
