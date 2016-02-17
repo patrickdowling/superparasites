@@ -938,6 +938,7 @@ void Generator::FillBufferHarmonic() {
 
   uint16_t envelope[kNumHarmonics];
 
+  // pre-compute spectral envelope
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
     int32_t x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
@@ -964,13 +965,13 @@ void Generator::FillBufferHarmonic() {
     const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
     const uint32_t kCutoffHigh = UINT16_MAX / 2;
 
-    if (pi < kCutoffLow)
-      ;
-    else if (pi < kCutoffHigh)
+    if (pi > kCutoffHigh)
+      envelope[harm] = 0;
+    else if (pi > kCutoffLow)
       envelope[harm] = envelope[harm] * (kCutoffHigh - pi)
         / (kCutoffHigh - kCutoffLow);
-    else
-      envelope[harm] = 0;
+
+    envelope_increment_[harm] = (envelope[harm] - envelope_[harm]) / size;
   }
 
   while (size--) {
@@ -1018,7 +1019,7 @@ void Generator::FillBufferHarmonic() {
 
       // Fast tracking of the local oscillator to the external oscillator.
       local_osc_phase_increment_ += static_cast<int32_t>(
-	  target_phase_increment_ - local_osc_phase_increment_) >> 5;
+        target_phase_increment_ - local_osc_phase_increment_) >> 5;
       local_osc_phase_ += local_osc_phase_increment_;
       
       // Slow phase realignment between the master oscillator and the local
@@ -1027,6 +1028,7 @@ void Generator::FillBufferHarmonic() {
       phase_increment_ = local_osc_phase_increment_ + (phase_error >> 13);
     }
 
+    // TODO!!! ramp
     center1_ += ((slope_ + 32768) - center1_) >> 4;
     center2_ += ((shape_ + 32768) - center2_) >> 4;
 
@@ -1045,11 +1047,11 @@ void Generator::FillBufferHarmonic() {
 
     for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
 
-      smoothed_envelope_[harm] += (envelope[harm] - smoothed_envelope_[harm]) >> 4;
-      gain += smoothed_envelope_[harm];
+      envelope_[harm] += envelope_increment_[harm];
+      gain += envelope_[harm];
 
-      bipolar += (tn * smoothed_envelope_[harm]) >> 16;
-      unipolar += (tn * smoothed_envelope_[harm_permut_[harm]]) >> 16;
+      bipolar += (tn * envelope_[harm]) >> 16;
+      unipolar += (tn * envelope_[harm_permut_[harm]]) >> 16;
 
       int32_t t = tn;
       tn = ((sine * tn) >> 14) - tn1;
