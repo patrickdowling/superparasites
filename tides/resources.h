@@ -56,7 +56,7 @@ extern const uint16_t lut_attenuverter_curve[];
 extern const uint16_t lut_slope_compression[];
 extern const uint32_t lut_increments[];
 extern const uint32_t lut_cutoff[];
-extern const int16_t wav_sine1024[];
+extern const int16_t wav_sine2048[];
 extern const int16_t wav_sine128[];
 extern const int16_t wav_sine64[];
 extern const int16_t wav_sine16[];
@@ -100,8 +100,8 @@ extern const int16_t ws_smooth_bipolar_fold[] IN_RAM;
 #define LUT_INCREMENTS_SIZE 97
 #define LUT_CUTOFF 1
 #define LUT_CUTOFF_SIZE 513
-#define WAV_SINE1024 0
-#define WAV_SINE1024_SIZE 1025
+#define WAV_SINE2048 0
+#define WAV_SINE2048_SIZE 2049
 #define WAV_SINE128 1
 #define WAV_SINE128_SIZE 129
 #define WAV_SINE64 2

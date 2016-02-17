@@ -1036,7 +1036,7 @@ void Generator::FillBufferHarmonic() {
     int32_t gain = 0;
 
     int32_t sine = range_ == GENERATOR_RANGE_HIGH ?
-      Interpolate1022(wav_sine1024, phase_) :
+      Interpolate1121(wav_sine2048, phase_) :
       range_ == GENERATOR_RANGE_MEDIUM ?
       Interpolate626(wav_sine64, phase_) :
       Interpolate428(wav_sine16, phase_);

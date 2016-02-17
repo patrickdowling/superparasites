@@ -35,12 +35,12 @@ waveforms = []
 """----------------------------------------------------------------------------
 Sine wave
 ----------------------------------------------------------------------------"""
-WAVETABLE_SIZE=1024
+WAVETABLE_SIZE=2048
 
 x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
 x[-1] = x[0]
 sine = numpy.sin(2 * numpy.pi * x)
-waveforms.append(('sine1024', (32767 * sine).astype(int)))
+waveforms.append(('sine2048', (32767 * sine).astype(int)))
 
 WAVETABLE_SIZE=128
 
