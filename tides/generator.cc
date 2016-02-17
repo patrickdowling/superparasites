@@ -247,26 +247,26 @@ int32_t Generator::ComputeAntialiasAttenuation(
 }
 
 void Generator::FillBuffer() {
-/*     if (feature_mode_ == FEAT_MODE_FUNCTION) { */
-/* #ifndef WAVETABLE_HACK */
-/*       if (range_ == GENERATOR_RANGE_HIGH) { */
-/*         FillBufferAudioRate(); */
-/*       } else { */
-/*         FillBufferControlRate(); */
-/*       } */
-/* #else */
-/*       FillBufferWavetable(); */
-/* #endif */
-/*     } else if (feature_mode_ == FEAT_MODE_HARMONIC) { */
+    if (feature_mode_ == FEAT_MODE_FUNCTION) {
+#ifndef WAVETABLE_HACK
+      if (range_ == GENERATOR_RANGE_HIGH) {
+        FillBufferAudioRate();
+      } else {
+        FillBufferControlRate();
+      }
+#else
+      FillBufferWavetable();
+#endif
+    } else if (feature_mode_ == FEAT_MODE_HARMONIC) {
     if (mode_ == GENERATOR_MODE_LOOPING)
       FillBufferHarmonic<GENERATOR_MODE_LOOPING>();
     else if (mode_ == GENERATOR_MODE_AR)
       FillBufferHarmonic<GENERATOR_MODE_AR>();
     else if (mode_ == GENERATOR_MODE_AD)
       FillBufferHarmonic<GENERATOR_MODE_AD>();
-    /* } else if (feature_mode_ == FEAT_MODE_RANDOM) { */
-    /*   FillBufferRandom(); */
-    /* } */
+    } else if (feature_mode_ == FEAT_MODE_RANDOM) {
+      FillBufferRandom();
+    }
   }
 
 // There are to our knowledge three ways of generating an "asymmetric" ramp:
@@ -963,13 +963,18 @@ void Generator::FillBufferHarmonic() {
   // pre-compute spectral envelope
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
-    int32_t x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
+    int32_t x;
+    if (mode == GENERATOR_MODE_AR)
+      x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonicsPowers-1);
+    else
+      x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
 
-    int32_t center1 = slope_ + 32768;
-    int32_t center2 = shape_ + 32768;
+    int32_t center1 = shape_ + 32768;
+    int32_t center2 = slope_ + 32768;
     int32_t peak1 = ComputePeak(center1, width, x);
-    int32_t peak2 = ComputePeak(center2, width, x);
-    peak1 /= 2;                 // second peak has half the gain
+    // second peak has twice the width
+    int32_t peak2 = ComputePeak(center2, width << 1, x);
+    peak2 /= 2;                 // second peak has half the gain
 
     int32_t a = peak1 > peak2 ? peak1 : peak2;
     CONSTRAIN(a, 0, INT16_MAX); // TODO devrait pas arriver!
@@ -1078,7 +1083,7 @@ void Generator::FillBufferHarmonic() {
 
       int32_t t = tn;
       if (mode == GENERATOR_MODE_AR) { // power of two harmonics
-        if (harm == 16) break;
+        if (harm == kNumHarmonicsPowers) break;
         if ((harm & 3) == 0)
           tn = Interpolate1121(wav_sine2048, phase_ << harm);
         else
