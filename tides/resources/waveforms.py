@@ -33,6 +33,37 @@ import numpy
 waveforms = []
 
 """----------------------------------------------------------------------------
+Sine wave
+----------------------------------------------------------------------------"""
+WAVETABLE_SIZE=1024
+
+x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
+x[-1] = x[0]
+sine = numpy.sin(2 * numpy.pi * x)
+waveforms.append(('sine1024', (32767 * sine).astype(int)))
+
+WAVETABLE_SIZE=128
+
+x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
+x[-1] = x[0]
+sine = numpy.sin(2 * numpy.pi * x)
+waveforms.append(('sine128', (32767 * sine).astype(int)))
+
+WAVETABLE_SIZE=64
+
+x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
+x[-1] = x[0]
+sine = numpy.sin(2 * numpy.pi * x)
+waveforms.append(('sine64', (32767 * sine).astype(int)))
+
+WAVETABLE_SIZE=16
+
+x = numpy.arange(0, WAVETABLE_SIZE + 1) / float(WAVETABLE_SIZE)
+x[-1] = x[0]
+sine = numpy.sin(2 * numpy.pi * x)
+waveforms.append(('sine16', (32767 * sine).astype(int)))
+
+"""----------------------------------------------------------------------------
 Band-limited waveforms
 ----------------------------------------------------------------------------"""
 

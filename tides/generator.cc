@@ -916,14 +916,14 @@ int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
 
 void Generator::FillBufferHarmonic() {
 
-  uint8_t size = kBlockSize * 3; // moar CPU
+  uint8_t size = kBlockSize;
   
   // 0 < width < 65535
   int32_t width = static_cast<int32_t>(smoothness_) * 2;
   // Scaling:
   width = width < 0 ? width + 65536 : width * 2 / 3;
   width = ((width >> 1) * width) >> 15;
-  width += 2048;
+  width += 512;
 
   int32_t reverse = (-smoothness_ << 3) + 32768;
   CONSTRAIN(reverse, 0, UINT16_MAX);
@@ -937,7 +937,6 @@ void Generator::FillBufferHarmonic() {
   }
 
   uint16_t envelope[kNumHarmonics];
-  uint16_t antialias[kNumHarmonics];
 
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     // 0 < x < 65535
@@ -962,16 +961,16 @@ void Generator::FillBufferHarmonic() {
     envelope[harm] = static_cast<uint16_t>(z);
 
     // Take care of harmonics which phase increment will be > Nyquist
-    const uint32_t kCutoffLow = UINT16_MAX / 8;
+    const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
     const uint32_t kCutoffHigh = UINT16_MAX / 2;
-    const uint32_t kCutoffWidth = kCutoffHigh - kCutoffLow;
 
     if (pi < kCutoffLow)
-      antialias[harm] = UINT16_MAX;
+      ;
     else if (pi < kCutoffHigh)
-      antialias[harm] = - UINT16_MAX * (pi - kCutoffHigh) / kCutoffWidth;
+      envelope[harm] = envelope[harm] * (kCutoffHigh - pi)
+        / (kCutoffHigh - kCutoffLow);
     else
-      antialias[harm] = 0;
+      envelope[harm] = 0;
   }
 
   while (size--) {
@@ -1035,50 +1034,37 @@ void Generator::FillBufferHarmonic() {
     int32_t unipolar = 0;
     int32_t gain = 0;
 
+    int32_t sine = range_ == GENERATOR_RANGE_HIGH ?
+      Interpolate1022(wav_sine1024, phase_) :
+      range_ == GENERATOR_RANGE_MEDIUM ?
+      Interpolate626(wav_sine64, phase_) :
+      Interpolate428(wav_sine16, phase_);
+
+    int32_t tn1 = 32768;
+    int32_t tn = sine;
+
     for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
 
       smoothed_envelope_[harm] += (envelope[harm] - smoothed_envelope_[harm]) >> 4;
       gain += smoothed_envelope_[harm];
 
-      uint32_t phase = phase_;
-      switch (mode_) {
-      case GENERATOR_MODE_AR:
-        phase = phase_ << harm;
-        break;
-      case GENERATOR_MODE_LOOPING:
-        phase = phase_ * (harm + 1);
-        break;
-      case GENERATOR_MODE_AD:
-        phase = phase_ * ((harm << 1) + 1);
-        break;
-      }
+      bipolar += (tn * smoothed_envelope_[harm]) >> 16;
+      unipolar += (tn * smoothed_envelope_[harm_permut_[harm]]) >> 16;
 
-      phase += ((harm & 1 ? center1_ : center2_) << 15) * harm;
-
-      // decimate the phase, as set by the Range button
-      if (range_ == GENERATOR_RANGE_LOW)
-	phase = (phase >> 28) << 28;
-      else if (range_ == GENERATOR_RANGE_MEDIUM)
-        phase = (phase >> 26) << 26;
-
-      int32_t sine = (Interpolate115(wav_bump_control, phase >> 16) << 1) - 32768;
-      bipolar += (((sine
-                    * smoothed_envelope_[harm]) >> 16)
-                  * antialias[harm]) >> 16;
-      unipolar += (((sine
-                     * smoothed_envelope_[harm_permut_[harm]]) >> 16)
-                   * antialias[harm]) >> 16;
+      int32_t t = tn;
+      tn = ((sine * tn) >> 14) - tn1;
+      tn1 = t;
     }
 
     GeneratorSample s;
 
-    // we normalize the values
+    // normalization
     if (gain <= 65536)
       gain = 65536;		// avoids extreme amplifications
     gain += 256;
 
-    s.bipolar = ((bipolar << 13) / gain) << 3;
-    s.unipolar = (((unipolar << 13) / gain) << 3) + 32768;
+    s.bipolar = ((bipolar << 11) / gain) << 5;
+    s.unipolar = (((unipolar << 11) / gain) << 5) + 32768;
     s.flags = 0;
     if (s.bipolar > 0) {
       s.flags |= FLAG_END_OF_ATTACK;
