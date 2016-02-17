@@ -115,8 +115,6 @@ void Generator::Init() {
   local_osc_phase_increment_ = phase_increment_;
   target_phase_increment_ = phase_increment_;
 
-  center1_ = center2_ = 0;
-
   RandomizeHarmonicDistribution();
 }
 
@@ -943,8 +941,10 @@ void Generator::FillBufferHarmonic() {
     // 0 < x < 65535
     int32_t x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
 
-    int32_t peak1 = ComputePeak(center1_, width, x);
-    int32_t peak2 = ComputePeak(center2_, width, x);
+    int32_t center1 = slope_ + 32768;
+    int32_t center2 = shape_ + 32768;
+    int32_t peak1 = ComputePeak(center1, width, x);
+    int32_t peak2 = ComputePeak(center2, width, x);
     peak1 /= 2;                 // second peak has half the gain
 
     int32_t a = peak1 > peak2 ? peak1 : peak2;
@@ -1027,10 +1027,6 @@ void Generator::FillBufferHarmonic() {
       int32_t phase_error = local_osc_phase_ - phase_;
       phase_increment_ = local_osc_phase_increment_ + (phase_error >> 13);
     }
-
-    // TODO!!! ramp
-    center1_ += ((slope_ + 32768) - center1_) >> 4;
-    center2_ += ((shape_ + 32768) - center2_) >> 4;
 
     int32_t bipolar = 0;
     int32_t unipolar = 0;

@@ -300,12 +300,11 @@ class Generator {
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 
-  static const uint8_t kNumHarmonics = 38;
+  static const uint8_t kNumHarmonics = 40;
 
   uint16_t envelope_[kNumHarmonics];
   uint16_t envelope_increment_[kNumHarmonics];
   uint8_t harm_permut_[kNumHarmonics];
-  int32_t center1_, center2_;
 
   void RandomizeDelay();
   void RandomizeDivider();
