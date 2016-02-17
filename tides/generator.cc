@@ -1053,7 +1053,17 @@ void Generator::FillBufferHarmonic() {
       unipolar += (tn * envelope_[harm_permut_[harm]]) >> 16;
 
       int32_t t = tn;
-      tn = ((sine * tn) >> 14) - tn1;
+      if (mode_ == GENERATOR_MODE_AR) { // power of two harmonics
+        tn = 2 * ((tn * tn) >> 15) - 32768;
+      } else if (mode_ == GENERATOR_MODE_AD) { // odd harmonics
+        tn = ((sine * tn) >> 14) - tn1;
+        tn1 = t;
+        t = tn;
+        tn = ((sine * tn) >> 14) - tn1;
+      } else { // GENERATOR_MODE_LOOPING // all harmonics
+        tn = ((sine * tn) >> 14) - tn1;
+      }
+
       tn1 = t;
     }
 
