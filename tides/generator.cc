@@ -952,12 +952,6 @@ void Generator::FillBufferHarmonic() {
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
-    uint32_t pi = phase_increment_ >> 16;
-    pi =
-      mode_ == GENERATOR_MODE_AR ? pi << harm :
-      mode_ == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
-      mode_ == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
-      UINT32_MAX;
     // approximate dB response
     z = (z * z) >> 16; // 35=>34
 
@@ -967,7 +961,14 @@ void Generator::FillBufferHarmonic() {
     const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
     const uint32_t kCutoffHigh = UINT16_MAX / 2;
 
-    if (pi > kCutoffHigh)
+    uint32_t pi = phase_increment_ >> 16;
+    pi =
+      mode_ == GENERATOR_MODE_AR ? pi << harm :
+      mode_ == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
+      mode_ == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
+      UINT32_MAX;
+
+    if (pi > kCutoffHigh || pi == 0)
       envelope[harm] = 0;
     else if (pi > kCutoffLow)
       envelope[harm] = envelope[harm] * (kCutoffHigh - pi)
