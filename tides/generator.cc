@@ -958,6 +958,8 @@ void Generator::FillBufferHarmonic() {
       mode_ == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
       mode_ == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
       UINT32_MAX;
+    // approximate dB response
+    z = (z * z) >> 16; // 35=>34
 
     envelope[harm] = static_cast<uint16_t>(z);
 
