@@ -97,7 +97,7 @@ class Oliverb {
     /* Set frequency of LFOs */
     float period = 1.0f / (mod_rate_ + 0.001f) * 32000.0f;
     for (int i=0; i<9; i++)
-      lfo_[i].set_period((uint32_t)period);
+      lfo_[i].set_slope((uint32_t)period);
 
     while (size--) {
       engine_.Start(&c);
