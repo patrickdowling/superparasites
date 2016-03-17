@@ -929,9 +929,6 @@ int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
     peak = 32768 + ((center - x) << 15) / width;
   else
     peak = 0;
-  peak <<= 1;
-  // TODO plus propre
-  CONSTRAIN(peak, 0, 65535);
   return peak;
 }
 
@@ -959,6 +956,7 @@ void Generator::FillBufferHarmonic() {
   }
 
   uint16_t envelope[kNumHarmonics];
+  uint16_t antialias[kNumHarmonics];
 
   // pre-compute spectral envelope
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
@@ -977,7 +975,6 @@ void Generator::FillBufferHarmonic() {
     peak2 /= 2;                 // second peak has half the gain
 
     int32_t a = peak1 > peak2 ? peak1 : peak2;
-    CONSTRAIN(a, 0, INT16_MAX); // TODO devrait pas arriver!
     int32_t b = 32767 - a;
     int32_t z = b + (((a - b) * reverse) >> 16);
 
@@ -998,10 +995,12 @@ void Generator::FillBufferHarmonic() {
       UINT32_MAX;
 
     if (pi > kCutoffHigh || pi == 0)
-      envelope[harm] = 0;
+      antialias[harm] = 0;
     else if (pi > kCutoffLow)
-      envelope[harm] = envelope[harm] * (kCutoffHigh - pi)
+      antialias[harm] = UINT16_MAX * (kCutoffHigh - pi)
         / (kCutoffHigh - kCutoffLow);
+    else
+      antialias[harm] = UINT16_MAX;
 
     envelope_increment_[harm] = (envelope[harm] - envelope_[harm]) / size;
   }
@@ -1078,8 +1077,8 @@ void Generator::FillBufferHarmonic() {
       envelope_[harm] += envelope_increment_[harm];
       gain += envelope_[harm];
 
-      bipolar += (tn * envelope_[harm]) >> 16;
-      unipolar += (tn * envelope_[harm_permut_[harm]]) >> 16;
+      bipolar += (((tn * envelope_[harm]) >> 16) * antialias[harm]) >> 16;
+      unipolar += (((tn * envelope_[harm_permut_[harm]]) >> 16) * antialias[harm]) >> 16;
 
       int32_t t = tn;
       if (mode == GENERATOR_MODE_AR) { // power of two harmonics
