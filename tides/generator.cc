@@ -999,7 +999,7 @@ void Generator::FillBufferHarmonic() {
       mode == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
       UINT32_MAX;
 
-    if (pi > kCutoffHigh || pi == 0)
+    if (pi > kCutoffHigh)
       antialias[harm] = 0;
     else if (pi > kCutoffLow)
       antialias[harm] = UINT16_MAX * (kCutoffHigh - pi)
