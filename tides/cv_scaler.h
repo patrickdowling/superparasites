@@ -123,20 +123,6 @@ class CvScaler {
   inline int16_t slope() const { return slope_; }
   inline int16_t smoothness() const { return smoothness_; }
   inline int16_t pitch() {
-    int32_t attenuverter_value = attenuverter_ - 32768;
-    int32_t attenuverter_sign = 1;
-    if (attenuverter_value < 0) {
-      attenuverter_value = -attenuverter_value - 1;
-      attenuverter_sign = - 1;
-    }
-    attenuverter_value = attenuverter_sign * static_cast<int32_t>(
-        stmlib::Interpolate88(lut_attenuverter_curve, attenuverter_value << 1));
-    
-    int32_t fm = (fm_ - calibration_data_.fm_offset) * \
-        calibration_data_.fm_scale >> 15;
-    fm = fm * attenuverter_value >> 16;
-    
-
     if (quantize_) {
       // Apply hysteresis and filtering to ADC reading to prevent
       // jittery quantization.
@@ -161,9 +147,25 @@ class CvScaler {
         quantize_lut[quantize_ - 1][semi];
     }
 
-    pitch += fm;
     return pitch;
   }
+
+  inline int16_t fm() {
+    int32_t attenuverter_value = attenuverter_ - 32768;
+    int32_t attenuverter_sign = 1;
+    if (attenuverter_value < 0) {
+      attenuverter_value = -attenuverter_value - 1;
+      attenuverter_sign = - 1;
+    }
+    attenuverter_value = attenuverter_sign * static_cast<int32_t>(
+        stmlib::Interpolate88(lut_attenuverter_curve, attenuverter_value << 1));
+    int32_t fm = (fm_ - calibration_data_.fm_offset) *  \
+      calibration_data_.fm_scale >> 15;
+    fm = fm * attenuverter_value >> 16;
+
+    return fm;
+  }
+
 
   inline uint16_t raw_attenuverter() const { return attenuverter_; }
 

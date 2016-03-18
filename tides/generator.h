@@ -100,14 +100,15 @@ class Generator {
     }
   }
   
-  void set_pitch_high_range(int16_t pitch) {
+  void set_pitch_high_range(int16_t pitch, int16_t fm) {
     if (sync_) {
       ComputeFrequencyRatio(pitch);
     }
     pitch_ = pitch + (12 << 7);
+    fm_ = fm;
   }
 
-  void set_pitch(int16_t pitch) {
+  void set_pitch(int16_t pitch, int16_t fm) {
     if (sync_) {
       ComputeFrequencyRatio(pitch);
     }
@@ -117,6 +118,7 @@ class Generator {
       pitch -= (12 << 7);  // One extra octave of super LF stuff!
     }
     pitch_ = pitch;
+    fm_ = fm;
   }
   
   void set_shape(int16_t shape) {
@@ -212,7 +214,7 @@ class Generator {
     bi_lp_state_[0] = bi_lp_state_[1] = 0;
   }
 
-  uint32_t ComputePhaseIncrement(int16_t pitch);
+  uint32_t ComputePhaseIncrement(int16_t pitch, int16_t fm);
   int16_t ComputePitch(uint32_t phase_increment);
   int32_t ComputeCutoffFrequency(int16_t pitch, int16_t smoothness);
   void ComputeFrequencyRatio(int16_t pitch);
@@ -227,6 +229,7 @@ class Generator {
   uint32_t clock_divider_;
   
   int16_t pitch_;
+  int16_t fm_;
   int16_t previous_pitch_;
   int16_t shape_;
   int16_t slope_;

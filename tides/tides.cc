@@ -147,9 +147,9 @@ int main(void) {
       }
       /* in harmonic mode, the range button sets the waveform, not the pitch */
       if (generator.feature_mode_ == Generator::FEAT_MODE_HARMONIC) {
-        generator.set_pitch_high_range(cv_scaler.pitch());
+        generator.set_pitch_high_range(cv_scaler.pitch(), cv_scaler.fm());
       } else {
-        generator.set_pitch(cv_scaler.pitch());
+        generator.set_pitch(cv_scaler.pitch(), cv_scaler.fm());
       }
       if (generator.feature_mode_ == Generator::FEAT_MODE_RANDOM) {
         generator.set_pulse_width(cv_scaler.raw_attenuverter());

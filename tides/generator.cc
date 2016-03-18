@@ -73,7 +73,7 @@ void Generator::Init() {
   range_ = GENERATOR_RANGE_HIGH;
   clock_divider_ = 1;
   phase_ = 0;
-  set_pitch(60 << 7);
+  set_pitch(60 << 7, 0);
   output_buffer_.Init();
   input_buffer_.Init();
   pattern_predictor_.Init();
@@ -144,7 +144,7 @@ void Generator::ComputeFrequencyRatio(int16_t pitch) {
   }
 }
 
-uint32_t Generator::ComputePhaseIncrement(int16_t pitch) {
+uint32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
   int16_t num_shifts = 0;
   while (pitch < 0) {
     pitch += kOctave;
@@ -160,9 +160,14 @@ uint32_t Generator::ComputePhaseIncrement(int16_t pitch) {
   uint32_t phase_increment = a + ((b - a) * (pitch & 0xf) >> 4);
   // Compensate for downsampling
   phase_increment *= clock_divider_;
-  return num_shifts >= 0
+  phase_increment = num_shifts >= 0
       ? phase_increment << num_shifts
       : phase_increment >> -num_shifts;
+  int32_t fm_incr = fm << 14;
+  if (fm_incr < 0 && phase_increment < static_cast<uint32_t>(-fm_incr))
+    return UINT32_MAX - (phase_increment + fm_incr);
+  else
+    return phase_increment + fm_incr;
 }
 
 int16_t Generator::ComputePitch(uint32_t phase_increment) {
@@ -309,7 +314,7 @@ void Generator::FillBufferAudioRate() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_);
+    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
@@ -565,7 +570,7 @@ void Generator::FillBufferControlRate() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_);
+    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
@@ -769,7 +774,7 @@ void Generator::FillBufferWavetable() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_);
+    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
   }
 
   uint32_t phase = phase_;
@@ -950,7 +955,7 @@ void Generator::FillBufferHarmonic() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_);
+    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
@@ -1203,7 +1208,7 @@ void Generator::FillBufferRandom() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_);
+    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
