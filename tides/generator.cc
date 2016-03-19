@@ -73,6 +73,7 @@ void Generator::Init() {
   range_ = GENERATOR_RANGE_HIGH;
   clock_divider_ = 1;
   phase_ = 0;
+  final_gain_ = 0;
   set_pitch(60 << 7, 0);
   output_buffer_.Init();
   input_buffer_.Init();
@@ -367,11 +368,6 @@ void Generator::FillBufferAudioRate() {
   const int16_t* shape_2 = waveform_table[wave_index + 1];
   uint16_t shape_xfade = shape << 2;
 
-  // cut out the output completely when smoothness is fully off.
-  uint32_t final_gain = smoothness_ + 32768;
-  CONSTRAIN(final_gain, 0, UINT16_MAX >> 4);
-  final_gain <<= 4;
-
   int32_t frequency = ComputeCutoffFrequency(pitch_, smoothness_);
   int32_t f_a = lut_cutoff[frequency >> 7] >> 16;
   int32_t f_b = lut_cutoff[(frequency >> 7) + 1] >> 16;
@@ -404,7 +400,15 @@ void Generator::FillBufferAudioRate() {
   if (end_of_attack < phase_increment) {
     end_of_attack = phase_increment;
   }
-  
+
+  // cut out the output completely when smoothness is fully off.
+  uint16_t final_gain_end = smoothness_ + 32768;
+  CONSTRAIN(final_gain_end, 200, (UINT16_MAX >> 3) + 200);
+  final_gain_end -= 200;
+  final_gain_end <<= 3;
+
+  uint16_t final_gain_increment = (final_gain_end - final_gain_) / size;
+
   while (size--) {
     ++sync_counter_;
     uint8_t control = input_buffer_.ImmediateRead();
@@ -412,7 +416,7 @@ void Generator::FillBufferAudioRate() {
     // When freeze is high, discard any start/reset command.
     if (!(control & CONTROL_FREEZE)) {
       if (control & CONTROL_GATE_RISING) {
-	phase = 0;
+        phase = 0;
         running_ = true;
       } else if (mode_ != GENERATOR_MODE_LOOPING && wrap) {
         phase = 0;
@@ -422,7 +426,7 @@ void Generator::FillBufferAudioRate() {
       // on clock falling edge
       if (!(control & CONTROL_CLOCK) &&
 	  previous_clock_) {
-	sub_phase_ = 0;
+        sub_phase_ = 0;
       }
       previous_clock_ = control & CONTROL_CLOCK;
     }
@@ -504,7 +508,7 @@ void Generator::FillBufferAudioRate() {
     original = bi_lp_state_1;
     folded = Interpolate1022(wav_bipolar_fold, original * wf_gain + (1UL << 31));
     sample.bipolar = original + ((folded - original) * wf_balance >> 15);
-    sample.bipolar = (sample.bipolar * final_gain) >> 16;
+    sample.bipolar = (sample.bipolar * final_gain_) >> 16;
 
     // Unipolar version --------------------------------------------------------
     ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
@@ -526,7 +530,7 @@ void Generator::FillBufferAudioRate() {
     original = uni_lp_state_1 << 1;
     folded = Interpolate1022(wav_unipolar_fold, original * wf_gain) << 1;
     sample.unipolar = original + ((folded - original) * wf_balance >> 15);
-    sample.unipolar = (sample.unipolar * final_gain) >> 16;
+    sample.unipolar = (sample.unipolar * final_gain_) >> 16;
 #else
     sample.bipolar = (phase >> 16) - 32768;
     sample.unipolar = phase >> 16;
@@ -549,8 +553,10 @@ void Generator::FillBufferAudioRate() {
       sub_phase_ += phase_increment >> 1;
       wrap = phase < phase_increment;
     }
+
+    final_gain_ += final_gain_increment;
   }
-  
+
   uni_lp_state_[0] = uni_lp_state_0;
   uni_lp_state_[1] = uni_lp_state_1;
   bi_lp_state_[0] = bi_lp_state_0;

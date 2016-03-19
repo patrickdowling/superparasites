@@ -236,6 +236,7 @@ class Generator {
   int32_t smoothed_slope_;
   int16_t smoothness_;
   bool antialiasing_;
+  uint16_t final_gain_;
   
   uint32_t phase_;
   int32_t phase_increment_;
