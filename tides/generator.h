@@ -287,7 +287,7 @@ class Generator {
   static const FrequencyRatio frequency_ratios_[];
   static const int16_t num_frequency_ratios_;
 
-  static const uint8_t kNumHarmonics = 30;
+  static const uint8_t kNumHarmonics = 28;
   static const uint8_t kNumHarmonicsPowers = 12;
 
   uint16_t envelope_[kNumHarmonics];
