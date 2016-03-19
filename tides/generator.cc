@@ -452,7 +452,8 @@ void Generator::FillBufferAudioRate() {
       // Slow phase realignment between the master oscillator and the local
       // oscillator.
       int32_t phase_error = local_osc_phase_ - phase;
-      phase_increment = local_osc_phase_increment_ + (phase_error >> 13);
+      phase_increment = local_osc_phase_increment_ + (phase_error >> 13)
+        + (fm_ << 14);
     }
     
     if (control & CONTROL_FREEZE) {
@@ -637,7 +638,7 @@ void Generator::FillBufferControlRate() {
         if (increment > 0x80000000) {
           increment = 0x80000000;
         }
-        phase_increment = static_cast<uint32_t>(increment);
+        phase_increment = static_cast<uint32_t>(increment) + (fm_ << 14);
       }
       sync_counter_ = 0;
     }
@@ -841,7 +842,7 @@ void Generator::FillBufferWavetable() {
             if (increment > 0x80000000) {
               increment = 0x80000000;
             }
-            phase_increment = static_cast<uint32_t>(increment);
+            phase_increment = static_cast<uint32_t>(increment) + (fm_ << 14);
           }
           sync_counter_ = 0;
         }
@@ -1043,7 +1044,7 @@ void Generator::FillBufferHarmonic() {
             if (increment > 0x80000000) {
               increment = 0x80000000;
             }
-            target_phase_increment_ = static_cast<uint32_t>(increment);
+            target_phase_increment_ = static_cast<uint32_t>(increment) + (fm_ << 14);
             local_osc_phase_ = 0;
           }
           sync_counter_ = 0;
@@ -1254,7 +1255,7 @@ void Generator::FillBufferRandom() {
         if (increment > 0x80000000) {
           increment = 0x80000000;
         }
-        phase_increment_ = static_cast<uint32_t>(increment);
+        phase_increment_ = static_cast<uint32_t>(increment) + (fm_ << 14);
       }
       sync_counter_ = 0;
     }
