@@ -144,7 +144,7 @@ void Generator::ComputeFrequencyRatio(int16_t pitch) {
   }
 }
 
-uint32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
+int32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
   int16_t num_shifts = 0;
   while (pitch < 0) {
     pitch += kOctave;
@@ -155,24 +155,21 @@ uint32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
     ++num_shifts;
   }
   // Lookup phase increment
-  uint32_t a = lut_increments[pitch >> 4];
-  uint32_t b = lut_increments[(pitch >> 4) + 1];
-  uint32_t phase_increment = a + ((b - a) * (pitch & 0xf) >> 4);
+  int32_t a = lut_increments[pitch >> 4];
+  int32_t b = lut_increments[(pitch >> 4) + 1];
+  int32_t phase_increment = a + ((b - a) * (pitch & 0xf) >> 4);
   // Compensate for downsampling
   phase_increment *= clock_divider_;
   phase_increment = num_shifts >= 0
       ? phase_increment << num_shifts
       : phase_increment >> -num_shifts;
   int32_t fm_incr = fm << 14;
-  if (fm_incr < 0 && phase_increment < static_cast<uint32_t>(-fm_incr))
-    return UINT32_MAX - (phase_increment + fm_incr);
-  else
-    return phase_increment + fm_incr;
+  return phase_increment + fm_incr;
 }
 
-int16_t Generator::ComputePitch(uint32_t phase_increment) {
-  uint32_t first = lut_increments[0];
-  uint32_t last = lut_increments[LUT_INCREMENTS_SIZE - 2];
+int16_t Generator::ComputePitch(int32_t phase_increment) {
+  int32_t first = lut_increments[0];
+  int32_t last = lut_increments[LUT_INCREMENTS_SIZE - 2];
   int16_t pitch = 0;
   
   if (phase_increment == 0) {
@@ -992,12 +989,12 @@ void Generator::FillBufferHarmonic() {
     const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
     const uint32_t kCutoffHigh = UINT16_MAX / 2;
 
-    uint32_t pi = phase_increment_ >> 16;
+    uint32_t pi = abs(phase_increment_) >> 16;
     pi =
       mode == GENERATOR_MODE_AR ? pi << harm :
       mode == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
-      mode == GENERATOR_MODE_AD ? pi * ((harm << 1) + 1) :
-      UINT32_MAX;
+      // mode == GENERATOR_MODE_AD ?
+      pi * ((harm << 1) + 1);
 
     if (pi > kCutoffHigh)
       antialias[harm] = 0;
@@ -1263,7 +1260,7 @@ void Generator::FillBufferRandom() {
     }
     
     // on significant slope or pitch variation
-    if (phase_ < phase_increment_ &&
+    if (phase_ < abs(phase_increment_) &&
 	(abs(slope_ - old_slope_) > 4096 ||
 	 abs(pitch_ - old_pitch_) > 512)) {
       old_slope_ = slope_;
@@ -1276,7 +1273,7 @@ void Generator::FillBufferRandom() {
     }
 
     // on delayed phase reset
-    if (delayed_phase_ < delayed_phase_increment_) {
+    if (delayed_phase_ < abs(delayed_phase_increment_)) {
       RandomizeDelay();
 
       // compute next threshold
@@ -1352,7 +1349,7 @@ void Generator::FillBufferRandom() {
      * oscillator */
 
     // on main phase reset
-    if (phase_ < phase_increment_) {
+    if (phase_ < abs(phase_increment_)) {
     }
 
     // just before main phase reset

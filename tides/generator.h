@@ -214,8 +214,8 @@ class Generator {
     bi_lp_state_[0] = bi_lp_state_[1] = 0;
   }
 
-  uint32_t ComputePhaseIncrement(int16_t pitch, int16_t fm);
-  int16_t ComputePitch(uint32_t phase_increment);
+  int32_t ComputePhaseIncrement(int16_t pitch, int16_t fm);
+  int16_t ComputePitch(int32_t phase_increment);
   int32_t ComputeCutoffFrequency(int16_t pitch, int16_t smoothness);
   void ComputeFrequencyRatio(int16_t pitch);
 
@@ -238,7 +238,7 @@ class Generator {
   bool antialiasing_;
   
   uint32_t phase_;
-  uint32_t phase_increment_;
+  int32_t phase_increment_;
   uint32_t sub_phase_;
   uint16_t x_;
   uint16_t y_;
@@ -250,7 +250,7 @@ class Generator {
   uint32_t divider_;
   uint32_t divider_counter_;
   uint32_t delayed_phase_;
-  uint32_t delayed_phase_increment_;
+  int32_t delayed_phase_increment_;
   uint32_t delay_;
   uint32_t delay_counter_;
   int16_t previous_slope_;
@@ -271,8 +271,8 @@ class Generator {
   uint32_t sync_counter_;
   uint32_t sync_edges_counter_;
   uint32_t local_osc_phase_;
-  uint32_t local_osc_phase_increment_;
-  uint32_t target_phase_increment_;
+  int32_t local_osc_phase_increment_;
+  int32_t target_phase_increment_;
   uint32_t eor_counter_;
 
   stmlib::PatternPredictor<32, 8> pattern_predictor_;
