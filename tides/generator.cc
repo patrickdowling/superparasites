@@ -309,12 +309,15 @@ void Generator::FillBufferAudioRate() {
   uint8_t size = kBlockSize;
   
   GeneratorSample sample = previous_sample_;
+  int32_t phase_increment_end;
+
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
+    phase_increment_end = phase_increment_;
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
-    local_osc_phase_increment_ = phase_increment_;
-    target_phase_increment_ = phase_increment_;
+    phase_increment_end = ComputePhaseIncrement(pitch_, fm_);
+    local_osc_phase_increment_ = phase_increment_end;
+    target_phase_increment_ = phase_increment_end;
   }
   if (pitch_ < 0) {
     pitch_ = 0;
@@ -386,7 +389,8 @@ void Generator::FillBufferAudioRate() {
   // Load state into registers - saves some memory load/store inside the
   // rendering loop.
   uint32_t phase = phase_;
-  uint32_t phase_increment = phase_increment_;
+  int32_t phase_increment = phase_increment_;
+  int32_t phase_increment_increment = (phase_increment_end - phase_increment_) / size;
   bool wrap = wrap_;
   int32_t uni_lp_state_0 = uni_lp_state_[0];
   int32_t uni_lp_state_1 = uni_lp_state_[1];
@@ -394,10 +398,10 @@ void Generator::FillBufferAudioRate() {
   int32_t bi_lp_state_1 = bi_lp_state_[1];
   
   // Enforce that the EOA pulse is at least 1 sample wide.
-  if (end_of_attack >= phase_increment) {
+  if (end_of_attack >= abs(phase_increment)) {
     end_of_attack -= phase_increment;
   }
-  if (end_of_attack < phase_increment) {
+  if (end_of_attack < abs(phase_increment)) {
     end_of_attack = phase_increment;
   }
 
@@ -551,10 +555,11 @@ void Generator::FillBufferAudioRate() {
     if (running_ && !sustained) {
       phase += phase_increment;
       sub_phase_ += phase_increment >> 1;
-      wrap = phase < phase_increment;
+      wrap = phase < abs(phase_increment);
     }
 
     final_gain_ += final_gain_increment;
+    phase_increment += phase_increment_increment;
   }
 
   uni_lp_state_[0] = uni_lp_state_0;
