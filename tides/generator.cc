@@ -961,12 +961,15 @@ void Generator::FillBufferHarmonic() {
   int32_t reverse = (-smoothness_ << 3) + 32768;
   CONSTRAIN(reverse, 0, UINT16_MAX);
 
+  int32_t phase_increment_end;
+
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
+    phase_increment_end = phase_increment_;
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
-    local_osc_phase_increment_ = phase_increment_;
-    target_phase_increment_ = phase_increment_;
+    phase_increment_end = ComputePhaseIncrement(pitch_, fm_);
+    local_osc_phase_increment_ = phase_increment_end;
+    target_phase_increment_ = phase_increment_end;
   }
 
   uint16_t envelope[kNumHarmonics];
@@ -1001,7 +1004,7 @@ void Generator::FillBufferHarmonic() {
     const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
     const uint32_t kCutoffHigh = UINT16_MAX / 2;
 
-    uint32_t pi = abs(phase_increment_) >> 16;
+    uint32_t pi = abs(phase_increment_end) >> 16;
     pi =
       mode == GENERATOR_MODE_AR ? pi << harm :
       mode == GENERATOR_MODE_LOOPING ? pi * (harm + 1) :
@@ -1018,6 +1021,8 @@ void Generator::FillBufferHarmonic() {
 
     envelope_increment_[harm] = (envelope[harm] - envelope_[harm]) / size;
   }
+
+  int32_t phase_increment_increment = (phase_increment_end - phase_increment_) / size;
 
   while (size--) {
     sync_counter_++;
@@ -1132,6 +1137,7 @@ void Generator::FillBufferHarmonic() {
     output_buffer_.Overwrite(s);
     sub_phase_ += phase_increment_ >> 1;
     phase_ += phase_increment_;
+    phase_increment_ += phase_increment_increment;
   }
 }
 
