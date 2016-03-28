@@ -938,9 +938,9 @@ uint16_t ComputePeak(uint16_t center, uint16_t width, uint16_t x) {
   if (x < center - width)
     peak = 0;
   else if (x < center)
-    peak = 32768 + ((x - center) << 15) / width;
+    peak = 32768 - ((center - x) << 15) / width;
   else if (x < center + width)
-    peak = 32768 + ((center - x) << 15) / width;
+    peak = 32768 - ((x - center) << 15) / width;
   else
     peak = 0;
   return peak;
@@ -951,7 +951,7 @@ void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize;
   
-  uint16_t width = static_cast<uint16_t>(smoothness_ * 2);
+  uint16_t width = static_cast<uint16_t>(smoothness_ << 1);
   width = (width * width) >> 16;
 
   int32_t reverse = (-smoothness_ << 3) + 32768;
@@ -982,8 +982,8 @@ void Generator::FillBufferHarmonic() {
 
     // first peak has half the width
     uint16_t peak1 = ComputePeak(center1, width >> 1, x);
-    uint16_t peak2 = ComputePeak(center2, width, x);
-    peak2 /= 2;                 // second peak has half the gain
+    // second peak has half the gain
+    uint16_t peak2 = ComputePeak(center2, width, x) >> 1;
 
     uint16_t a = peak1 > peak2 ? peak1 : peak2;
     uint16_t b = 32768 - a;
