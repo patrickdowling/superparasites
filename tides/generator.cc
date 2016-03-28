@@ -952,11 +952,8 @@ void Generator::FillBufferHarmonic() {
   uint8_t size = kBlockSize;
   
   // 0 < width < 65535
-  int32_t width = static_cast<int32_t>(smoothness_) * 2;
-  // Scaling:
-  width = width < 0 ? width + 65536 : width * 2 / 3;
-  width = ((width >> 1) * width) >> 15;
-  width += 512;
+  uint16_t width = static_cast<uint16_t>(smoothness_ * 2);
+  width = (width * width) >> 16;
 
   int32_t reverse = (-smoothness_ << 3) + 32768;
   CONSTRAIN(reverse, 0, UINT16_MAX);
