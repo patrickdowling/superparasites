@@ -987,6 +987,8 @@ void Generator::FillBufferHarmonic() {
 
     uint16_t a = peak1 > peak2 ? peak1 : peak2;
     uint16_t b = 32768 - a;
+    b = (b * b) >> 16;          // wider notches
+    b = b * (kNumHarmonics - harm) / kNumHarmonics;
     envelope[harm] = b + (((a - b) * reverse) >> 16);
 
     // Take care of harmonics which phase increment will be > Nyquist
