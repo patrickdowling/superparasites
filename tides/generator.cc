@@ -933,8 +933,8 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
-int32_t ComputePeak(int32_t center, int32_t width, int32_t x) {
-  int32_t peak = 0;            // 0 < peak < 65535
+int32_t ComputePeak(uint16_t center, uint16_t width, int32_t x) {
+  int32_t peak;            // 0 < peak < 65535
   if (x < center - width)
     peak = 0;
   else if (x < center)
@@ -981,8 +981,8 @@ void Generator::FillBufferHarmonic() {
     else
       x = (static_cast<int32_t>(harm) << 16) / (kNumHarmonics-1);
 
-    int32_t center1 = shape_ + 32768;
-    int32_t center2 = slope_ + 32768;
+    uint16_t center1 = shape_ + 32768;
+    uint16_t center2 = slope_ + 32768;
     int32_t peak1 = ComputePeak(center1, width, x);
     // second peak has twice the width
     int32_t peak2 = ComputePeak(center2, width << 1, x);
