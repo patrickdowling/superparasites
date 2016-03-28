@@ -933,8 +933,8 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
-int32_t ComputePeak(uint16_t center, int32_t width, uint16_t x) {
-  int32_t peak;            // 0 < peak < 65535
+uint16_t ComputePeak(uint16_t center, int32_t width, uint16_t x) {
+  uint16_t peak;
   if (x < center - width)
     peak = 0;
   else if (x < center)
@@ -951,7 +951,6 @@ void Generator::FillBufferHarmonic() {
 
   uint8_t size = kBlockSize;
   
-  // 0 < width < 65535
   uint16_t width = static_cast<uint16_t>(smoothness_ * 2);
   width = (width * width) >> 16;
 
@@ -978,17 +977,17 @@ void Generator::FillBufferHarmonic() {
   // pre-compute spectral envelope
   for (uint8_t harm=0; harm<kNumHarmonics; harm++) {
     uint16_t x = mode == GENERATOR_MODE_AR ?
-      (static_cast<int32_t>(harm) << 16) / (kNumHarmonicsPowers-1) :
-      (static_cast<int32_t>(harm) << 16) / (kNumHarmonics);
+      (harm << 16) / kNumHarmonicsPowers :
+      (harm << 16) / kNumHarmonics;
 
-    int32_t peak1 = ComputePeak(center1, width, x);
+    uint16_t peak1 = ComputePeak(center1, width, x);
     // second peak has twice the width
-    int32_t peak2 = ComputePeak(center2, width << 1, x);
+    uint16_t peak2 = ComputePeak(center2, width << 1, x);
     peak2 /= 2;                 // second peak has half the gain
 
-    int32_t a = peak1 > peak2 ? peak1 : peak2;
-    int32_t b = 32767 - a;
-    int32_t z = b + (((a - b) * reverse) >> 16);
+    uint16_t a = peak1 > peak2 ? peak1 : peak2;
+    uint16_t b = 32768 - a;
+    uint16_t z = b + (((a - b) * reverse) >> 16);
 
     // approximate dB response
     z = (z * z) >> 16; // 35=>34
