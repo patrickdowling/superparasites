@@ -933,7 +933,7 @@ void Generator::FillBufferWavetable() {
   bi_lp_state_[1] = lp_state_1;
 }
 
-uint16_t ComputePeak(uint16_t center, int32_t width, uint16_t x) {
+uint16_t ComputePeak(uint16_t center, uint16_t width, uint16_t x) {
   uint16_t peak;
   if (x < center - width)
     peak = 0;
@@ -980,19 +980,14 @@ void Generator::FillBufferHarmonic() {
       (harm << 16) / kNumHarmonicsPowers :
       (harm << 16) / kNumHarmonics;
 
-    uint16_t peak1 = ComputePeak(center1, width, x);
-    // second peak has twice the width
-    uint16_t peak2 = ComputePeak(center2, width << 1, x);
+    // first peak has half the width
+    uint16_t peak1 = ComputePeak(center1, width >> 1, x);
+    uint16_t peak2 = ComputePeak(center2, width, x);
     peak2 /= 2;                 // second peak has half the gain
 
     uint16_t a = peak1 > peak2 ? peak1 : peak2;
     uint16_t b = 32768 - a;
-    uint16_t z = b + (((a - b) * reverse) >> 16);
-
-    // approximate dB response
-    z = (z * z) >> 16; // 35=>34
-
-    envelope[harm] = static_cast<uint16_t>(z);
+    envelope[harm] = b + (((a - b) * reverse) >> 16);
 
     // Take care of harmonics which phase increment will be > Nyquist
     const uint32_t kCutoffLow = UINT16_MAX / 2 - UINT16_MAX / 16;
