@@ -1071,7 +1071,7 @@ void Generator::FillBufferHarmonic() {
     int32_t unipolar = 0;
     int32_t gain = 0;
 
-    int32_t sine = range_ == GENERATOR_RANGE_HIGH ?
+    int16_t sine = range_ == GENERATOR_RANGE_HIGH ?
       Interpolate1121(wav_sine2048, phase_) :
       range_ == GENERATOR_RANGE_MEDIUM ?
       Interpolate626(wav_sine64, phase_) :
@@ -1114,8 +1114,8 @@ void Generator::FillBufferHarmonic() {
       gain = 65536;		// avoids extreme amplifications
     gain += 256;
 
-    s.bipolar = ((bipolar << 11) / gain) << 5;
-    s.unipolar = (((unipolar << 11) / gain) << 5) + 32768;
+    s.bipolar = ((bipolar << 13) / gain) << 3;
+    s.unipolar = (((unipolar << 13) / gain) << 3) + 32768;
     s.flags = 0;
     if (s.bipolar > 0) {
       s.flags |= FLAG_END_OF_ATTACK;
