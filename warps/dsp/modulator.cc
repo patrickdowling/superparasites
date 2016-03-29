@@ -566,26 +566,20 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static float lp_time = 0.0f;
 
   const size_t kMinDelay = 80;
-  
+
   float time = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
-    * previous_parameters_.modulation_parameter
-    * previous_parameters_.modulation_parameter
-    + kMinDelay;
+    * previous_parameters_.modulation_parameter + kMinDelay;
   float time_end = static_cast<float>(DELAY_SIZE - 1 - kMinDelay)
-    * parameters_.modulation_parameter
-    * parameters_.modulation_parameter
-    + kMinDelay;
-  
+    * parameters_.modulation_parameter + kMinDelay;
+  float time_increment = (time_end - time) / static_cast<float>(size);
+
   float fb = previous_parameters_.channel_drive[0];
   float fb_end = parameters_.channel_drive[0];
+  float fb_increment = (fb_end - fb) / static_cast<float>(size);
 
   float drywet = previous_parameters_.channel_drive[1];
   float drywet_end = parameters_.channel_drive[1];
-
-  float step = 1.0f / static_cast<float>(size);
-  float time_increment = (time_end - time) * step;
-  float fb_increment = (fb_end - fb) * step;
-  float drywet_increment = (drywet_end - drywet) * step;
+  float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
@@ -631,6 +625,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_r = static_cast<float>(feedback.r) / 32768.0f * fb * 1.1f;
     }
 
+    // write to buffer
     buffer[cursor].l = Clip16((in_l + fb_l) * 32768.0f);
     buffer[cursor].r = Clip16((in_r + fb_r) * 32768.0f);
 
@@ -654,8 +649,11 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     float wet_l = static_cast<float>(feedback.l) / 32768.0f;
     float wet_r = static_cast<float>(feedback.r) / 32768.0f;
 
-    output->l = Clip16(((1.0f - drywet) * in_l + drywet * wet_l) * 32768.0f);
-    output->r = Clip16(((1.0f - drywet) * in_r + drywet * wet_r) * 32768.0f);
+    float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
+    float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
+
+    output->l = Clip16((fade_out * in_l + fade_in * wet_l) * 32768.0f);
+    output->r = Clip16((fade_out * in_r + fade_in * wet_r) * 32768.0f);
 
     time += time_increment;
     fb += fb_increment;
