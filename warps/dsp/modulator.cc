@@ -629,11 +629,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].l = Clip16((in_l + fb_l) * 32768.0f);
     buffer[cursor].r = Clip16((in_r + fb_r) * 32768.0f);
 
-    if (parameters_.carrier_shape == 0)
-      output->r = feedback.r;
-
+    // read from buffer
     ONE_POLE(lp_time, time, 0.001f);
-    
     CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 2);
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
@@ -656,6 +653,10 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     output->r = Clip16((fade_out * in_r + fade_in * wet_r) * 32768.0f);
 
     time += time_increment;
+    // if open feedback loop, AUX is the wet signal
+    if (parameters_.carrier_shape == 0)
+      output->r = feedback.r;
+
     fb += fb_increment;
     drywet += drywet_increment;
     input++;
