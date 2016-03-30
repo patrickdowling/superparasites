@@ -581,16 +581,17 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float drywet_end = parameters_.channel_drive[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
+  // float rate = parameters_.raw_algorithm;
+
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
 
-  ShortFrame *in = input;
   size_t cu = cursor;
 
   for (size_t i=0; i<size; i++) {
     
-    float in_l = static_cast<float>(input->l) / 32768.0f;
-    float in_r = static_cast<float>(input->r) / 32768.0f;
+    float in_l = static_cast<float>(input[i].l) / 32768.0f;
+    float in_r = static_cast<float>(input[i].r) / 32768.0f;
 
     float fb_l;
     float fb_r;
@@ -634,12 +635,10 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     buffer[cursor].r = Clip16((in_r + fb_r) * 32768.0f);
 
     fb += fb_increment;
-    input++;
     cursor = (cursor + 1) % DELAY_SIZE;
   }
 
   // restore values prior to loop
-  input = in;
   cursor = cu;
 
   for (size_t i=0; i<size; i++) {
