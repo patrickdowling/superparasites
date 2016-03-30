@@ -581,12 +581,14 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float drywet_end = parameters_.channel_drive[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
+  float rate = previous_parameters_.modulation_algorithm;
+  // float rate_end = parameters_.modulation_algorithm;
+  // float rate_increment = (drywet_end - drywet) / static_cast<float>(size);
+
   // float rate = parameters_.raw_algorithm;
 
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
-
-  size_t cu = cursor;
 
   for (size_t i=0; i<size; i++) {
     
@@ -602,13 +604,11 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb_r = static_cast<float>(feedback[i].l) / 32768.0f * fb * 1.1f;
     } else if (parameters_.carrier_shape == 2) {
       // simulate tape hiss with bitwise mangling and pot noise
-      int16_t seed = static_cast<int16_t>((fb + parameters_.modulation_algorithm) * 10000.0f) & 0b11111;
+      int16_t seed = static_cast<int16_t>((fb + drywet + time + rate) * 32768.0f) & 0b11111;
       feedback[i].l |= seed;
       feedback[i].r |= seed;
-      feedback[i].l += seed;
-      feedback[i].r += ~seed;
-      fb_l = static_cast<float>(feedback[i].l) / 32768.0f;
-      fb_r = static_cast<float>(feedback[i].r) / 32768.0f;
+      fb_l = (static_cast<float>(feedback[i].l) + seed) / 32768.0f;
+      fb_r = (static_cast<float>(feedback[i].r) + ~seed) / 32768.0f;
       // apply filters: fixed high-pass and varying low-pass with attenuation
       filter_[2].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
       filter_[3].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
