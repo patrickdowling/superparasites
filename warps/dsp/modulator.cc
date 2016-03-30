@@ -563,7 +563,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   static size_t cursor = 0;
   static ShortFrame feedback[64];
-  static float lp_time = 0.0f;
+  static float lp_time, sl_time = 0.0f;
 
   const size_t kMinDelay = 80;
 
@@ -631,15 +631,11 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     }
 
     // write to buffer
-    buffer[cursor].l = Clip16((in_l + fb_l) * 32768.0f);
-    buffer[cursor].r = Clip16((in_r + fb_r) * 32768.0f);
+    buffer[(cursor + i) % DELAY_SIZE].l = Clip16((in_l + fb_l) * 32768.0f);
+    buffer[(cursor + i) % DELAY_SIZE].r = Clip16((in_r + fb_r) * 32768.0f);
 
     fb += fb_increment;
-    cursor = (cursor + 1) % DELAY_SIZE;
   }
-
-  // restore values prior to loop
-  cursor = cu;
 
   for (size_t i=0; i<size; i++) {
 
@@ -647,7 +643,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     float in_r = static_cast<float>(input->r) / 32768.0f;
 
     // read from buffer
-    ONE_POLE(lp_time, time, 0.001f);
+    SLEW(sl_time, time, 10.0f);
+    ONE_POLE(lp_time, sl_time, 0.01f);
     CONSTRAIN(lp_time, kMinDelay, DELAY_SIZE - 2);
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
 
