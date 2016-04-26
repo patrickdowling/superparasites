@@ -239,6 +239,7 @@ void GranularProcessor::ProcessGranular(
                                 (0.5f - parameters_.stereo_spread) * 2.0f);
       resonestor_.set_freeze(parameters_.freeze);
       resonestor_.set_harmonicity(1.0f - (parameters_.feedback * 0.5f));
+      resonestor_.set_degrade(parameters_.dry_wet);
 
       float t = parameters_.texture;
       if (t < 0.5f) {
@@ -254,7 +255,8 @@ void GranularProcessor::ProcessGranular(
       }
 
       float d = parameters_.density;
-      d *= d * d;
+      d = (d - 0.05f) / (1 - 0.05f);
+      CONSTRAIN(d, 0.0f, 1.0f);
       d *= d * d;
       d *= d * d;
       resonestor_.set_feedback(d * 20.0f);
@@ -394,6 +396,11 @@ void GranularProcessor::Process(
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
   
+  // bypass dry/wet when in Resonestor (knob is re-used)
+  if (playback_mode_ == PLAYBACK_MODE_RESONESTOR) {
+    parameters_.dry_wet = 1.0f;
+  }
+
   const float post_gain = 1.2f;
   ParameterInterpolator dry_wet_mod(&dry_wet_, parameters_.dry_wet, size);
   for (size_t i = 0; i < size; ++i) {
@@ -579,8 +586,7 @@ void GranularProcessor::Prepare() {
           lut_sine_window_4096, 4096,
           num_channels_, resolution(), sr);
     } else if (playback_mode_ == PLAYBACK_MODE_RESONESTOR) {
-      BufferAllocator allocator(buffer[0], buffer_size[0]);
-      uint16_t* buf = allocator.Allocate<uint16_t>(16384);
+      uint16_t* buf = (uint16_t*)buffer[0];
       resonestor_.Init(buf);
     } else {
       for (int32_t i = 0; i < num_channels_; ++i) {

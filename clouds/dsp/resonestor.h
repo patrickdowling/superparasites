@@ -85,6 +85,7 @@ class Resonestor {
       narrow_[v] = 0.001f;
       damp_[v] = 1.0f;
       harmonicity_[v] = 1.0f;
+      degrade_[v] = 0.0f;
     }
     spread_amount_ = 0.0f;
     stereo_ = 0.0f;
@@ -109,8 +110,8 @@ class Resonestor {
       }
   }
 
-#define MAX_COMB 1000
-#define BASE_PITCH 220.0f
+#define MAX_COMB 2000
+#define BASE_PITCH 261.63f
 
   void Process(FloatFrame* in_out, size_t size) {
 
@@ -119,8 +120,8 @@ class Resonestor {
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
       E::Reserve<200,          /* bc */
-      E::Reserve<4000,          /* bd0 */
-      E::Reserve<4000,          /* bd1 */
+      E::Reserve<8000,          /* bd0 */
+      E::Reserve<8000,          /* bd1 */
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
       E::Reserve<MAX_COMB,
@@ -181,6 +182,11 @@ class Resonestor {
     while (size--) {
       engine_.Start(&c);
 
+      /* slow noise */
+      float noise = 0.0f;
+      noise = Random::GetFloat();
+      noise = noise * 2.0f - 1.0f;
+
       burst_time_--;
       float burst_gain = burst_time_ > 0.0f ? 1.0f : 0.0f;
 
@@ -217,6 +223,9 @@ class Resonestor {
                       comb_feedback_[part][voice] * 0.3f);              \
         float acc;                                                      \
         c.Write(acc);                                                   \
+        float degrade = 1.0f / (degrade_[voice] + 0.0001f) * 500.0f;    \
+        acc = truncf(acc * degrade + noise) / degrade;                  \
+        acc += noise * 0.1f * degrade_[voice];                          \
         acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
         acc = bp1_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
         acc = bp2_[part][voice].Process<FILTER_MODE_BAND_PASS_NORMALIZED>(acc); \
@@ -294,6 +303,10 @@ class Resonestor {
     damp_[voice_] = damp;
   }
 
+  void set_degrade(float degrade) {
+    degrade_[voice_] = degrade;
+  }
+
   void set_trigger(bool trigger) {
     previous_trigger_ = trigger_;
     trigger_ = trigger;
@@ -333,7 +346,7 @@ class Resonestor {
   }
 
  private:
-  typedef FxEngine<16384, FORMAT_16_BIT> E;
+  typedef FxEngine<32768, FORMAT_16_BIT> E;
   E engine_;
 
   /* parameters: */
@@ -343,6 +356,7 @@ class Resonestor {
   float narrow_[2];
   float damp_[2];
   float harmonicity_[2];
+  float degrade_[2];
   float spread_amount_;
   float stereo_;
   float separation_;
