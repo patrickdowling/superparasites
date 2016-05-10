@@ -69,6 +69,9 @@ void Modulator::Init(float sample_rate) {
 
   feedback_sample_ = 0.0f;
 
+  ShortFrame e = {0, 0};
+  fill(delay_buffer_, delay_buffer_+DELAY_SIZE, e);  
+  
   filter_[0].Init();
   filter_[1].Init();
   filter_[2].Init();
