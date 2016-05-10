@@ -181,7 +181,7 @@ void TestEasterEgg() {
     p->raw_algorithm_pot = 0.0f + 0.0f * triangle + 0.0f * filtered_noise;
     p->raw_algorithm_cv = 0.0f;
     p->carrier_shape = 1;
-    p->channel_drive[0] = 0.0f;
+    p->channel_drive[0] = 0.5f;
     p->channel_drive[1] = 1.0f;
     p->modulation_parameter = 0.9f + 0.0f * square;
     p->note = 48.0f + phi;

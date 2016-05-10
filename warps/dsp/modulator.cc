@@ -567,6 +567,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static ShortFrame feedback_buffer[kMaxBlockSize];
   static float lp_time, sl_time = 0.0f;
 
+  static FloatFrame previous_input_sample = {0.0f, 0.0f};
+
   const size_t kMinDelay = 80;
 
   float time = static_cast<float>(DELAY_SIZE - 60 - kMinDelay)
@@ -575,9 +577,9 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     * parameters_.modulation_parameter + kMinDelay;
   float time_increment = (time_end - time) / static_cast<float>(size);
 
-  float fb = previous_parameters_.channel_drive[0];
-  float fb_end = parameters_.channel_drive[0];
-  float fb_increment = (fb_end - fb) / static_cast<float>(size);
+  float feedback = previous_parameters_.channel_drive[0];
+  float feedback_end = parameters_.channel_drive[0];
+  float feedback_increment = (feedback_end - feedback) / static_cast<float>(size);
 
   float drywet = previous_parameters_.channel_drive[1];
   float drywet_end = parameters_.channel_drive[1];
@@ -594,49 +596,54 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   for (size_t i=0; i<size; i++) {
     
-    float in_l = static_cast<float>(input[i].l) / 32768.0f;
-    float in_r = static_cast<float>(input[i].r) / 32768.0f;
-
-    float fb_l;
-    float fb_r;
+    FloatFrame in;
+    in.l = static_cast<float>(input[i].l) / 32768.0f;
+    in.r = static_cast<float>(input[i].r) / 32768.0f;
+    
+    FloatFrame fb;
 
     if (parameters_.carrier_shape == 3) {
       // invert feedback channels (ping-pong)
-      fb_l = static_cast<float>(feedback[i].r) / 32768.0f * fb * 1.1f;
-      fb_r = static_cast<float>(feedback[i].l) / 32768.0f * fb * 1.1f;
+      fb.l = static_cast<float>(feedback_buffer[i].r) / 32768.0f * feedback * 1.1f;
+      fb.r = static_cast<float>(feedback_buffer[i].l) / 32768.0f * feedback * 1.1f;
     } else if (parameters_.carrier_shape == 2) {
       // simulate tape hiss with bitwise mangling and pot noise
-      int16_t seed = static_cast<int16_t>((fb + drywet + time + rate) * 32768.0f) & 0b11111;
-      feedback[i].l |= seed;
-      feedback[i].r |= seed;
-      fb_l = (static_cast<float>(feedback[i].l) + seed) / 32768.0f;
-      fb_r = (static_cast<float>(feedback[i].r) + ~seed) / 32768.0f;
+      int16_t seed = static_cast<int16_t>((feedback + drywet + time + rate) * 32768.0f) & 0b11111;
+      feedback_buffer[i].l |= seed;
+      feedback_buffer[i].r |= seed;
+      fb.l = (static_cast<float>(feedback_buffer[i].l) + seed) / 32768.0f;
+      fb.r = (static_cast<float>(feedback_buffer[i].r) + ~seed) / 32768.0f;
       // apply filters: fixed high-pass and varying low-pass with attenuation
-      filter_[2].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
-      filter_[3].set_f<stmlib::FREQUENCY_FAST>(fb / 16.0f);
-      fb_l = filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_l);
-      fb_r = filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb_r);
-      fb_l = fb * (2.0f - fb) * 1.1f * filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_l);
-      fb_r = fb * (2.0f - fb) * 1.1f * filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb_r);
+      filter_[2].set_f<stmlib::FREQUENCY_FAST>(feedback / 16.0f);
+      filter_[3].set_f<stmlib::FREQUENCY_FAST>(feedback / 16.0f);
+      fb.l = filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb.l);
+      fb.r = filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb.r);
+      fb.l = feedback * (2.0f - feedback) * 1.1f *
+        filter_[2].Process<stmlib::FILTER_MODE_LOW_PASS>(fb.l);
+      fb.r = feedback * (2.0f - feedback) * 1.1f *
+        filter_[3].Process<stmlib::FILTER_MODE_LOW_PASS>(fb.r);
       // apply soft saturation with a bit of bias
-      fb_l = SoftLimit(fb_l * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
-      fb_r = SoftLimit(fb_r * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
+      fb.l = SoftLimit(fb.l * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
+      fb.r = SoftLimit(fb.r * 1.4f + 0.1f) / 1.4f - SoftLimit(0.1f);
     } else if (parameters_.carrier_shape == 0) {
       // open feedback loop
-      fb_l = fb * 1.1f * in_r;
-      fb_r = static_cast<float>(feedback[i].l) / 32768.0f;
-      in_r = 0.0f;
+      fb.l = feedback * 1.1f * in.r;
+      fb.r = static_cast<float>(feedback_buffer[i].l) / 32768.0f;
+      in.r = 0.0f;
     } else {
       // classic dual delay
-      fb_l = static_cast<float>(feedback[i].l) / 32768.0f * fb * 1.1f;
-      fb_r = static_cast<float>(feedback[i].r) / 32768.0f * fb * 1.1f;
+      fb.l = static_cast<float>(feedback_buffer[i].l) / 32768.0f * feedback * 1.1f;
+      fb.r = static_cast<float>(feedback_buffer[i].r) / 32768.0f * feedback * 1.1f;
     }
 
     // write to buffer
-    buffer[(cursor + i) % DELAY_SIZE].l = Clip16((in_l + fb_l) * 32768.0f);
-    buffer[(cursor + i) % DELAY_SIZE].r = Clip16((in_r + fb_r) * 32768.0f);
+    {    
+      buffer[(cursor + i) % DELAY_SIZE].l = Clip16((in.l + fb.l) * 32768.0f);
+      buffer[(cursor + i) % DELAY_SIZE].r = Clip16((in.r + fb.r) * 32768.0f);
+    }
 
-    fb += fb_increment;
+    previous_input_sample = in;
+    feedback += feedback_increment;
   }
 
   for (size_t i=0; i<size; i++) {
@@ -656,12 +663,12 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
 
-    feedback[i].l = a.l + (b.l - a.l) * lp_time_fractional;
-    feedback[i].r = a.r + (b.r - a.r) * lp_time_fractional;
+    feedback_buffer[i].l = a.l + (b.l - a.l) * lp_time_fractional;
+    feedback_buffer[i].r = a.r + (b.r - a.r) * lp_time_fractional;
 
-    float wet_l = static_cast<float>(feedback[i].l) / 32768.0f;
-    float wet_r = static_cast<float>(feedback[i].r) / 32768.0f;
-
+    float wet_l = static_cast<float>(feedback_buffer[i].l) / 32768.0f;
+    float wet_r = static_cast<float>(feedback_buffer[i].r) / 32768.0f;    
+    
     float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
     float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
 
@@ -672,7 +679,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     // if open feedback loop, AUX is the wet signal
     if (parameters_.carrier_shape == 0)
-      output->r = feedback[i].r;
+      output->r = feedback_buffer[i].r;
 
     time += time_increment;
     drywet += drywet_increment;
