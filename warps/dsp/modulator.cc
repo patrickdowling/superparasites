@@ -664,10 +664,14 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     rate += rate_increment;
   }
 
+  rate = previous_parameters_.modulation_algorithm;
+  CONSTRAIN(rate, 0.001f, 1.0f);
+
   for (size_t i=0; i<size; i++) {
 
-    float in_l = static_cast<float>(input->l) / 32768.0f;
-    float in_r = static_cast<float>(input->r) / 32768.0f;
+    FloatFrame in;
+    in.l = static_cast<float>(input[i].l) / 32768.0f;
+    in.r = static_cast<float>(input[i].r) / 32768.0f;
 
     // read from buffer
     SLEW(sl_time, time, 10.0f);
@@ -690,9 +694,9 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
     float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
 
-    output->l = Clip16((fade_out * in_l +
+    output[i].l = Clip16((fade_out * in.l +
                         fade_in * wet_l) * 32768.0f);
-    output->r = Clip16((fade_out * in_r +
+    output[i].r = Clip16((fade_out * in.r +
                         fade_in * wet_r) * 32768.0f);
 
     // if open feedback loop, AUX is the wet signal
@@ -701,8 +705,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     time += time_increment;
     drywet += drywet_increment;
-    input++;
-    output++;
+    rate += rate_increment;
     cursor = (cursor + 1) % DELAY_SIZE;
   }
 
