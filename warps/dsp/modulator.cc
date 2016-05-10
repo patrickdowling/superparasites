@@ -564,7 +564,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   ShortFrame *buffer = delay_buffer_;
 
   static size_t cursor = 0;
-  static ShortFrame feedback[64];
+  static ShortFrame feedback_buffer[kMaxBlockSize];
   static float lp_time, sl_time = 0.0f;
 
   const size_t kMinDelay = 80;
