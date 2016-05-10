@@ -568,8 +568,10 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static float lp_time, sl_time = 0.0f;
 
   static float write_position;
+  static float read_position;
   
   static FloatFrame previous_input_sample = {0.0f, 0.0f};
+  static ShortFrame previous_buffer_sample = {0, 0};
 
   const size_t kMinDelay = 80;
 
@@ -685,23 +687,27 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
 
-    feedback_buffer[i].l = a.l + (b.l - a.l) * lp_time_fractional;
-    feedback_buffer[i].r = a.r + (b.r - a.r) * lp_time_fractional;
+    ShortFrame buf;
+    buf.l = a.l + (b.l - a.l) * lp_time_fractional;
+    buf.r = a.r + (b.r - a.r) * lp_time_fractional;
+    
+    feedback_buffer[i] = buf;
 
-    float wet_l = static_cast<float>(feedback_buffer[i].l) / 32768.0f;
-    float wet_r = static_cast<float>(feedback_buffer[i].r) / 32768.0f;    
+    FloatFrame wet;
+    wet.l = static_cast<float>(buf.l) / 32768.0f;
+    wet.r = static_cast<float>(buf.r) / 32768.0f;    
     
     float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
     float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
 
-    output[i].l = Clip16((fade_out * in.l +
-                        fade_in * wet_l) * 32768.0f);
-    output[i].r = Clip16((fade_out * in.r +
-                        fade_in * wet_r) * 32768.0f);
+    output[i].l = Clip16((fade_out * in.l + fade_in * wet.l) * 32768.0f);
+    output[i].r = Clip16((fade_out * in.r + fade_in * wet.r) * 32768.0f);
 
     // if open feedback loop, AUX is the wet signal
     if (parameters_.carrier_shape == 0)
       output->r = feedback_buffer[i].r;
+
+    previous_buffer_sample = buf;
 
     time += time_increment;
     drywet += drywet_increment;
