@@ -78,11 +78,7 @@ void TestSRCUp(const char* name) {
 void TestSRC96To576To96() {
   size_t ratio = 6;
   WavWriter wav_writer(1, kSampleRate, 10);
-<<<<<<< HEAD
-  wav_writer.Open("warps_out.wav");
-=======
   wav_writer.Open("warps_src_96_576_96.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   SampleRateConverter<SRC_UP, 6, 48> src_up;
   SampleRateConverter<SRC_DOWN, 6, 48> src_down;
@@ -110,15 +106,9 @@ void TestSRC96To576To96() {
 }
 
 void TestModulator() {
-<<<<<<< HEAD
-  FILE* fp_in = fopen("audio_samples/sines.wav", "rb");
-  WavWriter wav_writer(2, kSampleRate, 15);
-  wav_writer.Open("warps_out.wav");
-=======
   FILE* fp_in = fopen("audio_samples/modulation_96k.wav", "rb");
   WavWriter wav_writer(2, kSampleRate, 15);
   wav_writer.Open("warps_modulator.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   fseek(fp_in, 48, SEEK_SET);
   
@@ -165,27 +155,16 @@ void TestModulator() {
 }
 
 void TestEasterEgg() {
-<<<<<<< HEAD
-  FILE* fp_in = fopen("audio_samples/piano.wav", "rb");
-  
-  WavWriter wav_writer(2, kSampleRate, 15);
-  wav_writer.Open("warps_out.wav");
-=======
-  FILE* fp_in = fopen("audio_samples/modulation_96k.wav", "rb");
+  FILE* fp_in = fopen("audio_samples/ericderr96.wav", "rb");
   
   WavWriter wav_writer(2, kSampleRate, 15);
   wav_writer.Open("warps_easter_egg.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   fseek(fp_in, 48, SEEK_SET);
   
   Modulator modulator;
   modulator.Init(kSampleRate);
-<<<<<<< HEAD
-  modulator.set_feature_mode(FEATURE_MODE_DOPPLER);
-=======
-  modulator.set_easter_egg(true);
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
+  modulator.set_feature_mode(FEATURE_MODE_DELAY);
   
   Parameters* p = modulator.mutable_parameters();
   
@@ -199,22 +178,13 @@ void TestEasterEgg() {
     float noise = (Random::GetFloat() - 0.5f) / 128.0f;
     filtered_noise += (noise - filtered_noise) * 0.1f;
     
-<<<<<<< HEAD
-    p->modulation_algorithm = 0.5f + 0.0f * triangle + 0.0f * filtered_noise;
-    p->carrier_shape = 1;
-    p->channel_drive[0] = 0.2f;
-    p->channel_drive[1] = 0.9f;
-    p->modulation_parameter = 1.0f + 0.0f * square;
-    p->note = 50.0f + phi;
-=======
-    p->frequency_shift_pot = 0.85f + 0.0f * triangle + 0.0f * filtered_noise;
-    p->frequency_shift_cv = 0.0f;
+    p->raw_algorithm_pot = 0.0f + 0.0f * triangle + 0.0f * filtered_noise;
+    p->raw_algorithm_cv = 0.0f;
     p->carrier_shape = 1;
     p->channel_drive[0] = 0.0f;
     p->channel_drive[1] = 1.0f;
-    p->modulation_parameter = 0.0f + 0.0f * square;
+    p->modulation_parameter = 0.9f + 0.0f * square;
     p->note = 48.0f + phi;
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
 
     ShortFrame input[kBlockSize];
     ShortFrame output[kBlockSize];
@@ -228,8 +198,8 @@ void TestEasterEgg() {
     }
     
     for (size_t i = 0; i < kBlockSize; ++i) {
-      input[i].r = input[i].l;
-      input[i].l = 0;
+      input[i].r = input[i].r;
+      input[i].l = input[i].l;
     }
     modulator.Process(input, output, kBlockSize);
     wav_writer.WriteFrames((short*)(output), kBlockSize);
@@ -239,18 +209,14 @@ void TestEasterEgg() {
 
 void TestOscillators() {
   WavWriter wav_writer(2, kSampleRate, 15);
-<<<<<<< HEAD
-  wav_writer.Open("warps_out.wav");
-=======
   wav_writer.Open("warps_oscillator.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   Modulator modulator;
   modulator.Init(kSampleRate);
   
   Parameters* p = modulator.mutable_parameters();
   
-  p->carrier_shape = 3;
+  p->carrier_shape = 1;
   p->channel_drive[0] = 0.0f;
   p->channel_drive[1] = 0.0f;
   p->modulation_algorithm = 0.0f;
@@ -322,11 +288,7 @@ void TestFilterBankReconstruction() {
 
 void TestSineTransition() {
   WavWriter wav_writer(2, kSampleRate, 15);
-<<<<<<< HEAD
-  wav_writer.Open("warps_out.wav");
-=======
   wav_writer.Open("warps_sine_transition.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   Modulator modulator;
   modulator.Init(kSampleRate);
@@ -357,11 +319,7 @@ void TestSineTransition() {
 
 void TestGain() {
   WavWriter wav_writer(2, kSampleRate, 10);
-<<<<<<< HEAD
-  wav_writer.Open("warps_out.wav");
-=======
   wav_writer.Open("warps_gain.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   
   Modulator modulator;
   modulator.Init(kSampleRate);
@@ -398,11 +356,7 @@ void TestGain() {
 
 void TestQuadratureOscillator() {
   WavWriter wav_writer(2, kSampleRate, 10);
-<<<<<<< HEAD
-  wav_writer.Open("warps_out.wav");
-=======
   wav_writer.Open("warps_quadrature.wav");
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
   QuadratureOscillator q;
   q.Init(kSampleRate);
   while (!wav_writer.done()) {
@@ -414,27 +368,14 @@ void TestQuadratureOscillator() {
 }
 
 int main(void) {
-<<<<<<< HEAD
-  // _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-  // TestSRCUp<SampleRateConverter<SRC_UP, 6, 48> >("warps_src_up_fir_48.wav");
-  // TestSRC96To576To96();
+  _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+  //TestSRCUp<SampleRateConverter<SRC_UP, 6, 48> >("warps_src_up_fir_48.wav");
+  //TestSRC96To576To96();
   // TestModulator();
   TestEasterEgg();
-  // TestOscillators();
-  // TestFilterBankReconstruction();
-  // TestSineTransition();
-  // TestGain();
-  // TestQuadratureOscillator();
-=======
-  _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-  TestSRCUp<SampleRateConverter<SRC_UP, 6, 48> >("warps_src_up_fir_48.wav");
-  TestSRC96To576To96();
-  // TestModulator();
-  // TestEasterEgg();
-  TestOscillators();
-  TestFilterBankReconstruction();
-  TestSineTransition();
-  TestGain();
-  TestQuadratureOscillator();
->>>>>>> 9468e813c89690d98c0cf51eca334c22d38de969
+  //TestOscillators();
+  //TestFilterBankReconstruction();
+  //TestSineTransition();
+  //TestGain();
+  //TestQuadratureOscillator();
 }

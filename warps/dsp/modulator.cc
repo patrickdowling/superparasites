@@ -556,7 +556,6 @@ void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t 
   previous_parameters_ = parameters_;
 
 }
-
   
 void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size) {
   ShortFrame *buffer = delay_buffer_;

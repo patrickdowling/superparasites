@@ -322,10 +322,10 @@ class Modulator {
 
   enum DelaySize {
     DELAY_SIZE = (sizeof(delay_buffer_)
-		  + sizeof(internal_modulation_)
-		  + sizeof(buffer_)
-		  + sizeof(src_buffer_)
-		  + sizeof(feedback_sample_)) / sizeof(ShortFrame) - 4
+                  + sizeof(internal_modulation_)
+                  + sizeof(buffer_)
+                  + sizeof(src_buffer_)
+                  + sizeof(feedback_sample_)) / sizeof(ShortFrame) - 4
   };
 
   static XmodFn xmod_table_[];
