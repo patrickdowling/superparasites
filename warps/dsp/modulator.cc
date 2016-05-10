@@ -567,6 +567,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static ShortFrame feedback_buffer[kMaxBlockSize];
   static float lp_time, sl_time = 0.0f;
 
+  static float write_position;
+  
   static FloatFrame previous_input_sample = {0.0f, 0.0f};
 
   const size_t kMinDelay = 80;
@@ -586,16 +588,16 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
   float rate = previous_parameters_.modulation_algorithm;
-  // float rate_end = parameters_.modulation_algorithm;
-  // float rate_increment = (drywet_end - drywet) / static_cast<float>(size);
-
-  // float rate = parameters_.raw_algorithm;
+  float rate_end = parameters_.modulation_algorithm;
+  CONSTRAIN(rate, 0.001f, 1.0f);
+  CONSTRAIN(rate_end, 0.001f, 1.0f);
+  float rate_increment = (rate_end - rate) / static_cast<float>(size);
 
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
+  
+  for (size_t i=0; i<size;) {
 
-  for (size_t i=0; i<size; i++) {
-    
     FloatFrame in;
     in.l = static_cast<float>(input[i].l) / 32768.0f;
     in.r = static_cast<float>(input[i].r) / 32768.0f;
@@ -637,13 +639,29 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     }
 
     // write to buffer
-    {    
-      buffer[(cursor + i) % DELAY_SIZE].l = Clip16((in.l + fb.l) * 32768.0f);
-      buffer[(cursor + i) % DELAY_SIZE].r = Clip16((in.r + fb.r) * 32768.0f);
+    while (write_position < 1) {
+      
+      // read somewhere between the input and the previous input
+      FloatFrame s;
+      s.l = in.l + (previous_input_sample.l - in.l) * write_position;
+      s.r = in.r + (previous_input_sample.r - in.r) * write_position;
+
+      // write this to buffer
+      buffer[(cursor + i) % DELAY_SIZE].l = Clip16((s.l + fb.l) * 32768.0f);
+      buffer[(cursor + i) % DELAY_SIZE].r = Clip16((s.r + fb.r) * 32768.0f);
+
+      // printf("buffer[%lu] = in[%f]\n", (cursor+i)%DELAY_SIZE, write_position);
+
+      write_position += 1.0f / rate;
+      i++;
     }
+    
+    // printf("in++ (increment=%f)\n", 1.0f/rate);
+    write_position--;
 
     previous_input_sample = in;
     feedback += feedback_increment;
+    rate += rate_increment;
   }
 
   for (size_t i=0; i<size; i++) {
