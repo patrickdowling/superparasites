@@ -314,7 +314,7 @@ class Modulator {
   stmlib::OnePole filter_[4];
 
   /* everything that follows will be used as delay buffer */
-  ShortFrame delay_buffer_[8192+4096];  
+  ShortFrame delay_buffer_[8192+3072];  
   float internal_modulation_[kMaxBlockSize];
   float buffer_[3][kMaxBlockSize];
   float src_buffer_[2][kMaxBlockSize * kOversampling];
