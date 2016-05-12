@@ -561,18 +561,25 @@ void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t 
 }
   
 void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size) {
+
+  // parameters_.modulation_parameter = 0.5f;
+  parameters_.raw_algorithm -= 0.5f;
+  parameters_.raw_algorithm *= 1.05f;
+  parameters_.raw_algorithm += 0.5f;
+  CONSTRAIN(parameters_.raw_algorithm, 0.0f, 1.0f);
+
   ShortFrame *buffer = delay_buffer_;
   
   static ShortFrame feedback_buffer[kMaxBlockSize];
   static float lp_time, sl_time = 0.0f;
 
-  static size_t write_head = 0;
-  static size_t read_head = 1;
+  static uint32_t write_head = 0;
+  static uint32_t read_head = 1;
   
   static float write_position = 0.0f; 
   static float read_position = 0.0f;
   
-  static FloatFrame previous_input_sample = {0.0f, 0.0f};
+  static FloatFrame previous_mix_sample = {0.0f, 0.0f};
   static ShortFrame previous_buffer_sample = {0, 0};
 
   const size_t kMinDelay = 80;
@@ -591,8 +598,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float drywet_end = parameters_.channel_drive[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
   
-  float rate = previous_parameters_.modulation_algorithm;
-  float rate_end = parameters_.modulation_algorithm;
+  float rate = previous_parameters_.raw_algorithm;
+  float rate_end = parameters_.raw_algorithm;
   CONSTRAIN(rate, 0.001f, 1.0f);
   CONSTRAIN(rate_end, 0.001f, 1.0f);
   float rate_increment = (rate_end - rate) / static_cast<float>(size);
@@ -642,13 +649,18 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb.r = static_cast<float>(feedback_buffer[i].r) / 32768.0f * feedback * 1.1f;
     }
 
+    // input + feedback
+    FloatFrame mix;
+    mix.l = in.l + fb.l;
+    mix.r = in.r + fb.r;
+
     // write to buffer
     while (write_position < 1) {
       
       // read somewhere between the input and the previous input
       FloatFrame s;
-      s.l = previous_input_sample.l + (in.l - previous_input_sample.l) * write_position;
-      s.r = previous_input_sample.r + (in.r - previous_input_sample.r) * write_position;
+      s.l = previous_mix_sample.l + (mix.l - previous_mix_sample.l) * write_position;
+      s.r = previous_mix_sample.r + (mix.r - previous_mix_sample.r) * write_position;
 
       // write this to buffer
       buffer[write_head % DELAY_SIZE].l = Clip16((s.l + fb.l) * 32768.0f);
@@ -663,13 +675,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     // printf("in++ (increment=%f, write_head=%zu)\n", 1.0f/rate, write_head);
     write_position--;
 
-    previous_input_sample = in;
+    previous_mix_sample = mix;
     feedback += feedback_increment;
     rate += rate_increment;
   }
 
-  rate = previous_parameters_.modulation_algorithm;
-  CONSTRAIN(rate, 0.001f, 1.0f);
+  rate = previous_parameters_.raw_algorithm;
+  CONSTRAIN(rate, 0.001f, 1.0f); // TODO
 
   for (size_t i=0; i<size;) {
 
@@ -680,7 +692,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     // lp_time = sl_time = time;
     MAKE_INTEGRAL_FRACTIONAL(lp_time);
     
-    int16_t index = (read_head - lp_time_integral) % DELAY_SIZE;
+    uint32_t index = ((uint32_t)read_head - lp_time_integral) % DELAY_SIZE;
     
     ShortFrame a = buffer[index];
     ShortFrame b = buffer[index == 0 ? DELAY_SIZE - 1: index - 1];
@@ -688,8 +700,6 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     ShortFrame buf;
     buf.l = a.l + (b.l - a.l) * lp_time_fractional;
     buf.r = a.r + (b.r - a.r) * lp_time_fractional;
-    
-    feedback_buffer[i] = buf;      
     
     while (read_position < 1.0f && i < size) {
 
@@ -700,11 +710,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       ShortFrame d;
       d.l = previous_buffer_sample.l + (buf.l - previous_buffer_sample.l) * read_position;
       d.r = previous_buffer_sample.r + (buf.r - previous_buffer_sample.r) * read_position;
+
+      feedback_buffer[i] = d;
       
       FloatFrame wet;
       wet.l = static_cast<float>(d.l) / 32768.0f;
       wet.r = static_cast<float>(d.r) / 32768.0f;
-      
+
       float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
       float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
 
