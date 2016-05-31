@@ -121,6 +121,7 @@ class Ui {
   Meter* meter_;
   
   uint8_t load_save_location_;
+  uint16_t ignore_releases_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };

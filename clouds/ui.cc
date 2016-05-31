@@ -54,6 +54,7 @@ void Ui::Init(
   processor_ = processor;
   meter_ = meter;
   mode_ = UI_MODE_SPLASH;
+  ignore_releases_ = 0;
   
   const State& state = settings_->state();
   
@@ -69,6 +70,11 @@ void Ui::Init(
         static_cast<float>(state.blend_value[i]) / 255.0f);
   }
   cv_scaler_->UnlockBlendKnob();
+
+  if (switches_.pressed_immediate(SWITCH_WRITE)) {
+    mode_ = UI_MODE_CALIBRATION_1;
+    ignore_releases_ = 1;
+  }  
 }
 
 void Ui::SaveState() {
@@ -224,6 +230,11 @@ void Ui::FlushEvents() {
 void Ui::OnSwitchPressed(const Event& e) {
   if (e.control_id == SWITCH_FREEZE) {
     processor_->ToggleFreeze();
+  // double press -> feature switch mode
+  } else if ((e.control_id == SWITCH_MODE && switches_.pressed_immediate(SWITCH_WRITE)) ||
+             (e.control_id == SWITCH_WRITE && switches_.pressed_immediate(SWITCH_MODE))) {
+    mode_ = UI_MODE_PLAYBACK_MODE;
+    ignore_releases_ = 2;
   }
 }
 
@@ -248,6 +259,13 @@ void Ui::OnSecretHandshake() {
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
+
+  // hack for double presses
+  if (ignore_releases_ > 0) {
+    ignore_releases_--;
+    return;
+  }
+
   switch (e.control_id) {
     case SWITCH_FREEZE:
       break;
@@ -271,7 +289,9 @@ void Ui::OnSwitchReleased(const Event& e) {
         processor_->set_quality((processor_->quality() + 1) & 3);
         SaveState();
       } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
-        uint8_t mode = (processor_->playback_mode() + 1) % PLAYBACK_MODE_LAST;
+        uint8_t mode = processor_->playback_mode() == 0 ?
+          PLAYBACK_MODE_LAST :
+          processor_->playback_mode() - 1;
         processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
         SaveState();
       } else if (mode_ == UI_MODE_SAVE || mode_ == UI_MODE_LOAD) {
@@ -282,10 +302,7 @@ void Ui::OnSwitchReleased(const Event& e) {
       break;
 
     case SWITCH_WRITE:
-      if (e.data >= kLongPressDuration && switches_.pressed(SWITCH_MODE)) {
-        press_time_[SWITCH_MODE] = 0;
-        mode_ = UI_MODE_CALIBRATION_1;
-      } else if (mode_ == UI_MODE_CALIBRATION_1) {
+      if (mode_ == UI_MODE_CALIBRATION_1) {
         CalibrateC1();
       } else if (mode_ == UI_MODE_CALIBRATION_2) {
         CalibrateC3();
@@ -309,6 +326,10 @@ void Ui::OnSwitchReleased(const Event& e) {
             load_save_location_));
         load_save_location_ = (load_save_location_ + 1) & 3;
         mode_ = UI_MODE_VU_METER;
+      } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
+        uint8_t mode = (processor_->playback_mode() + 1) % PLAYBACK_MODE_LAST;
+        processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
+        SaveState();
       } else if (e.data >= kLongPressDuration) {
         mode_ = UI_MODE_SAVE;
       } else {
