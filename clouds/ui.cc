@@ -156,15 +156,19 @@ void Ui::PaintLeds() {
       break;
       
     case UI_MODE_PLAYBACK_MODE:
-      if (processor_->playback_mode() < 4)
+      if (blink) {
+        for (int i=0; i<4; i++)
+          leds_.set_status(i, 0, 0);
+      } else if (processor_->playback_mode() < 4) {      
         leds_.set_status(processor_->playback_mode(),
                          128 + (fade >> 1),
                          255 - (fade >> 1));
-      else {
+      } else {
         for (int i=0; i<4; i++)
           leds_.set_status(i, 128 + (fade >> 1), 255 - (fade >> 1));
         leds_.set_status(processor_->playback_mode() & 3, 0, 0);
       }
+      
       break;
       
     case UI_MODE_LOAD:
