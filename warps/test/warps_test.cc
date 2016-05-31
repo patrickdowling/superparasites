@@ -178,12 +178,14 @@ void TestEasterEgg() {
     float noise = (Random::GetFloat() - 0.5f) / 128.0f;
     filtered_noise += (noise - filtered_noise) * 0.1f;
     
-    p->raw_algorithm_pot = 0.0f + 0.0f * triangle + 0.0f * filtered_noise;
+    p->raw_algorithm_pot = 0.0f + 0.0f * triangle + 0.0f * square;
     p->raw_algorithm_cv = 0.0f;
+    p->raw_algorithm = 1.0f;// + 0.1f * filtered_noise;    // sample rate
+    p->modulation_algorithm = 0.0f;
     p->carrier_shape = 1;
     p->channel_drive[0] = 0.5f;
     p->channel_drive[1] = 1.0f;
-    p->modulation_parameter = 0.9f + 0.0f * square;
+    p->modulation_parameter = 1.0f + 0.05f * filtered_noise;
     p->note = 48.0f + phi;
 
     ShortFrame input[kBlockSize];
