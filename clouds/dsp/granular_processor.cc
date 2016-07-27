@@ -393,17 +393,20 @@ void GranularProcessor::Process(
   
   // This is what is fed back. Reverb is not fed back.
   copy(&out_[0], &out_[size], &fb_[0]);
-  
+
   const float post_gain = 1.2f;
-  ParameterInterpolator dry_wet_mod(&dry_wet_, parameters_.dry_wet, size);
-  for (size_t i = 0; i < size; ++i) {
-    float dry_wet = dry_wet_mod.Next();
-    float fade_in = Interpolate(lut_xfade_in, dry_wet, 16.0f);
-    float fade_out = Interpolate(lut_xfade_out, dry_wet, 16.0f);
-    float l = static_cast<float>(input[i].l) / 32768.0f;
-    float r = static_cast<float>(input[i].r) / 32768.0f;
-    out_[i].l = l * fade_out + out_[i].l * post_gain * fade_in;
-    out_[i].r = r * fade_out + out_[i].r * post_gain * fade_in;
+
+  if (playback_mode_ != PLAYBACK_MODE_RESONESTOR) {
+    ParameterInterpolator dry_wet_mod(&dry_wet_, parameters_.dry_wet, size);
+    for (size_t i = 0; i < size; ++i) {
+      float dry_wet = dry_wet_mod.Next();
+      float fade_in = Interpolate(lut_xfade_in, dry_wet, 16.0f);
+      float fade_out = Interpolate(lut_xfade_out, dry_wet, 16.0f);
+      float l = static_cast<float>(input[i].l) / 32768.0f;
+      float r = static_cast<float>(input[i].r) / 32768.0f;
+      out_[i].l = l * fade_out + out_[i].l * post_gain * fade_in;
+      out_[i].r = r * fade_out + out_[i].r * post_gain * fade_in;
+    }
   }
 
   // Apply the simple post-processing reverb.
