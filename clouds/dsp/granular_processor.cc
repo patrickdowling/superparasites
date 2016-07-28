@@ -239,6 +239,7 @@ void GranularProcessor::ProcessGranular(
                                 (0.5f - parameters_.stereo_spread) * 2.0f);
       resonestor_.set_freeze(parameters_.freeze);
       resonestor_.set_harmonicity(1.0f - (parameters_.feedback * 0.5f));
+      resonestor_.set_distortion(parameters_.dry_wet);
 
       float t = parameters_.texture;
       if (t < 0.5f) {
@@ -253,7 +254,8 @@ void GranularProcessor::ProcessGranular(
         resonestor_.set_narrow(0.001f + n * n * 0.6f);
       }
 
-      float d = parameters_.density;
+      float d = (parameters_.density - 0.05f) / 0.9f;
+      if (d < 0.0f) d = 0.0f;
       d *= d * d;
       d *= d * d;
       d *= d * d;

@@ -85,6 +85,7 @@ class Resonestor {
       narrow_[v] = 0.001f;
       damp_[v] = 1.0f;
       harmonicity_[v] = 1.0f;
+      distortion_[v] = 0.0f;
     }
     spread_amount_ = 0.0f;
     stereo_ = 0.0f;
@@ -98,6 +99,7 @@ class Resonestor {
     for (int i=0; i<3; i++)
       spread_delay_[i] = Random::GetFloat() * 3999;
     burst_lp_.Init();
+    rand_lp_.Init();
     for (int v=0; v<2; v++)
       for (int p=0; p<4; p++) {
         lp_[p][v].Init();
@@ -176,14 +178,17 @@ class Resonestor {
         spread_delay_[i] = Random::GetFloat() * (bd0.length - 1);
     }
 
+    rand_lp_.set_f_q<FREQUENCY_FAST>(distortion_[voice_] * 0.5f, 1.0f);
+
     while (size--) {
       engine_.Start(&c);
 
       burst_time_--;
       float burst_gain = burst_time_ > 0.0f ? 1.0f : 0.0f;
 
+      float random = Random::GetFloat() * 2.0f - 1.0f;
       /* burst noise generation */
-      c.Read((Random::GetFloat() * 2.0f - 1.0f), burst_gain);
+      c.Read(random, burst_gain);
       // goes through comb and lp filters
       const float comb_fb = 0.6f - burst_comb_ * 0.4f;
       float comb_del = burst_comb_ * bc.length;
@@ -203,16 +208,22 @@ class Resonestor {
       c.Read(in_out->r, 1.0f);
       c.Write(bd1, 0.0f);
 
+      float amplitude = distortion_[voice_];
+      amplitude = 1.0f - amplitude;
+      amplitude *= 0.3f;
+      amplitude *= amplitude;
+      random = rand_lp_.Process<FILTER_MODE_LOW_PASS>(random * amplitude);
+
 #define COMB(pre, part, voice, vol)                                     \
       {                                                                 \
         c.Load(0.0f);                                                   \
         c.Read(bd ## voice, pre * spread_amount_, vol);                 \
+        float tap = comb_period_[part][voice] * (1.0f + random);        \
+        c.InterpolateHermite(c ## part ## voice, tap ,                  \
+                             comb_feedback_[part][voice] * 0.7f);      \
         c.InterpolateHermite(c ## part ## voice,                        \
-                             comb_period_[part][voice],                 \
-                             comb_feedback_[part][voice] * 0.7f);       \
-        c.Interpolate(c ## part ## voice,                               \
-                      comb_period_[part][voice] * harmonicity_[voice],  \
-                      comb_feedback_[part][voice] * 0.3f);              \
+                             tap * harmonicity_[voice],                 \
+                             comb_feedback_[part][voice] * 0.3f);       \
         float acc;                                                      \
         c.Write(acc);                                                   \
         acc = lp_[part][voice].Process<FILTER_MODE_LOW_PASS>(acc);      \
@@ -291,6 +302,11 @@ class Resonestor {
     damp_[voice_] = damp;
   }
 
+  void set_distortion(float distortion) {
+    distortion *= distortion * distortion;
+    distortion_[voice_] = distortion;
+  }
+
   void set_trigger(bool trigger) {
     previous_trigger_ = trigger_;
     trigger_ = trigger;
@@ -340,6 +356,7 @@ class Resonestor {
   float narrow_[2];
   float damp_[2];
   float harmonicity_[2];
+  float distortion_[2];
   float spread_amount_;
   float stereo_;
   float separation_;
@@ -359,6 +376,7 @@ class Resonestor {
   Svf lp_[4][2];
   Svf bp_[4][2];
   Svf burst_lp_;
+  Svf rand_lp_;
 
   int32_t voice_, __align1;
 
