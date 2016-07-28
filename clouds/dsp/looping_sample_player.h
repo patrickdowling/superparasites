@@ -114,7 +114,7 @@ class LoopingSamplePlayer {
     if (!parameters.freeze) {
       while (size--) {
         float error = (target_delay - current_delay_);
-        float delay = current_delay_ + 0.001f * error;
+        float delay = current_delay_ + 0.0005f * error;
         current_delay_ = delay;
         int32_t delay_int = (buffer->head() - 4 - size + buffer->size()) << 12;
         delay_int -= static_cast<int32_t>(delay * 4096.0f);
