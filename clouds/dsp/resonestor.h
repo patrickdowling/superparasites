@@ -111,7 +111,7 @@ class Resonestor {
   }
 
 #define MAX_COMB 1000
-#define BASE_PITCH 220.0f
+#define BASE_PITCH 261.626f
 
   void Process(FloatFrame* in_out, size_t size) {
 
