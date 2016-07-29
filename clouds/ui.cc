@@ -290,7 +290,7 @@ void Ui::OnSwitchReleased(const Event& e) {
         SaveState();
       } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
         uint8_t mode = processor_->playback_mode() == 0 ?
-          PLAYBACK_MODE_LAST :
+          PLAYBACK_MODE_LAST-1 :
           processor_->playback_mode() - 1;
         processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
         SaveState();
