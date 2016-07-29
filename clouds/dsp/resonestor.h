@@ -100,6 +100,8 @@ class Resonestor {
       spread_delay_[i] = Random::GetFloat() * 3999;
     burst_lp_.Init();
     rand_lp_.Init();
+    rand_hp_.Init();
+    rand_hp_.set_f<FREQUENCY_FAST>(5.0f / 32000.0f);
     for (int v=0; v<2; v++)
       for (int p=0; p<4; p++) {
         lp_[p][v].Init();
@@ -178,7 +180,7 @@ class Resonestor {
         spread_delay_[i] = Random::GetFloat() * (bd0.length - 1);
     }
 
-    rand_lp_.set_f_q<FREQUENCY_FAST>(distortion_[voice_] * 0.5f, 1.0f);
+    rand_lp_.set_f_q<FREQUENCY_FAST>(distortion_[voice_] * 0.4f, 1.0f);
 
     while (size--) {
       engine_.Start(&c);
@@ -212,7 +214,9 @@ class Resonestor {
       amplitude = 1.0f - amplitude;
       amplitude *= 0.3f;
       amplitude *= amplitude;
-      random = rand_lp_.Process<FILTER_MODE_LOW_PASS>(random * amplitude);
+      random *= amplitude;
+      random = rand_lp_.Process<FILTER_MODE_LOW_PASS>(random);
+      random = rand_hp_.Process<FILTER_MODE_HIGH_PASS>(random);
 
 #define COMB(pre, part, voice, vol)                                     \
       {                                                                 \
@@ -377,6 +381,7 @@ class Resonestor {
   Svf bp_[4][2];
   Svf burst_lp_;
   Svf rand_lp_;
+  OnePole rand_hp_;
 
   int32_t voice_, __align1;
 
