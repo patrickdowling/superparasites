@@ -99,13 +99,16 @@ class GranularProcessor {
   inline void ToggleFreeze() {
     parameters_.freeze = !parameters_.freeze;
   }
-  
-  inline void set_freeze(bool freeze) {
-    parameters_.freeze = freeze;
+  inline void ToggleReverse() {
+    parameters_.granular.reverse = !parameters_.granular.reverse;
   }
 
   inline bool frozen() const {
     return parameters_.freeze;
+  }
+
+  inline bool reversed() const {
+    return parameters_.granular.reverse;
   }
 
   inline void set_silence(bool silence) {

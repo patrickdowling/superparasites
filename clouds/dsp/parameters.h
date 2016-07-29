@@ -53,6 +53,7 @@ struct Parameters {
     float window_shape;
     float stereo_spread;
     bool use_deterministic_seed;
+    bool reverse;
   } granular;
   
   struct Spectral {

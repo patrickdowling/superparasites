@@ -127,15 +127,17 @@ void Ui::Poll() {
 
 void Ui::PaintLeds() {
   leds_.Clear();
-  bool blink = (system_clock.milliseconds() & 127) > 64;
-  uint8_t fade = system_clock.milliseconds() >> 1;
+  uint32_t clock = system_clock.milliseconds();
+  bool blink = (clock & 127) > 64;
+  bool flash = (clock & 511) < 16;
+  uint8_t fade = clock >> 1;
   fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
   fade = static_cast<uint16_t>(fade) * fade >> 8;
   switch (mode_) {
     case UI_MODE_SPLASH:
       {
-        uint8_t index = ((system_clock.milliseconds() >> 8) + 1) & 3;
-        uint8_t fade = (system_clock.milliseconds() >> 2);
+        uint8_t index = ((clock >> 8) + 1) & 3;
+        uint8_t fade = (clock >> 2);
         fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
         leds_.set_intensity(3 - index, fade);
       }
@@ -213,8 +215,12 @@ void Ui::PaintLeds() {
     default:
       break;
   }
-  
-  leds_.set_freeze(processor_->frozen());
+
+  bool freeze = processor_->frozen();
+  if (processor_->reversed()) {
+    freeze ^= flash;
+  }
+  leds_.set_freeze(freeze);
   if (processor_->bypass()) {
     leds_.PaintBar(lut_db[meter_->peak() >> 7]);
     leds_.set_freeze(true);
@@ -228,11 +234,9 @@ void Ui::FlushEvents() {
 }
 
 void Ui::OnSwitchPressed(const Event& e) {
-  if (e.control_id == SWITCH_FREEZE) {
-    processor_->ToggleFreeze();
   // double press -> feature switch mode
-  } else if ((e.control_id == SWITCH_MODE && switches_.pressed_immediate(SWITCH_WRITE)) ||
-             (e.control_id == SWITCH_WRITE && switches_.pressed_immediate(SWITCH_MODE))) {
+  if ((e.control_id == SWITCH_MODE && switches_.pressed_immediate(SWITCH_WRITE)) ||
+      (e.control_id == SWITCH_WRITE && switches_.pressed_immediate(SWITCH_MODE))) {
     mode_ = UI_MODE_PLAYBACK_MODE;
     ignore_releases_ = 2;
   }
@@ -268,6 +272,12 @@ void Ui::OnSwitchReleased(const Event& e) {
 
   switch (e.control_id) {
     case SWITCH_FREEZE:
+      if (e.data >= kVeryLongPressDuration) {
+      } else if (e.data >= kLongPressDuration) {
+        processor_->ToggleReverse();
+      } else {
+        processor_->ToggleFreeze();
+      }
       break;
 
     case SWITCH_MODE:
