@@ -585,8 +585,7 @@ void GranularProcessor::Prepare() {
           lut_sine_window_4096, 4096,
           num_channels_, resolution(), sr);
     } else if (playback_mode_ == PLAYBACK_MODE_RESONESTOR) {
-      BufferAllocator allocator(buffer[0], buffer_size[0]);
-      uint16_t* buf = allocator.Allocate<uint16_t>(16384);
+      float* buf = (float*)buffer[0];
       resonestor_.Init(buf);
     } else {
       for (int32_t i = 0; i < num_channels_; ++i) {

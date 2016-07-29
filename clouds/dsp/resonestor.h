@@ -76,7 +76,7 @@ class Resonestor {
   Resonestor() { }
   ~Resonestor() { }
 
-  void Init(uint16_t* buffer) {
+  void Init(float* buffer) {
     engine_.Init(buffer);
     for (int v=0; v<2; v++) {
       pitch_[v] = 0.0f;
@@ -346,7 +346,7 @@ class Resonestor {
   }
 
  private:
-  typedef FxEngine<16384, FORMAT_16_BIT> E;
+  typedef FxEngine<16384, FORMAT_32_BIT> E;
   E engine_;
 
   /* parameters: */
