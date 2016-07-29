@@ -73,7 +73,7 @@ class GranularSamplePlayer {
       const Parameters& parameters,
       float* out, size_t size) {
     float overlap = parameters.granular.overlap;
-    overlap = overlap * overlap * overlap;
+    overlap = (overlap * overlap) * (overlap * overlap);
     float target_num_grains = max_num_grains_ * overlap;
     float p = target_num_grains / static_cast<float>(grain_size_hint_);
     float space_between_grains = grain_size_hint_ / target_num_grains;
