@@ -232,7 +232,7 @@ class GranularSamplePlayer {
         gain_l,
         gain_r,
         quality);
-    ONE_POLE(grain_size_hint_, grain_size, 0.1f);
+    grain_size_hint_ = grain_size;
   }
   
   int32_t max_num_grains_;
