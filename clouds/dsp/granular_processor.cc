@@ -103,6 +103,7 @@ void GranularProcessor::ProcessGranular(
       } else {
         parameters_.granular.overlap = 0.0f;
       }
+
       // And TEXTURE too.
       parameters_.granular.window_shape = parameters_.texture < 0.75f
           ? parameters_.texture * 1.333f : 1.0f;
@@ -180,7 +181,7 @@ void GranularProcessor::ProcessGranular(
         }
 
         // Settings of the reverb
-        oliverb_.set_diffusion(0.3f + 0.5f * parameters_.texture);
+        oliverb_.set_diffusion(0.3f + 0.5f * parameters_.stereo_spread);
         oliverb_.set_size(0.05f + 0.94f * parameters_.size);
         oliverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
                              parameters_.feedback * parameters_.feedback * 70.0f);
@@ -208,10 +209,10 @@ void GranularProcessor::ProcessGranular(
           oliverb_.set_decay(parameters_.density * 1.3f
                            + 0.15f * abs(parameters_.pitch) / 24.0f);
           oliverb_.set_input_gain(0.5f);
-          float lp = parameters_.stereo_spread < 0.5f ?
-            parameters_.stereo_spread * 2.0f : 1.0f;
-          float hp = parameters_.stereo_spread > 0.5f ?
-            (parameters_.stereo_spread - 0.5f) * 2.0f : 0.0f;
+          float lp = parameters_.texture < 0.5f ?
+            parameters_.texture * 2.0f : 1.0f;
+          float hp = parameters_.texture > 0.5f ?
+            (parameters_.texture - 0.5f) * 2.0f : 0.0f;
           oliverb_.set_lp(0.03f + 0.9f * lp);
           oliverb_.set_hp(0.01f + 0.2f * hp); // the small offset
                                                   // gets rid of
