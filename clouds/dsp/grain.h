@@ -74,16 +74,24 @@ class Grain {
       int32_t buffer_size,
       int32_t start,
       int32_t width,
+      bool reverse,
       int32_t phase_increment,
       float window_shape,
       float gain_l,
       float gain_r,
       GrainQuality recommended_quality) {
     pre_delay_ = pre_delay;
-    width_ = width;
-    first_sample_ = (start + buffer_size) % buffer_size;
-    phase_increment_ = phase_increment;
-    phase_ = 0;
+    reverse_ = reverse;
+
+    if (reverse) {
+      first_sample_ = (start + width + buffer_size) % buffer_size;
+      phase_increment_ = -phase_increment;
+      phase_ = INT32_MAX;
+    } else {
+      first_sample_ = (start + buffer_size) % buffer_size;
+      phase_increment_ = phase_increment;
+      phase_ = 0;
+    }
     envelope_phase_ = 0.0f;
     envelope_phase_increment_ = 2.0f / static_cast<float>(width);
 
@@ -179,7 +187,6 @@ class Grain {
 
  private:
   int32_t first_sample_;
-  int32_t width_;
   int32_t phase_;
   int32_t phase_increment_;
   int32_t pre_delay_;
@@ -193,6 +200,7 @@ class Grain {
   float gain_r_;
 
   bool active_;
+  bool reverse_;
   
   GrainQuality recommended_quality_;
 

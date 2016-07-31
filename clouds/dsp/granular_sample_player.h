@@ -219,6 +219,7 @@ class GranularSamplePlayer {
     available -= eaten_by_play_head;
     available -= eaten_by_recording_head;
 
+    bool reverse = parameters.granular.reverse;
     int32_t size = static_cast<int32_t>(grain_size) & ~1;
     int32_t start = buffer_head - static_cast<int32_t>(
         position * available + eaten_by_play_head);
@@ -227,6 +228,7 @@ class GranularSamplePlayer {
         buffer_size,
         start,
         size,
+        reverse,
         static_cast<uint32_t>(pitch_ratio * 65536.0f),
         window_shape,
         gain_l,
