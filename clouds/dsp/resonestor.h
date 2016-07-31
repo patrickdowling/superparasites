@@ -101,7 +101,7 @@ class Resonestor {
     burst_lp_.Init();
     rand_lp_.Init();
     rand_hp_.Init();
-    rand_hp_.set_f<FREQUENCY_FAST>(5.0f / 32000.0f);
+    rand_hp_.set_f<FREQUENCY_FAST>(1.0f / 32000.0f);
     for (int v=0; v<2; v++)
       for (int p=0; p<4; p++) {
         lp_[p][v].Init();
