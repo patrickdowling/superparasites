@@ -80,7 +80,7 @@ float Oscillator::RenderSine(
       phase -= 1.0f;
     }
     uint32_t modulated_phase = static_cast<uint32_t>(phase * kToUint32);
-    modulated_phase += static_cast<int32_t>(*modulation++ * 0.5f * kToUint32);
+    modulated_phase += static_cast<int32_t>(*modulation++ * kToUint32) * 4;
     uint32_t integral = modulated_phase >> 22;
     float fractional = static_cast<float>(modulated_phase << 10) * kToFloat;
     float a = lut_sin[integral];
@@ -113,7 +113,7 @@ float Oscillator::RenderPolyblep(
     next_sample = 0.0f;
 
     float modulated_increment = phase_increment.Next() * (1.0f + *modulation++);
-    
+
     if (modulated_increment <= 0.0f) {
       modulated_increment = 1.0e-7;
     }
