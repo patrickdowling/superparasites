@@ -668,7 +668,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     CONSTRAIN (sample_rate, 0.01f, 1.0f);
     int direction = rate > 0.0f ? 1 : -1;
 
-    printf("rate=%f(%d), time=%f, wh=%d, wp=%f, rh=%d, rp=%f\n", sample_rate, direction, time, write_head, write_position, read_head, read_position);
+    // printf("rate=%f(%d), time=%f, wh=%d, wp=%f, rh=%d, rp=%f\n", sample_rate, direction, time, write_head, write_position, read_head, read_position);
 
     // write to buffer
     while (write_position < 1.0f) {
