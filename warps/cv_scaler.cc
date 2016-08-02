@@ -122,8 +122,8 @@ void CvScaler::DetectAudioNormalization(Codec::Frame* in, size_t size) {
 
 void CvScaler::Read(Parameters* p) {
   // Modulation parameters.
-  BIND(p->channel_drive[0], LEVEL_1, false, 1.6f, 0.08f, true);
-  BIND(p->channel_drive[1], LEVEL_2, false, 1.6f, 0.08f, true);
+  BIND(p->channel_drive[0], LEVEL_1, false, 1.6f, 0.5f, true);
+  BIND(p->channel_drive[1], LEVEL_2, false, 1.6f, 0.5f, true);
   BIND(p->modulation_algorithm, ALGORITHM, true, 2.0f, 0.08f, false);
   BIND(p->modulation_parameter, PARAMETER, false, 2.0f, 0.08f, false);
   
