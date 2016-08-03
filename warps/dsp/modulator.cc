@@ -486,8 +486,8 @@ void Modulator::Process1(ShortFrame* input, ShortFrame* output, size_t size) {
     ++output;
   }
   previous_parameters_ = parameters_;
-
 }
+
 void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t size) {
   float* carrier = buffer_[0];
   float* modulator = buffer_[1];
@@ -883,8 +883,10 @@ void Modulator::Process(ShortFrame* input, ShortFrame* output, size_t size) {
     Process1<ALGORITHM_FOLD>(input, output, size);
     break;
 
-  case FEATURE_MODE_RING_MODULATION:
-    Process1<ALGORITHM_RING_MODULATION>(input, output, size);
+  case FEATURE_MODE_CHEBYSCHEV:
+    parameters_.modulation_parameter = 0.7f +
+      parameters_.modulation_parameter * 0.3f;
+    Process1<ALGORITHM_CHEBYSCHEV>(input, output, size);
     break;
 
   case FEATURE_MODE_FREQUENCY_SHIFTER:
@@ -1127,6 +1129,45 @@ inline float Modulator::Xmod<ALGORITHM_COMPARATOR_CHEBYSCHEV>(
   float x = Xmod<ALGORITHM_COMPARATOR8>(x_1, x_2, p_1);
   x = Mod<ALGORITHM_CHEBYSCHEV>(x, p_2);
   return 0.8f * x;
+}
+
+/* static */
+template<>
+inline float Modulator::Xmod<ALGORITHM_CHEBYSCHEV>(
+    float x_1, float x_2, float p_1, float p_2) {
+
+  float x = x_1 + x_2;
+
+  const float att = 1.0f;
+  const float rel = 0.000001f;
+
+  static float envelope_;
+
+  float error = fabs(x) - envelope_;
+  envelope_ += (error > 0.0f ? att : rel) * error;
+
+  const float degree = 14.0f;
+
+  x /= envelope_;
+  x *= p_2;
+
+  float n = p_1 * degree;
+
+  float tn1 = x;
+  float tn = 2.0f * x * x - 1;
+  while (n > 1.0) {
+    float temp = tn;
+    tn = 2.0f * x * tn - tn1;
+    tn1 = temp;
+    n--;
+  }
+
+  x = tn1 + (tn - tn1) * n;
+  x /= p_2;
+
+  x *= envelope_;
+
+  return x;
 }
 
 /* static */
