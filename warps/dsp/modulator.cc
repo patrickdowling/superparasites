@@ -583,25 +583,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float time_end = parameters_.modulation_parameter * (DELAY_SIZE-10);
   float time_increment = (time_end - time) / static_cast<float>(size);
 
-  // // TEST
-  // time = 5000;
-  // time_increment = 0;
-
   float feedback = previous_parameters_.channel_drive[0];
   float feedback_end = parameters_.channel_drive[0];
   float feedback_increment = (feedback_end - feedback) / static_cast<float>(size);
 
-  // // TEST
-  // feedback = 0.0;
-  // feedback_increment = 0;
-
   float drywet = previous_parameters_.channel_drive[1];
   float drywet_end = parameters_.channel_drive[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
-
-  // // TEST
-  // drywet = 1.0;
-  // drywet_increment = 0;
 
   float rate = previous_parameters_.raw_algorithm;
   rate = rate * 2.0f - 1.0f;
@@ -610,11 +598,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   rate_end = rate_end * 2.0f - 1.0f;
   rate_end = rate_end * rate_end * rate_end;
   float rate_increment = (rate_end - rate) / static_cast<float>(size);
-
-  // // TEST
-  // rate = 1.0;
-  // rate_increment = 0;
-
+ 
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
 
@@ -705,16 +689,14 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     // read from buffer
 
-    // printf("lp_time=%f\n", lp_time);
-
     float index = read_position - lp_time;
     if (index < 0)
       index += DELAY_SIZE;
 
     MAKE_INTEGRAL_FRACTIONAL(index);
 
-    ShortFrame a = buffer[(index_integral-1) % DELAY_SIZE];
-    ShortFrame b = buffer[index_integral];
+    ShortFrame a = buffer[index_integral];
+    ShortFrame b = buffer[(index_integral + 1) % DELAY_SIZE];
 
     FloatFrame wet;
     wet.l = a.l + (b.l - a.l) * index_fractional;
