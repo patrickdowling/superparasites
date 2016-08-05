@@ -68,6 +68,7 @@ void Modulator::Init(float sample_rate) {
   previous_parameters_.note = 48.0f;
 
   feedback_sample_ = 0.0f;
+  delay_interpolation_ = INTERPOLATION_HERMITE;
 
   ShortFrame e = {0, 0};
   fill(delay_buffer_, delay_buffer_+DELAY_SIZE, e);
@@ -571,7 +572,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static float write_position = 0.0f;
   static float read_position = 0.0f;
 
-  static FloatFrame previous_mix_sample = {0.0f, 0.0f};
+  static FloatFrame previous_samples[3] = {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}};
 
   float time = previous_parameters_.modulation_parameter * (DELAY_SIZE-10);
   float time_end = parameters_.modulation_parameter * (DELAY_SIZE-10);
@@ -592,13 +593,12 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   rate_end = rate_end * 2.0f - 1.0f;
   rate_end = rate_end * rate_end * rate_end;
   float rate_increment = (rate_end - rate) / static_cast<float>(size);
- 
+
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
 
   while (size--) {
 
-    // TODO outside of loop
     static float lp_time = 0.0f;
     ONE_POLE(lp_time, time, 0.00002f);
 
@@ -659,9 +659,31 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     while (write_position < 1.0f) {
 
       // read somewhere between the input and the previous input
-      FloatFrame s;
-      s.l = previous_mix_sample.l + (mix.l - previous_mix_sample.l) * write_position;
-      s.r = previous_mix_sample.r + (mix.r - previous_mix_sample.r) * write_position;
+      FloatFrame s = {0, 0};
+
+      if (delay_interpolation_ == INTERPOLATION_ZOH) {
+        s.l = mix.l;
+        s.r = mix.r;
+      } else if (delay_interpolation_ == INTERPOLATION_LINEAR) {
+        s.l = previous_samples[0].l + (mix.l - previous_samples[0].l) * write_position;
+        s.r = previous_samples[0].r + (mix.r - previous_samples[0].r) * write_position;
+      } else if (delay_interpolation_ == INTERPOLATION_HERMITE) {
+        FloatFrame xm1 = previous_samples[2];
+        FloatFrame x0 = previous_samples[1];
+        FloatFrame x1 = previous_samples[0];
+        FloatFrame x2 = mix;
+
+        FloatFrame c = { (x1.l - xm1.l) * 0.5f,
+                         (x1.r - xm1.r) * 0.5f };
+        FloatFrame v = { (float)(x0.l - x1.l), (float)(x0.r - x1.r)};
+        FloatFrame w = { c.l + v.l, c.r + v.r };
+        FloatFrame a = { w.l + v.l + (x2.l - x0.l) * 0.5f,
+                         w.r + v.r + (x2.r - x0.r) * 0.5f };
+        FloatFrame b_neg = { w.l + a.l, w.r + a.r };
+        float t = write_position;
+        s.l = ((((a.l * t) - b_neg.l) * t + c.l) * t + x0.l);
+        s.r = ((((a.r * t) - b_neg.r) * t + c.r) * t + x0.r);
+      }
 
       // write this to buffer
       buffer[write_head].l = Clip16((s.l) * 32768.0f);
@@ -678,7 +700,10 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     }
 
     write_position--;
-    previous_mix_sample = mix;
+
+    previous_samples[2] = previous_samples[1];
+    previous_samples[1] = previous_samples[0];
+    previous_samples[0] = mix;
 
     // read from buffer
 
@@ -688,12 +713,32 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     MAKE_INTEGRAL_FRACTIONAL(index);
 
-    ShortFrame a = buffer[index_integral];
-    ShortFrame b = buffer[(index_integral + 1) % DELAY_SIZE];
+    ShortFrame xm1 = buffer[index_integral];
+    ShortFrame x0 = buffer[(index_integral + 1) % DELAY_SIZE];
+    ShortFrame x1 = buffer[(index_integral + 2) % DELAY_SIZE];
+    ShortFrame x2 = buffer[(index_integral + 3) % DELAY_SIZE];
 
     FloatFrame wet;
-    wet.l = a.l + (b.l - a.l) * index_fractional;
-    wet.r = a.r + (b.r - a.r) * index_fractional;
+
+    if (delay_interpolation_ == INTERPOLATION_ZOH) {
+      wet.l = xm1.l;
+      wet.r = xm1.r;
+    } else if (delay_interpolation_ == INTERPOLATION_LINEAR) {
+      wet.l = xm1.l + (x0.l - xm1.l) * index_fractional;
+      wet.r = xm1.r + (x0.r - xm1.r) * index_fractional;
+    } else if (delay_interpolation_ == INTERPOLATION_HERMITE) {
+      FloatFrame c = { (x1.l - xm1.l) * 0.5f,
+                       (x1.r - xm1.r) * 0.5f };
+      FloatFrame v = { (float)(x0.l - x1.l), (float)(x0.r - x1.r)};
+      FloatFrame w = { c.l + v.l, c.r + v.r };
+      FloatFrame a = { w.l + v.l + (x2.l - x0.l) * 0.5f,
+                       w.r + v.r + (x2.r - x0.r) * 0.5f };
+      FloatFrame b_neg = { w.l + a.l, w.r + a.r };
+      float t = index_fractional;
+      wet.l = ((((a.l * t) - b_neg.l) * t + c.l) * t + x0.l);
+      wet.r = ((((a.r * t) - b_neg.r) * t + c.r) * t + x0.r);
+    }
+
     wet.l /= 32768.0f;
     wet.r /= 32768.0f;
 

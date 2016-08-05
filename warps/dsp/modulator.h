@@ -328,8 +328,16 @@ class Modulator {
                   + sizeof(feedback_sample_)) / sizeof(ShortFrame) - 4
   };
 
+  enum DelayInterpolation {
+    INTERPOLATION_ZOH,
+    INTERPOLATION_LINEAR,
+    INTERPOLATION_HERMITE,
+  };
+
+  DelayInterpolation delay_interpolation_;
+
   static XmodFn xmod_table_[];
-  
+
   DISALLOW_COPY_AND_ASSIGN(Modulator);
 };
 
