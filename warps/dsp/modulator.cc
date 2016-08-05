@@ -562,12 +562,6 @@ void Modulator::ProcessBitcrusher(ShortFrame* input, ShortFrame* output, size_t 
 
 void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size) {
 
-  // on my hardware the big knob doesn't go to 1.0
-  parameters_.raw_algorithm -= 0.5f;
-  parameters_.raw_algorithm *= 1.1f;
-  parameters_.raw_algorithm += 0.5f;
-  CONSTRAIN(parameters_.raw_algorithm, 0.0f, 1.0f);
-
   ShortFrame *buffer = delay_buffer_;
 
   static FloatFrame feedback_sample;
@@ -593,7 +587,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   float rate = previous_parameters_.raw_algorithm;
   rate = rate * 2.0f - 1.0f;
-  rate = rate * rate * rate;
+  rate *= rate * rate;
   float rate_end = parameters_.raw_algorithm;
   rate_end = rate_end * 2.0f - 1.0f;
   rate_end = rate_end * rate_end * rate_end;
@@ -607,11 +601,10 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     // TODO outside of loop
     static float lp_time = 0.0f;
     ONE_POLE(lp_time, time, 0.00002f);
-    CONSTRAIN(lp_time, 0, DELAY_SIZE-1); // TODO why?
 
     static float sample_rate;
     ONE_POLE(sample_rate, fabsf(rate), 0.01f);
-    CONSTRAIN (sample_rate, 0.01f, 1.0f); // TODO why not 0?
+    CONSTRAIN (sample_rate, 0.001f, 1.0f);
     int direction = rate > 0.0f ? 1 : -1;
 
     FloatFrame in;
