@@ -568,54 +568,67 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   parameters_.raw_algorithm += 0.5f;
   CONSTRAIN(parameters_.raw_algorithm, 0.0f, 1.0f);
 
-  // TEST
-  float r = 0.0f;
-  parameters_.raw_algorithm = previous_parameters_.raw_algorithm = r;
-  float t = 0.0f;
-  parameters_.modulation_parameter = previous_parameters_.modulation_parameter = t;
-
   ShortFrame *buffer = delay_buffer_;
 
   static FloatFrame feedback_sample;
-  static float lp_time, sl_time = 0.0f;
 
-  static uint32_t write_head = 0;
-  static uint32_t read_head = 1;
+  static int32_t write_head = 0;
 
   static float write_position = 0.0f;
   static float read_position = 0.0f;
 
   static FloatFrame previous_mix_sample = {0.0f, 0.0f};
 
-  const size_t kMinDelay = 1000;
-
-  float time = static_cast<float>(DELAY_SIZE - kMinDelay)
-    * previous_parameters_.modulation_parameter + kMinDelay;
-  float time_end = static_cast<float>(DELAY_SIZE - kMinDelay)
-    * parameters_.modulation_parameter + kMinDelay;
+  float time = previous_parameters_.modulation_parameter * (DELAY_SIZE-10);
+  float time_end = parameters_.modulation_parameter * (DELAY_SIZE-10);
   float time_increment = (time_end - time) / static_cast<float>(size);
+
+  // // TEST
+  // time = 5000;
+  // time_increment = 0;
 
   float feedback = previous_parameters_.channel_drive[0];
   float feedback_end = parameters_.channel_drive[0];
   float feedback_increment = (feedback_end - feedback) / static_cast<float>(size);
 
+  // // TEST
+  // feedback = 0.0;
+  // feedback_increment = 0;
+
   float drywet = previous_parameters_.channel_drive[1];
   float drywet_end = parameters_.channel_drive[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
+  // // TEST
+  // drywet = 1.0;
+  // drywet_increment = 0;
+
   float rate = previous_parameters_.raw_algorithm;
   rate = rate * 2.0f - 1.0f;
+  rate = rate * rate * rate;
   float rate_end = parameters_.raw_algorithm;
   rate_end = rate_end * 2.0f - 1.0f;
-
+  rate_end = rate_end * rate_end * rate_end;
   float rate_increment = (rate_end - rate) / static_cast<float>(size);
 
-  // printf("feedback=%f\n", feedback);
+  // // TEST
+  // rate = 1.0;
+  // rate_increment = 0;
 
   filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
   filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
 
   while (size--) {
+
+    // TODO outside of loop
+    static float lp_time = 0.0f;
+    ONE_POLE(lp_time, time, 0.00002f);
+    CONSTRAIN(lp_time, 0, DELAY_SIZE-1); // TODO why?
+
+    static float sample_rate;
+    ONE_POLE(sample_rate, fabsf(rate), 0.01f);
+    CONSTRAIN (sample_rate, 0.01f, 1.0f); // TODO why not 0?
+    int direction = rate > 0.0f ? 1 : -1;
 
     FloatFrame in;
     in.l = static_cast<float>(input->l) / 32768.0f;
@@ -663,12 +676,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     mix.l = in.l + fb.l;
     mix.r = in.r + fb.r;
 
-    float sample_rate = rate * rate * rate;
-    sample_rate = fabs(sample_rate);
-    CONSTRAIN (sample_rate, 0.01f, 1.0f);
-    int direction = rate > 0.0f ? 1 : -1;
-
-    // printf("rate=%f(%d), time=%f, wh=%d, wp=%f, rh=%d, rp=%f\n", sample_rate, direction, time, write_head, write_position, read_head, read_position);
+    // printf("rate=%f(%d), time=%f, wh=%d, wp=%f, rp=%f\n", sample_rate, direction, time, write_head, write_position, read_position);
 
     // write to buffer
     while (write_position < 1.0f) {
@@ -679,57 +687,40 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       s.r = previous_mix_sample.r + (mix.r - previous_mix_sample.r) * write_position;
 
       // write this to buffer
-      buffer[write_head % DELAY_SIZE].l = Clip16((s.l) * 32768.0f);
-      buffer[write_head % DELAY_SIZE].r = Clip16((s.r) * 32768.0f);
-
-      // printf("buffer[%u] = %d\n", write_head, buffer[write_head % DELAY_SIZE].l);
+      buffer[write_head].l = Clip16((s.l) * 32768.0f);
+      buffer[write_head].r = Clip16((s.r) * 32768.0f);
 
       write_position += 1.0f / sample_rate;
 
-      // if (direction == -1 && write_head == 0) {
-      //   write_head = DELAY_SIZE;
-      // } else if (direction == 1 && write_head == DELAY_SIZE-1) {
-      //   write_head = 0;
-      // } else {
-        write_head += direction;
-      // }
+      write_head += direction;
+      // wraparound
+      if (write_head >= DELAY_SIZE)
+        write_head -= DELAY_SIZE;
+      if (write_head < 0)
+        write_head += DELAY_SIZE;
     }
 
     write_position--;
-
-    // TODO optimize!
-    while (read_position > 1.0f) {
-      // if (direction == -1 && read_head == 0) {
-      //   read_head = DELAY_SIZE;
-      // } else if (direction == 1 && read_head == DELAY_SIZE-1) {
-      //   read_head = 0;
-      // } else {
-        read_head += direction;
-      // }
-
-      read_position--;
-    }
-
-    // printf("rh=%d; wh=%d (DS=%d)\n", read_head, write_head, DELAY_SIZE);
+    previous_mix_sample = mix;
 
     // read from buffer
-    SLEW(sl_time, time, 0.5f);
-    ONE_POLE(lp_time, sl_time, 0.0001f);
-    CONSTRAIN(lp_time, 0, DELAY_SIZE-1);
 
-    float index = read_head - lp_time + read_position;
+    // printf("lp_time=%f\n", lp_time);
+
+    float index = read_position - lp_time;
+    if (index < 0)
+      index += DELAY_SIZE;
+
     MAKE_INTEGRAL_FRACTIONAL(index);
 
     ShortFrame a = buffer[(index_integral-1) % DELAY_SIZE];
-    ShortFrame b = buffer[index_integral % DELAY_SIZE];
+    ShortFrame b = buffer[index_integral];
 
     FloatFrame wet;
     wet.l = a.l + (b.l - a.l) * index_fractional;
     wet.r = a.r + (b.r - a.r) * index_fractional;
     wet.l /= 32768.0f;
     wet.r /= 32768.0f;
-
-    // printf("write_pos=%f, write_head=%d, read_head=%d, index=%f\n", write_position, write_head, read_head, index);
 
     feedback_sample = wet;
 
@@ -743,9 +734,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     if (parameters_.carrier_shape == 0)
       output->r = feedback_sample.r;
 
-    read_position += sample_rate;
+    read_position += sample_rate * direction;
 
-    previous_mix_sample = mix;
+    // wraparound
+    if (read_position >= DELAY_SIZE)
+      read_position -= DELAY_SIZE;
+    if (read_position < 0)
+      read_position += DELAY_SIZE;
 
     feedback += feedback_increment;
     rate += rate_increment;
