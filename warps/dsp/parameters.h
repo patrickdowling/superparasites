@@ -59,6 +59,7 @@ struct Parameters {
   float modulation_parameter;
   
   // Raw parameters.
+  float raw_level[2];
   float raw_algorithm_pot;
   float raw_algorithm_cv;
   float raw_algorithm;
