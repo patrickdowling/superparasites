@@ -571,7 +571,6 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   static int32_t write_head = 0;
 
   static float write_position = 0.0f;
-  static float read_position = 0.0f;
 
   static FloatFrame previous_samples[3] = {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}};
 
@@ -603,10 +602,11 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     static float lp_time = 0.0f;
     ONE_POLE(lp_time, time, 0.00002f);
 
-    static float sample_rate;
-    ONE_POLE(sample_rate, fabsf(rate), 0.005f);
-    CONSTRAIN(sample_rate, 0.001f, 1.0f);
-    int direction = rate > 0.0f ? 1 : -1;
+    static float lp_rate;
+    ONE_POLE(lp_rate, rate, 0.007f);
+    float sample_rate = fabsf(lp_rate);
+    CONSTRAIN(sample_rate, 0.0001f, 1.0f);
+    int direction = lp_rate > 0.0f ? 1 : -1;
 
     FloatFrame in;
     in.l = static_cast<float>(input->l) / 32768.0f;
@@ -706,7 +706,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     // read from buffer
 
-    float index = read_position - lp_time;
+    float index = write_head - write_position * sample_rate * direction - lp_time;
+
     if (index < 0)
       index += DELAY_SIZE;
 
@@ -752,14 +753,6 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     // if open feedback loop, AUX is the wet signal
     if (parameters_.carrier_shape == 0)
       output->r = feedback_sample.r;
-
-    read_position += sample_rate * direction;
-
-    // wraparound
-    if (read_position >= DELAY_SIZE)
-      read_position -= DELAY_SIZE;
-    if (read_position < 0)
-      read_position += DELAY_SIZE;
 
     feedback += feedback_increment;
     rate += rate_increment;
