@@ -579,12 +579,12 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   float time_end = parameters_.modulation_parameter * (DELAY_SIZE-10);
   float time_increment = (time_end - time) / static_cast<float>(size);
 
-  float feedback = previous_parameters_.channel_drive[0];
-  float feedback_end = parameters_.channel_drive[0];
+  float feedback = previous_parameters_.raw_level[0];
+  float feedback_end = parameters_.raw_level[0];
   float feedback_increment = (feedback_end - feedback) / static_cast<float>(size);
 
-  float drywet = previous_parameters_.channel_drive[1];
-  float drywet_end = parameters_.channel_drive[1];
+  float drywet = previous_parameters_.raw_level[1];
+  float drywet_end = parameters_.raw_level[1];
   float drywet_increment = (drywet_end - drywet) / static_cast<float>(size);
 
   float rate = previous_parameters_.raw_algorithm;
