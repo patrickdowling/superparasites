@@ -31,6 +31,7 @@
 #include <algorithm>
 
 #include "stmlib/dsp/units.h"
+#include "stmlib/utils/random.h"
 
 #include "warps/drivers/debug_pin.h"
 #include "warps/resources.h"
@@ -594,8 +595,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
   rate_end = rate_end * rate_end * rate_end;
   float rate_increment = (rate_end - rate) / static_cast<float>(size);
 
-  filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.001f);
-  filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.001f);
+  filter_[0].set_f<stmlib::FREQUENCY_FAST>(0.0008f);
+  filter_[1].set_f<stmlib::FREQUENCY_FAST>(0.0008f);
 
   while (size--) {
 
@@ -618,16 +619,14 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       fb.l = feedback_sample.r * feedback * 1.1f;
       fb.r = feedback_sample.l * feedback * 1.1f;
     } else if (parameters_.carrier_shape == 2) {
-      // simulate tape hiss with bitwise mangling and pot noise
-      int16_t seed = static_cast<int16_t>((feedback + drywet + time + rate) * 32768.0f) & 0b11111;
-      // TODO!!!
-      // feedback_sample.l |= seed;
-      // feedback_sample.r |= seed;
-      fb.l = feedback_sample.l + seed / 32768.0f;
-      fb.r = feedback_sample.r + ~seed / 32768.0f;
+      // simulate tape hiss with a bit of noise
+      float noise1 = Random::GetFloat();
+      float noise2 = Random::GetFloat();
+      fb.l = feedback_sample.l + noise1 * 0.003f;
+      fb.r = feedback_sample.r + noise2 * 0.003f;
       // apply filters: fixed high-pass and varying low-pass with attenuation
-      filter_[2].set_f<stmlib::FREQUENCY_FAST>(feedback / 16.0f);
-      filter_[3].set_f<stmlib::FREQUENCY_FAST>(feedback / 16.0f);
+      filter_[2].set_f<stmlib::FREQUENCY_FAST>(feedback / 12.0f);
+      filter_[3].set_f<stmlib::FREQUENCY_FAST>(feedback / 12.0f);
       fb.l = filter_[0].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb.l);
       fb.r = filter_[1].Process<stmlib::FILTER_MODE_HIGH_PASS>(fb.r);
       fb.l = feedback * (2.0f - feedback) * 1.1f *
