@@ -138,12 +138,12 @@ void Modulator::ProcessFreqShifter(
       parameters_.modulation_parameter,
       size);
   ParameterInterpolator feedback_amount(
-      &previous_parameters_.channel_drive[0],
-      parameters_.channel_drive[0],
+      &previous_parameters_.raw_level[0],
+      parameters_.raw_level[0],
       size);
   ParameterInterpolator dry_wet(
-      &previous_parameters_.channel_drive[1],
-      parameters_.channel_drive[1],
+      &previous_parameters_.raw_level[1],
+      parameters_.raw_level[1],
       size);
 
   float feedback_sample = feedback_sample_;
