@@ -183,8 +183,7 @@ void GranularProcessor::ProcessGranular(
         // Settings of the reverb
         oliverb_.set_diffusion(0.3f + 0.5f * parameters_.stereo_spread);
         oliverb_.set_size(0.05f + 0.94f * parameters_.size);
-        oliverb_.set_mod_rate(parameters_.feedback * parameters_.feedback *
-                             parameters_.feedback * parameters_.feedback * 70.0f);
+        oliverb_.set_mod_rate(parameters_.feedback);
         oliverb_.set_mod_amount(parameters_.reverb * 300.0f);
         oliverb_.set_ratio(SemitonesToRatio(parameters_.pitch));
 

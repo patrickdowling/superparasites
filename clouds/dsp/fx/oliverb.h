@@ -95,9 +95,11 @@ class Oliverb {
     float hp_2 = hp_decay_2_;
 
     /* Set frequency of LFOs */
-    float period = 1.0f / (mod_rate_ + 0.001f) * 32000.0f;
+    float slope = mod_rate_ * mod_rate_;
+    slope *= slope * slope;
+    slope /= 200.0f;
     for (int i=0; i<9; i++)
-      lfo_[i].set_slope((uint32_t)period);
+      lfo_[i].set_slope(slope);
 
     while (size--) {
       engine_.Start(&c);
