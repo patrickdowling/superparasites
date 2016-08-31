@@ -745,12 +745,19 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
     float fade_out = Interpolate(lut_xfade_out, drywet, 256.0f);
 
-    output->l = Clip16((fade_out * in.l + fade_in * wet.l) * 32768.0f);
-    output->r = Clip16((fade_out * in.r + fade_in * wet.r) * 32768.0f);
-
-    // if open feedback loop, AUX is the wet signal
-    if (parameters_.carrier_shape == 0)
-      output->r = feedback_sample.r;
+    if (parameters_.carrier_shape == 0) {
+      // if open feedback loop, AUX is the wet signal and OUT
+      // crossfades between inputs
+      output->l = Clip16((fade_out * in.l + fade_in * in.r) * 32768.0f);
+      output->r = Clip16(wet.r * 32768.0f);
+    } else if (parameters_.carrier_shape == 2) {
+      // analog mode -> soft-clipping
+      output->l = SoftConvert(fade_out * in.l + fade_in * wet.l);
+      output->r = SoftConvert(fade_out * in.r + fade_in * wet.r);
+    } else {
+      output->l = Clip16((fade_out * in.l + fade_in * wet.l) * 32768.0f);
+      output->r = Clip16((fade_out * in.r + fade_in * wet.r) * 32768.0f);
+    }
 
     feedback += feedback_increment;
     rate += rate_increment;
