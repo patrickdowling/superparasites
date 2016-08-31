@@ -622,8 +622,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       // simulate tape hiss with a bit of noise
       float noise1 = Random::GetFloat();
       float noise2 = Random::GetFloat();
-      fb.l = feedback_sample.l + noise1 * 0.003f;
-      fb.r = feedback_sample.r + noise2 * 0.003f;
+      fb.l = feedback_sample.l + noise1 * 0.002f;
+      fb.r = feedback_sample.r + noise2 * 0.002f;
       // apply filters: fixed high-pass and varying low-pass with attenuation
       filter_[2].set_f<stmlib::FREQUENCY_FAST>(feedback / 12.0f);
       filter_[3].set_f<stmlib::FREQUENCY_FAST>(feedback / 12.0f);
@@ -651,8 +651,6 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     FloatFrame mix;
     mix.l = in.l + fb.l;
     mix.r = in.r + fb.r;
-
-    // printf("rate=%f(%d), time=%f, wh=%d, wp=%f, rp=%f\n", sample_rate, direction, time, write_head, write_position, read_position);
 
     // write to buffer
     while (write_position < 1.0f) {
