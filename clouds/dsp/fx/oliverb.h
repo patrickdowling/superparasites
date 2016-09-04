@@ -232,7 +232,7 @@ class Oliverb {
   }
 
  private:
-  typedef FxEngine<16384, FORMAT_12_BIT> E;
+  typedef FxEngine<16384, FORMAT_16_BIT> E;
   E engine_;
 
   float input_gain_;
