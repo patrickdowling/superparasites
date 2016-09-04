@@ -748,6 +748,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     if (parameters_.carrier_shape == 0) {
       // if open feedback loop, AUX is the wet signal and OUT
       // crossfades between inputs
+      in.r = static_cast<float>(input->r) / 32768.0f;
       output->l = Clip16((fade_out * in.l + fade_in * in.r) * 32768.0f);
       output->r = Clip16(wet.r * 32768.0f);
     } else if (parameters_.carrier_shape == 2) {
