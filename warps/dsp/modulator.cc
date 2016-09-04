@@ -753,8 +753,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       output->r = Clip16(wet.r * 32768.0f);
     } else if (parameters_.carrier_shape == 2) {
       // analog mode -> soft-clipping
-      output->l = SoftConvert(fade_out * in.l + fade_in * wet.l);
-      output->r = SoftConvert(fade_out * in.r + fade_in * wet.r);
+      output->l = SoftConvert((fade_out * in.l + fade_in * wet.l) * 2.0f);
+      output->r = SoftConvert((fade_out * in.r + fade_in * wet.r) * 2.0f);
     } else {
       output->l = Clip16((fade_out * in.l + fade_in * wet.l) * 32768.0f);
       output->r = Clip16((fade_out * in.r + fade_in * wet.r) * 32768.0f);
