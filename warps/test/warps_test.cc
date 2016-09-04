@@ -164,7 +164,7 @@ void TestEasterEgg() {
   
   Modulator modulator;
   modulator.Init(kSampleRate);
-  modulator.set_feature_mode(FEATURE_MODE_DELAY);
+  modulator.set_feature_mode(FEATURE_MODE_CHEBYSCHEV);
   
   Parameters* p = modulator.mutable_parameters();
   
@@ -178,14 +178,16 @@ void TestEasterEgg() {
     float noise = (Random::GetFloat() - 0.5f) / 128.0f;
     filtered_noise += (noise - filtered_noise) * 0.1f;
     
-    p->raw_algorithm_pot = 0.0f + 0.0f * triangle + 0.0f * square;
+    p->raw_algorithm_pot = 1.0f + 0.0f * triangle + 0.0f * square;
     p->raw_algorithm_cv = 0.0f;
-    p->raw_algorithm = 1.0f;// + 0.1f * filtered_noise;    // sample rate
-    p->modulation_algorithm = 0.0f;
-    p->carrier_shape = 1;
+    p->raw_algorithm = 0.0f;// + 0.0f * triangle;// + 0.1f * filtered_noise;
+    p->modulation_algorithm = 0.3f;// + 1.0f * triangle;
+    p->carrier_shape = 0;
     p->channel_drive[0] = 0.5f;
-    p->channel_drive[1] = 1.0f;
-    p->modulation_parameter = 1.0f + 0.05f * filtered_noise;
+    p->channel_drive[1] = 0.0f;
+    p->raw_level[0] = 0.6f;
+    p->raw_level[1] = 1.0f;
+    p->modulation_parameter = 1.0f;// + 0.05f * filtered_noise;
     p->note = 48.0f + phi;
 
     ShortFrame input[kBlockSize];
