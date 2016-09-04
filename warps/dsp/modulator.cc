@@ -574,8 +574,8 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
   static FloatFrame previous_samples[3] = {{0.0f, 0.0f}, {0.0f, 0.0f}, {0.0f, 0.0f}};
 
-  float time = previous_parameters_.modulation_parameter * (DELAY_SIZE-100);
-  float time_end = parameters_.modulation_parameter * (DELAY_SIZE-100);
+  float time = previous_parameters_.modulation_parameter * (DELAY_SIZE-10) + 5;
+  float time_end = parameters_.modulation_parameter * (DELAY_SIZE-10) + 5;
   float time_increment = (time_end - time) / static_cast<float>(size);
 
   float feedback = previous_parameters_.raw_level[0];
