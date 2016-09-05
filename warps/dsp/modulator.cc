@@ -1151,24 +1151,18 @@ inline float Modulator::Xmod<ALGORITHM_CHEBYSCHEV>(
 
   float x = x_1 + x_2;
 
-  const float att = 1.0f;
-  const float rel = 0.000001f;
+  const float degree = 16.0f;
 
-  static float envelope_;
+  x *= p_2 * 2.0f;
 
-  float error = fabs(x) - envelope_;
-  envelope_ += (error > 0.0f ? att : rel) * error;
-
-  const float degree = 14.0f;
-
-  x /= envelope_;
-  x *= p_2;
+  if (x < -1.0f) x = -1.0f;
+  else if (x > 1.0f) x = 1.0f;
 
   float n = p_1 * degree;
 
   float tn1 = x;
   float tn = 2.0f * x * x - 1;
-  while (n > 1.0) {
+  while (n > 1.0f) {
     float temp = tn;
     tn = 2.0f * x * tn - tn1;
     tn1 = temp;
@@ -1177,8 +1171,7 @@ inline float Modulator::Xmod<ALGORITHM_CHEBYSCHEV>(
 
   x = tn1 + (tn - tn1) * n;
   x /= p_2;
-
-  x *= envelope_;
+  x *= 0.5f;
 
   return x;
 }
