@@ -605,7 +605,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     static float lp_rate;
     ONE_POLE(lp_rate, rate, 0.007f);
     float sample_rate = fabsf(lp_rate);
-    CONSTRAIN(sample_rate, 0.0001f, 1.0f);
+    CONSTRAIN(sample_rate, 0.001f, 1.0f);
     int direction = lp_rate > 0.0f ? 1 : -1;
 
     FloatFrame in;
