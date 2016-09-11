@@ -740,6 +740,13 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
     wet.l /= 32768.0f;
     wet.r /= 32768.0f;
 
+    // attenuate output at low sample rate to mask stupid
+    // discontinuity bug
+    float gain = sample_rate / 0.01f;
+    CONSTRAIN(gain, 0.0f, 1.0f);
+    wet.l *= gain * gain;
+    wet.r *= gain * gain;
+
     feedback_sample = wet;
 
     float fade_in = Interpolate(lut_xfade_in, drywet, 256.0f);
