@@ -692,7 +692,7 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
       // wraparound
       if (write_head >= DELAY_SIZE)
         write_head -= DELAY_SIZE;
-      if (write_head < 0)
+      else if (write_head < 0)
         write_head += DELAY_SIZE;
     }
 
@@ -706,8 +706,9 @@ void Modulator::ProcessDelay(ShortFrame* input, ShortFrame* output, size_t size)
 
     float index = write_head - write_position * sample_rate * direction - lp_time;
 
-    if (index < 0)
+    while (index < 0) {
       index += DELAY_SIZE;
+    }
 
     MAKE_INTEGRAL_FRACTIONAL(index);
 
