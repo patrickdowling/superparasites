@@ -75,7 +75,7 @@ void write_wav_header(FILE* fp, int num_samples, int num_channels) {
 void TestDSP() {
   size_t duration = 15;
 
-  FILE* fp_in = fopen("audio_samples/sines.wav", "rb");
+  FILE* fp_in = fopen("audio_samples/sine.wav", "rb");
   FILE* fp_out = fopen("clouds.wav", "wb");
 
   size_t remaining_samples = kSampleRate * duration;
@@ -92,7 +92,7 @@ void TestDSP() {
 
   processor.set_num_channels(2);
   processor.set_low_fidelity(false);
-  processor.set_playback_mode(PLAYBACK_MODE_OLIVERB);
+  processor.set_playback_mode(PLAYBACK_MODE_GRANULAR);
   
   Parameters* p = processor.mutable_parameters();
   
@@ -102,23 +102,24 @@ void TestDSP() {
   processor.Prepare();
   float pot_noise = 0.0f;
   while (remaining_samples) {
-    uint16_t tri = (remaining_samples * 0.4);
-    tri = tri > 32767 ? 65535 - tri : tri;
-    float triangle = tri / 32768.0f;
+    // uint16_t tri = (remaining_samples * 0.4);
+    // tri = tri > 32767 ? 65535 - tri : tri;
+    // float triangle = tri / 32768.0f;
     
     p->gate = false;
-    p->trigger = false || (block_counter & 2047) > 1024;
+    p->trigger = false;// || (block_counter & 2047) > 1024;
     p->freeze = false; // || (block_counter & 2047) > 1024;
+    p->granular.reverse = true;
     pot_noise += 0.05f * ((Random::GetSample() / 32768.0f) * 0.05f - pot_noise);
-    p->position = triangle * 0.0f + 0.5f;
-    p->size = 0.99f;
-    p->pitch = 0.0f + (triangle > 0.5f ? 1.0f : 0.0f) * 0.0f;
-    p->density = 0.7f;
-    p->texture = 0.5f;
+    p->position = Random::GetFloat();//triangle * 0.0f + 0.5f;
+    p->size = Random::GetFloat();//0.99f;
+    p->pitch = Random::GetFloat() * 24.0f; //0.0f + (triangle > 0.5f ? 1.0f : 0.0f) * 0.0f;
+    p->density = 0.99f;
+    p->texture = 0.7f;
     p->dry_wet = 1.0f;
-    p->stereo_spread = 0.7f;
-    p->feedback = 0.3f;
-    p->reverb = 0.9f;
+    p->stereo_spread = 0.0f;
+    p->feedback = 0.0f;
+    p->reverb = 0.0f;
 
     ++block_counter;
     ShortFrame input[kBlockSize];
