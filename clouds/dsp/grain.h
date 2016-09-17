@@ -83,12 +83,11 @@ class Grain {
     pre_delay_ = pre_delay;
     reverse_ = reverse;
 
+    first_sample_ = (start + buffer_size) % buffer_size;
     if (reverse) {
-      first_sample_ = (start + width + buffer_size) % buffer_size;
       phase_increment_ = -phase_increment;
-      phase_ = INT32_MAX;
+      phase_ = width * phase_increment;
     } else {
-      first_sample_ = (start + buffer_size) % buffer_size;
       phase_increment_ = phase_increment;
       phase_ = 0;
     }
