@@ -239,9 +239,7 @@ class AudioBuffer {
   }
   
   inline float ReadHermite(int32_t integral, uint16_t fractional) const {
-    if (integral >= size_) {
-      integral -= size_;
-    }
+	integral = integral % size_;
     
     // assert(integral >= 0 && integral < size_);
     

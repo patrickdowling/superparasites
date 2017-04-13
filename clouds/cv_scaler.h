@@ -101,7 +101,7 @@ class CvScaler {
   }
 
  private:
-  static const int8_t kAdcLatency = 5;
+  static const int kAdcLatency = 5;
   
   Adc adc_;
   PotsAdc pots_adc_;

@@ -41,6 +41,7 @@
 #include "clouds/dsp/fx/oliverb.h"
 #include "clouds/dsp/granular_processor.h"
 #include "clouds/dsp/granular_sample_player.h"
+#include "clouds/dsp/kammerl_player.h"
 #include "clouds/dsp/looping_sample_player.h"
 #include "clouds/dsp/pvoc/phase_vocoder.h"
 #include "clouds/dsp/sample_rate_converter.h"
@@ -57,6 +58,7 @@ enum PlaybackMode {
   PLAYBACK_MODE_SPECTRAL,
   PLAYBACK_MODE_OLIVERB,
   PLAYBACK_MODE_RESONESTOR,
+  PLAYBACK_MODE_KAMMERL,
   PLAYBACK_MODE_LAST
 };
 
@@ -215,6 +217,7 @@ class GranularProcessor {
   WSOLASamplePlayer ws_player_;
   LoopingSamplePlayer looper_;
   PhaseVocoder phase_vocoder_;
+  KammerlPlayer kammerl_;
   
   Diffuser diffuser_;
   Reverb reverb_;

@@ -62,6 +62,17 @@ struct Parameters {
     float phase_randomization;
     float warp;
   } spectral;
+
+  struct Kammerl {
+    float probability;
+    float pitch_mode;
+    float clock_divider;
+    float distortion;
+    float slice_selection;
+    float slice_modulation;
+    float size_modulation;
+    float pitch;
+  } kammerl;
 };
 
 }  // namespace clouds

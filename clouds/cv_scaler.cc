@@ -179,6 +179,22 @@ void CvScaler::Read(Parameters* parameters) {
   } 
   parameters->pitch += note_;
   CONSTRAIN(parameters->pitch, -48.0f, 48.0f);
+
+  // Update KAMMERL_MODE parameters
+  parameters->kammerl.slice_selection = smoothed_adc_value_[ADC_TEXTURE_CV];
+  CONSTRAIN(parameters->kammerl.slice_selection, 0.0f, 1.0f);
+  parameters->kammerl.slice_modulation = smoothed_adc_value_[ADC_TEXTURE_POTENTIOMETER];
+  CONSTRAIN(parameters->kammerl.slice_modulation, 0.0f, 1.0f);
+
+  parameters->kammerl.size_modulation = density; 
+  parameters->kammerl.probability = dry_wet; // BLEND_PARAMETER_DRY_WET:
+  parameters->kammerl.clock_divider = stereo_spread; // BLEND_PARAMETER_STEREO_SPREAD
+  parameters->kammerl.pitch_mode = feedback; // BLEND_PARAMETER_FEEDBACK
+  parameters->kammerl.distortion = reverb_amount; // BLEND_PARAMETER_REVERB
+
+  parameters->kammerl.pitch = smoothed_adc_value_[ADC_CHANNEL_LAST + ADC_PITCH_POTENTIOMETER];
+  parameters->kammerl.pitch += smoothed_adc_value_[ADC_VOCT_CV] - 0.5f;
+  CONSTRAIN(parameters->kammerl.pitch, 0.0f, 1.0f);
   
   gate_input_.Read();
   if (gate_input_.freeze_rising_edge()) {
