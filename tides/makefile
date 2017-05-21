@@ -42,8 +42,6 @@ TARGET         = tides
 PACKAGES       = tides tides/drivers stmlib/utils stmlib/system
 RESOURCES      = tides/resources
 
-TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
-
 include stmlib/makefile.inc
 
 # Rule for building the firmware update file

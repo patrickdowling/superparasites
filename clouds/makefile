@@ -48,8 +48,6 @@ PACKAGES       = clouds \
 		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = clouds/resources
 
-TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
-
 include stmlib/makefile.inc
 
 # Rule for building the firmware update file
