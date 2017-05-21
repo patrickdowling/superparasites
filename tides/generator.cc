@@ -1074,7 +1074,7 @@ void Generator::FillBufferHarmonic() {
     int32_t gain = 0;
 
     int16_t sine = range_ == GENERATOR_RANGE_HIGH ?
-      Interpolate1121(wav_sine2048, phase_) :
+      Interpolate1121(wav_sine1024, phase_) :
       range_ == GENERATOR_RANGE_MEDIUM ?
       Interpolate626(wav_sine64, phase_) :
       Interpolate428(wav_sine16, phase_);
@@ -1094,7 +1094,7 @@ void Generator::FillBufferHarmonic() {
       if (mode == GENERATOR_MODE_AR) { // power of two harmonics
         if (harm == kNumHarmonicsPowers) break;
         if ((harm & 3) == 0)
-          tn = Interpolate1121(wav_sine2048, phase_ << harm);
+          tn = Interpolate1121(wav_sine1024, phase_ << harm);
         else
           tn = 2 * ((tn * tn) >> 15) - 32768;
       } else if (mode == GENERATOR_MODE_AD) { // odd harmonics
