@@ -104,6 +104,12 @@ void GranularProcessor::ProcessGranular(
         parameters_.granular.overlap = 0.0f;
       }
 
+#ifdef CLOUDS_QUANTIZE_SEMITONES
+      // Quantize pitch to closest semitone
+      if (parameters_.pitch < 0.5f) parameters_.pitch -= 0.5f;
+      parameters_.pitch = static_cast<int>(parameters_.pitch + 0.5f);
+#endif
+
       // And TEXTURE too.
       parameters_.granular.window_shape = parameters_.texture < 0.75f
           ? parameters_.texture * 1.333f : 1.0f;
