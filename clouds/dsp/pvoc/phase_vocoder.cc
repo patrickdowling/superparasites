@@ -57,7 +57,7 @@ void PhaseVocoder::Init(
   float* ifft_buffer = allocator[num_channels_ - 1]->Allocate<float>(fft_size);
   
   size_t num_textures = kMaxNumTextures;
-  size_t texture_size = (fft_size >> 1) - kHighFrequencyTruncation;
+  size_t texture_size = (fft_size >> 1);
   for (int32_t i = 0; i < num_channels_; ++i) {
     short* ana_syn_buffer = allocator[i]->Allocate<short>(
         (fft_size + (fft_size >> 1)) * 2);
@@ -73,12 +73,12 @@ void PhaseVocoder::Init(
         ifft_buffer,
         large_window_lut,
         ana_syn_buffer,
-        &frame_transformation_[i]);
+        &spectral_clouds_transformation_[i]);
   }
   for (int32_t i = 0; i < num_channels_; ++i) {
     float* texture_buffer = allocator[i]->Allocate<float>(
         num_textures * texture_size);
-    frame_transformation_[i].Init(texture_buffer, fft_size, num_textures);
+    spectral_clouds_transformation_[i].Init(texture_buffer, fft_size, num_textures, sample_rate, &fft_);
   }
 }
 
@@ -86,6 +86,7 @@ void PhaseVocoder::Process(
     const Parameters& parameters,
     const FloatFrame* input,
     FloatFrame* output, size_t size) {
+
   const float* input_samples = &input[0].l;
   float* output_samples = &output[0].l;
   for (int32_t i = 0; i < num_channels_; ++i) {

@@ -30,7 +30,8 @@
 
 #include <algorithm>
 
-#include "clouds/dsp/pvoc/frame_transformation.h"
+#include "clouds/dsp/parameters.h"
+#include "clouds/dsp/pvoc/spectral_coulds_transformation.h"
 #include "stmlib/dsp/dsp.h"
 
 namespace clouds {
@@ -74,6 +75,8 @@ void STFT::Init(
   
   parameters_ = NULL;
   
+  trigger_received_ = false;
+
   Reset();
 }
 
@@ -94,6 +97,8 @@ void STFT::Process(
     size_t size,
     size_t stride) {
   parameters_ = &parameters;
+  trigger_received_ |= parameters_->capture;
+
   while (size) {
     size_t processed = min(size, hop_size_ - block_size_);
     for (size_t i = 0; i < processed; ++i) {
@@ -152,7 +157,8 @@ void STFT::Buffer() {
 #endif  // USE_ARM_FFT
   // Process in the frequency domain.
   if (modifier_ != NULL && parameters_ != NULL) {
-    modifier_->Process(*parameters_, &fft_out_[0], &ifft_in_[0]);
+    modifier_->Process(*parameters_, &fft_out_[0], &ifft_in_[0], trigger_received_);
+    trigger_received_ = false;
   } else {
     copy(&fft_out_[0], &fft_out_[fft_size_], &ifft_in_[0]);
   }

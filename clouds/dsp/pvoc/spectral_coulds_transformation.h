@@ -1,6 +1,6 @@
-// Copyright 2014 Olivier Gillet.
+// Copyright 2014 Julius Kammerl.
 //
-// Author: Olivier Gillet (ol.gillet@gmail.com)
+// Author: Julius Kammerl (julius.kammerl@gmail.com)
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,53 +24,64 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Naive phase vocoder.
+// Generates clouds like frequency spectrums.
 
-#ifndef CLOUDS_DSP_PVOC_PHASE_VOCODER_H_
-#define CLOUDS_DSP_PVOC_PHASE_VOCODER_H_
+#ifndef CLOUDS_DSP_PVOC_SPECTRAL_COUDS_TRANSFORMATION_H_
+#define CLOUDS_DSP_PVOC_SPECTRAL_COUDS_TRANSFORMATION_H_
 
 #include "stmlib/stmlib.h"
 
-#include "stmlib/fft/shy_fft.h"
-
-#include "clouds/dsp/frame.h"
 #include "clouds/dsp/pvoc/stft.h"
-#include "clouds/dsp/pvoc/spectral_coulds_transformation.h"
+
+#include "clouds/resources.h"
 
 namespace clouds {
 
+const int32_t kMaxNumTextures = 7;
+
 struct Parameters;
 
-class PhaseVocoder {
- public:
-  PhaseVocoder() { }
-  ~PhaseVocoder() { }
-  
-  void Init(
-      void** buffer, size_t* buffer_size,
-      const float* large_window_lut, size_t largest_fft_size,
-      int32_t num_channels,
-      int32_t resolution,
-      float sample_rate);
+class SpectralCloudsTransformation {
+public:
+	SpectralCloudsTransformation() {
+	}
+	~SpectralCloudsTransformation() {
+	}
 
-  void Process(
-      const Parameters& parameters,
-      const FloatFrame* input,
-      FloatFrame* output,
-      size_t size);
-  void Buffer();
-  
- private:
-  FFT fft_;
-  
-  STFT stft_[2];
-  SpectralCloudsTransformation spectral_clouds_transformation_[2];
+	void Init(float* buffer, int32_t fft_size, int32_t num_textures,
+			float sample_rate_hz, FFT* fft);
 
-  int32_t num_channels_;
-  
-  DISALLOW_COPY_AND_ASSIGN(PhaseVocoder);
+	void Process(const Parameters& parameters, float* fft_out, float* ifft_in, bool trigger);
+
+private:
+	void Reset(int32_t num_textures);
+	void RectangularToPolar(float* fft_data);
+	void PolarToRectangular(float* mags, float* fft_data);
+
+
+	inline void fast_p2r(float magnitude, uint16_t angle, float* re,
+			float* im) {
+		angle >>= 6;
+		*re = magnitude * lut_sin[angle + 256];
+		*im = magnitude * lut_sin[angle];
+	}
+
+	FFT* fft_;
+
+	int32_t size_;
+
+	float* buffers_[kMaxNumTextures];
+
+	uint16_t* phases_;
+	uint16_t* previous_mag_;
+	uint16_t* band_gain_target_;
+	uint16_t* band_gain_state_;
+
+	float current_num_freq_bands_parameter_;
+
+	DISALLOW_COPY_AND_ASSIGN (SpectralCloudsTransformation);
 };
 
 }  // namespace clouds
 
-#endif  // CLOUDS_DSP_PVOC_PHASE_VOCODER_H_
+#endif  // CLOUDS_DSP_PVOC_SPECTRAL_COUDS_TRANSFORMATION_H_

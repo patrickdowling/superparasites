@@ -55,13 +55,15 @@ struct Parameters {
     bool use_deterministic_seed;
     bool reverse;
   } granular;
-  
+
+#ifndef ENABLE_SPECTRAL_CLOUD
   struct Spectral {
     float quantization;
     float refresh_rate;
     float phase_randomization;
     float warp;
   } spectral;
+#endif
 
   struct Kammerl {
     float probability;

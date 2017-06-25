@@ -34,9 +34,10 @@ float KammerlPlayer::quantizeSize(float size) const {
 	static const size_t kNumSizeQuantizationIntevals = sizeof(kSizeQuantization)
 			/ sizeof(float);
 	if (size > kSizeQuantizationBorder[0]) {
-		const size_t index = std::upper_bound(kSizeQuantizationBorder,
+		size_t index = std::upper_bound(kSizeQuantizationBorder,
 				kSizeQuantizationBorder + kNumSizeQuantizationIntevals, size)
 				- kSizeQuantizationBorder;
+		CONSTRAIN(index, 0, kNumSizeQuantizationIntevals - 1);
 		return kSizeQuantization[index];
 	}
 	return size;

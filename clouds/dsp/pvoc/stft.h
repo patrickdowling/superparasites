@@ -50,7 +50,7 @@ const size_t kMaxFftSize = 4096;
   typedef stmlib::ShyFFT<float, kMaxFftSize, stmlib::RotationPhasor> FFT;
 #endif  // USE_ARM_FFT
 
-typedef class FrameTransformation Modifier;
+typedef class SpectralCloudsTransformation Modifier;
 
 class STFT {
  public:
@@ -108,6 +108,8 @@ class STFT {
   
   Modifier* modifier_;
   
+  bool trigger_received_;
+
   DISALLOW_COPY_AND_ASSIGN(STFT);
 };
 

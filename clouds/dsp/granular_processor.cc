@@ -82,7 +82,7 @@ void GranularProcessor::ProcessGranular(
     size_t size) {
   // At the exception of the spectral mode, all modes require the incoming
   // audio signal to be written to the recording buffer.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR) {
     const float* input_samples = &input[0].l;
     const bool play = !parameters_.freeze ||
@@ -142,8 +142,9 @@ void GranularProcessor::ProcessGranular(
       }
       break;
 
-    case PLAYBACK_MODE_SPECTRAL:
+    case PLAYBACK_MODE_SPECTRAL_CLOUD:
       {
+#ifndef ENABLE_SPECTRAL_CLOUD
         parameters_.spectral.quantization = parameters_.texture;
         parameters_.spectral.refresh_rate = 0.01f + 0.99f * parameters_.density;
         float warp = parameters_.size - 0.5f;
@@ -154,6 +155,7 @@ void GranularProcessor::ProcessGranular(
         randomization -= 0.05f;
         CONSTRAIN(randomization, 0.0f, 1.0f);
         parameters_.spectral.phase_randomization = randomization;
+#endif
         phase_vocoder_.Process(parameters_, input, output, size);
 
         if (num_channels_ == 1) {
@@ -280,7 +282,7 @@ void GranularProcessor::ProcessGranular(
     if (resolution() == 8) {
       kammerl_.Play(buffer_8_, parameters_, &output[0].l, size);
     } else {
-  	kammerl_.Play(buffer_16_, parameters_, &output[0].l, size);
+      kammerl_.Play(buffer_16_, parameters_, &output[0].l, size);
     }
     break;
 
@@ -288,6 +290,32 @@ void GranularProcessor::ProcessGranular(
       break;
   }
 }
+
+void GranularProcessor::WarmDistortion(float* in, float parameter) {
+	if (parameter < 0.1) {
+		return;
+	}
+	static const float kMaxDistf = 2.0f;
+	const float fac = kMaxDistf * parameter;
+	const float amp = 1.0f - parameter * 0.45f;
+
+	float smp = *in;
+	smp = (1.0f + fac) * smp - fac * smp * smp * smp;
+
+	float sign = 1.0f;
+	if (smp < 0) {
+		sign = -1.0;
+	}
+	float tanh_loopup =  std::max(0.0f, std::min(1.0f, (smp / 2.0f) * sign));
+	float inv_tanh_smp = Interpolate(lut_inv_tanh, tanh_loopup,
+			static_cast<float>(LUT_INV_TANH_SIZE-1)) * sign;
+
+	smp = smp + (inv_tanh_smp - smp) * fac;
+	smp *= amp;
+	smp = std::max(-1.0f, std::min(1.0f, smp));
+	*in = smp;
+}
+
 
 void GranularProcessor::Process(
     ShortFrame* input,
@@ -346,7 +374,8 @@ void GranularProcessor::Process(
 				  parameters_.reverb : 0.0f; // Map reverb parameter to feedback in PLAYBACK_MODE_KAMMERL.
   if (playback_mode_ != PLAYBACK_MODE_OLIVERB &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR &&
-      playback_mode_ != PLAYBACK_MODE_KAMMERL) {
+      playback_mode_ != PLAYBACK_MODE_KAMMERL &&
+      playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD) {
 	ONE_POLE(freeze_lp_, parameters_.freeze ? 1.0f : 0.0f, 0.0005f)
 	feedback = parameters_.feedback;
 	float cutoff = (20.0f + 100.0f * feedback * feedback) / sample_rate();
@@ -373,7 +402,7 @@ void GranularProcessor::Process(
   }
 
   // Diffusion and pitch-shifting post-processings.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
       playback_mode_ != PLAYBACK_MODE_OLIVERB &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR &&
       playback_mode_!= PLAYBACK_MODE_KAMMERL) {
@@ -385,8 +414,9 @@ void GranularProcessor::Process(
     diffuser_.Process(out_, size);
   }
 
-  if (playback_mode_ == PLAYBACK_MODE_LOOPING_DELAY &&
-      (!parameters_.freeze || looper_.synchronized())) {
+  if (((playback_mode_ == PLAYBACK_MODE_LOOPING_DELAY)
+      && (!parameters_.freeze || looper_.synchronized()))
+      || (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD)) {
     pitch_shifter_.set_ratio(SemitonesToRatio(parameters_.pitch));
     pitch_shifter_.set_size(parameters_.size);
     float x = parameters_.pitch;
@@ -485,6 +515,11 @@ void GranularProcessor::Process(
   }
 
   for (size_t i = 0; i < size; ++i) {
+    if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
+	    WarmDistortion(&out_[i].l, parameters_.kammerl.pitch_mode);
+	    WarmDistortion(&out_[i].r, parameters_.kammerl.pitch_mode);
+    }
+
     output[i].l = SoftConvert(out_[i].l);
     output[i].r = SoftConvert(out_[i].r);
   }
@@ -498,7 +533,7 @@ void GranularProcessor::PreparePersistentData() {
   persistent_state_.write_head[1] = low_fidelity_ ?
       buffer_8_[1].head() : buffer_16_[1].head();
   persistent_state_.quality = quality();
-  persistent_state_.spectral = playback_mode() == PLAYBACK_MODE_SPECTRAL;
+  persistent_state_.spectral = playback_mode() == PLAYBACK_MODE_SPECTRAL_CLOUD;
 }
 
 void GranularProcessor::GetPersistentData(
@@ -543,11 +578,11 @@ bool GranularProcessor::LoadPersistentData(const uint32_t* data) {
 
     if (i == 0) {
       // We now know from which mode the data was saved.
-      bool currently_spectral = playback_mode_ == PLAYBACK_MODE_SPECTRAL;
+      bool currently_spectral = playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD;
       bool requires_spectral = persistent_state_.spectral;
       if (currently_spectral ^ requires_spectral) {
         set_playback_mode(requires_spectral
-            ? PLAYBACK_MODE_SPECTRAL
+            ? PLAYBACK_MODE_SPECTRAL_CLOUD
             : PLAYBACK_MODE_GRANULAR);
       }
       set_quality(persistent_state_.quality);
@@ -575,8 +610,8 @@ bool GranularProcessor::LoadPersistentData(const uint32_t* data) {
 
 void GranularProcessor::Prepare() {
   bool playback_mode_changed = previous_playback_mode_ != playback_mode_;
-  bool benign_change = previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL
-    && playback_mode_ != PLAYBACK_MODE_SPECTRAL
+  bool benign_change = previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD
+    && playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD
     && playback_mode_ != PLAYBACK_MODE_RESONESTOR
     && previous_playback_mode_ != PLAYBACK_MODE_RESONESTOR
     && playback_mode_ != PLAYBACK_MODE_OLIVERB
@@ -637,7 +672,7 @@ void GranularProcessor::Prepare() {
         &correlator_data[correlator_block_size]);
     pitch_shifter_.Init((uint16_t*)correlator_data);
 
-    if (playback_mode_ == PLAYBACK_MODE_SPECTRAL) {
+    if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
       phase_vocoder_.Init(
           buffer, buffer_size,
           lut_sine_window_4096, 4096,
@@ -670,7 +705,7 @@ void GranularProcessor::Prepare() {
     previous_playback_mode_ = playback_mode_;
   }
 
-  if (playback_mode_ == PLAYBACK_MODE_SPECTRAL) {
+  if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
     phase_vocoder_.Buffer();
   } else if (playback_mode_ == PLAYBACK_MODE_STRETCH ||
              playback_mode_ == PLAYBACK_MODE_OLIVERB) {

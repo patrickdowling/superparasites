@@ -149,7 +149,7 @@ public:
 	template<Resolution resolution>
 	void Play(const AudioBuffer<resolution>* buffer,
 			const Parameters& parameters, float* out, size_t size) {
-		int32_t max_delay = buffer->size();
+		int32_t max_delay = buffer->size() - 4;
 		num_samples_since_trigger_ += size;
 		if (num_samples_since_trigger_ > max_delay) {
 			num_samples_since_trigger_ = 0;
@@ -267,8 +267,8 @@ public:
 			case PLAYBACK_MODE_SCRATCH_PITCH:
 				// TODO: Use precomputed sin lookup table.
 				playback_sample_step = 1.0f
-						- std::sin(slice_processed_percentage * 2.0f * M_PI)
-								* (1.0f - pitch_parameter);
+						- Interpolate(lut_sin, slice_processed_percentage,
+								1024.0f) * (1.0f - pitch_parameter);
 				break;
 			default:
 				playback_sample_step = pitch_parameter;
@@ -348,15 +348,22 @@ public:
 			slice_play_pos_samples_ += playback_sample_step
 					* slice_play_direction_;
 
+			// Safety check to ensure the 4 sample lookahead doesn't lead to an out-of-bound read.
+			uint32_t buffer_pos_idx_in_buffer = buffer_pos_idx >> 12;
+			uint32_t buffer_pos_fract = buffer_pos_idx << 4;
+			buffer_pos_idx_in_buffer = buffer_pos_idx_in_buffer
+					% buffer->size();
+			CONSTRAIN(buffer_pos_idx_in_buffer, 0, (uint32_t)(buffer->size() - 5));
+
 			// Write to output.
-			float l = buffer[0].ReadHermite((buffer_pos_idx >> 12),
-					buffer_pos_idx << 4);
+			float l = buffer[0].ReadHermite(buffer_pos_idx_in_buffer,
+					buffer_pos_fract);
 			if (num_channels_ == 1) {
 				*out++ = l;
 				*out++ = l;
 			} else if (num_channels_ == 2) {
-				float r = buffer[1].ReadHermite((buffer_pos_idx >> 12),
-						buffer_pos_idx << 4);
+				float r = buffer[1].ReadHermite(buffer_pos_idx_in_buffer,
+						buffer_pos_fract);
 				*out++ = l;
 				*out++ = r;
 			}
