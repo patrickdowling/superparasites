@@ -68,7 +68,7 @@ Band-limited waveforms
 ----------------------------------------------------------------------------"""
 
 SAMPLE_RATE = 48000.0
-WAVETABLE_SIZE = 256
+WAVETABLE_SIZE = 1024
 
 def dither(x, order=0, type=numpy.int16):
   for i in xrange(order):
@@ -170,7 +170,7 @@ waveforms.extend(audio_rate_tables)
 Waveshaper for control rate
 ----------------------------------------------------------------------------"""
 
-WAVESHAPER_SIZE = 1024
+WAVESHAPER_SIZE = 512
 
 x = numpy.arange(0, WAVESHAPER_SIZE + 1) / float(WAVESHAPER_SIZE)
 
@@ -221,6 +221,8 @@ waveforms.extend(control_rate_tables)
 """----------------------------------------------------------------------------
 Post waveshaper
 ----------------------------------------------------------------------------"""
+
+WAVESHAPER_SIZE = 1024
 
 x = numpy.arange(0, WAVESHAPER_SIZE + 1) / (WAVESHAPER_SIZE / 2.0) - 1.0
 x[-1] = x[-2]

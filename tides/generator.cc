@@ -493,8 +493,8 @@ void Generator::FillBufferAudioRate() {
     // Bipolar version ---------------------------------------------------------
     int32_t ramp_a, ramp_b, saw;
     int32_t original, folded;
-    ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_bi, xfade);
-    ramp_b = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_b_bi, xfade);
+    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_bi, xfade);
+    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_bi, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw);
     
@@ -515,8 +515,8 @@ void Generator::FillBufferAudioRate() {
     sample.bipolar = (sample.bipolar * final_gain_) >> 16;
 
     // Unipolar version --------------------------------------------------------
-    ramp_a = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
-    ramp_b = Crossfade(wave_1, wave_2, compressed_phase + phase_offset_b_uni, xfade);
+    ramp_a = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_a_uni, xfade);
+    ramp_b = Crossfade1022(wave_1, wave_2, compressed_phase + phase_offset_b_uni, xfade);
     saw = (ramp_b - ramp_a) * gain >> 10;
     CLIP(saw)
     
@@ -526,6 +526,7 @@ void Generator::FillBufferAudioRate() {
     if (!running_ && !sustained) {
       saw = 0;
     }
+
     // Run through LPF.
     uni_lp_state_0 += f * (saw - uni_lp_state_0) >> 15;
     uni_lp_state_1 += f * (uni_lp_state_0 - uni_lp_state_1) >> 15;
@@ -693,7 +694,7 @@ void Generator::FillBufferControlRate() {
 
 #ifndef CORE_ONLY  
     int32_t original, folded;
-    int32_t unipolar = Crossfade115(
+    int32_t unipolar = Crossfade106(
         shape_1,
         shape_2,
         skewed_phase >> 16, shape_xfade);
@@ -704,7 +705,7 @@ void Generator::FillBufferControlRate() {
     folded = Interpolate1022(wav_unipolar_fold, original * wf_gain) << 1;
     sample.unipolar = original + ((folded - original) * wf_balance >> 15);
     
-    int32_t bipolar = Crossfade115(
+    int32_t bipolar = Crossfade106(
         shape_1,
         shape_2,
         skewed_phase >> 15, shape_xfade);
@@ -1074,7 +1075,7 @@ void Generator::FillBufferHarmonic() {
     int32_t gain = 0;
 
     int16_t sine = range_ == GENERATOR_RANGE_HIGH ?
-      Interpolate1121(wav_sine1024, phase_) :
+      Interpolate1022(wav_sine1024, phase_) :
       range_ == GENERATOR_RANGE_MEDIUM ?
       Interpolate626(wav_sine64, phase_) :
       Interpolate428(wav_sine16, phase_);
