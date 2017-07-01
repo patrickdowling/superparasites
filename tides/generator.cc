@@ -145,7 +145,7 @@ void Generator::ComputeFrequencyRatio(int16_t pitch) {
   }
 }
 
-int32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
+int32_t Generator::ComputePhaseIncrement(int16_t pitch) {
   int16_t num_shifts = 0;
   while (pitch < 0) {
     pitch += kOctave;
@@ -164,8 +164,7 @@ int32_t Generator::ComputePhaseIncrement(int16_t pitch, int16_t fm) {
   phase_increment = num_shifts >= 0
       ? phase_increment << num_shifts
       : phase_increment >> -num_shifts;
-  int32_t fm_incr = fm << 15;
-  return phase_increment + fm_incr;
+  return phase_increment;
 }
 
 int16_t Generator::ComputePitch(int32_t phase_increment) {
@@ -315,7 +314,7 @@ void Generator::FillBufferAudioRate() {
     pitch_ = ComputePitch(phase_increment_);
     phase_increment_end = phase_increment_;
   } else {
-    phase_increment_end = ComputePhaseIncrement(pitch_, fm_);
+    phase_increment_end = ComputePhaseIncrement(pitch_);
     local_osc_phase_increment_ = phase_increment_end;
     target_phase_increment_ = phase_increment_end;
   }
@@ -460,8 +459,7 @@ void Generator::FillBufferAudioRate() {
       // Slow phase realignment between the master oscillator and the local
       // oscillator.
       int32_t phase_error = local_osc_phase_ - phase;
-      phase_increment = local_osc_phase_increment_ + (phase_error >> 13)
-        + (fm_ << 15);
+      phase_increment = local_osc_phase_increment_ + (phase_error >> 13);
     }
     
     if (control & CONTROL_FREEZE) {
@@ -580,7 +578,7 @@ void Generator::FillBufferControlRate() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
+    phase_increment_ = ComputePhaseIncrement(pitch_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
@@ -650,7 +648,7 @@ void Generator::FillBufferControlRate() {
         if (increment > 0x80000000) {
           increment = 0x80000000;
         }
-        phase_increment = static_cast<uint32_t>(increment) + (fm_ << 15);
+        phase_increment = static_cast<uint32_t>(increment);
       }
       sync_counter_ = 0;
     }
@@ -784,7 +782,7 @@ void Generator::FillBufferWavetable() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
+    phase_increment_ = ComputePhaseIncrement(pitch_);
   }
 
   uint32_t phase = phase_;
@@ -854,7 +852,7 @@ void Generator::FillBufferWavetable() {
             if (increment > 0x80000000) {
               increment = 0x80000000;
             }
-            phase_increment = static_cast<uint32_t>(increment) + (fm_ << 15);
+            phase_increment = static_cast<uint32_t>(increment);
           }
           sync_counter_ = 0;
         }
@@ -964,7 +962,7 @@ void Generator::FillBufferHarmonic() {
     pitch_ = ComputePitch(phase_increment_);
     phase_increment_end = phase_increment_;
   } else {
-    phase_increment_end = ComputePhaseIncrement(pitch_, fm_);
+    phase_increment_end = ComputePhaseIncrement(pitch_);
     local_osc_phase_increment_ = phase_increment_end;
     target_phase_increment_ = phase_increment_end;
   }
@@ -1052,7 +1050,7 @@ void Generator::FillBufferHarmonic() {
             if (increment > 0x80000000) {
               increment = 0x80000000;
             }
-            target_phase_increment_ = static_cast<uint32_t>(increment) + (fm_ << 15);
+            target_phase_increment_ = static_cast<uint32_t>(increment);
             local_osc_phase_ = 0;
           }
           sync_counter_ = 0;
@@ -1215,7 +1213,7 @@ void Generator::FillBufferRandom() {
   if (sync_) {
     pitch_ = ComputePitch(phase_increment_);
   } else {
-    phase_increment_ = ComputePhaseIncrement(pitch_, fm_);
+    phase_increment_ = ComputePhaseIncrement(pitch_);
     local_osc_phase_increment_ = phase_increment_;
     target_phase_increment_ = phase_increment_;
   }
@@ -1264,7 +1262,7 @@ void Generator::FillBufferRandom() {
         if (increment > 0x80000000) {
           increment = 0x80000000;
         }
-        phase_increment_ = static_cast<uint32_t>(increment) + (fm_ << 15);
+        phase_increment_ = static_cast<uint32_t>(increment);
       }
       sync_counter_ = 0;
     }
