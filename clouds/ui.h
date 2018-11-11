@@ -35,6 +35,7 @@
 
 #include "clouds/drivers/leds.h"
 #include "clouds/drivers/switches.h"
+#include "clouds/drivers/dac.h"
 
 namespace clouds {
 
@@ -57,7 +58,10 @@ enum UiMode {
 enum SwitchIndex {
   SWITCH_MODE,
   SWITCH_WRITE,
-  SWITCH_FREEZE
+  SWITCH_CAPTURE,
+  SWITCH_FREEZE,
+  SWITCH_MUTE_OUT,
+  SWITCH_MUTE_IN
 };
 
 enum FactoryTestingCommand {
@@ -82,7 +86,8 @@ class Ui {
       Settings* settings,
       CvScaler* cv_scaler,
       GranularProcessor* processor,
-      Meter* meter);
+      Meter* inmeter,
+      Meter* outmeter);
   void Poll();
   void DoEvents();
   void FlushEvents();
@@ -110,17 +115,21 @@ class Ui {
 
   Settings* settings_;
   CvScaler* cv_scaler_;
+  Dac dac_; // For modulation output
   
   Leds leds_;
   Switches switches_;
   uint32_t press_time_[kNumSwitches];
   uint32_t long_press_time_[kNumSwitches];
+  uint32_t quality_changed_time_;
   UiMode mode_;
   
   GranularProcessor* processor_;
-  Meter* meter_;
+  Meter* inmeter_;
+  Meter* outmeter_;
   
   uint8_t load_save_location_;
+  uint8_t last_load_save_location_;
   uint16_t ignore_releases_;
   
   DISALLOW_COPY_AND_ASSIGN(Ui);

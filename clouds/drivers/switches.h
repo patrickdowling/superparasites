@@ -35,7 +35,7 @@
 
 namespace clouds {
 
-const uint8_t kNumSwitches = 3;
+const uint8_t kNumSwitches = 6;
 
 class Switches {
  public:
@@ -58,12 +58,11 @@ class Switches {
   }
   
   inline bool pressed_immediate(uint8_t index) const {
-    if (index == kNumSwitches - 1) {
-      return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_8);
-    } else {
-      const uint16_t pins[] = { GPIO_Pin_11, GPIO_Pin_10 };
-      return !GPIO_ReadInputDataBit(GPIOC, pins[index]);
-    }
+      const uint16_t pins[] = { 
+        GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_9,
+        GPIO_Pin_10, GPIO_Pin_7, GPIO_Pin_8 
+      };
+      return !GPIO_ReadInputDataBit(GPIOE, pins[index]);
   }
   
  private:

@@ -32,6 +32,7 @@
 #include <stm32f4xx_conf.h>
 
 #include "stmlib/stmlib.h"
+#include "stmlib/utils/ring_buffer.h"
 
 namespace clouds {
 

@@ -51,7 +51,8 @@ class Version {
     GPIO_Init(GPIOB, &gpio_init);
   }
   static inline bool revised() {
-    return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0);
+    //return !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0);
+    return true;
   }
  private:
   DISALLOW_COPY_AND_ASSIGN(Version);

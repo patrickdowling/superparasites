@@ -99,12 +99,18 @@ class GranularProcessor {
   inline void ToggleFreeze() {
     parameters_.freeze = !parameters_.freeze;
   }
-  inline void ToggleReverse() {
-    parameters_.granular.reverse = !parameters_.granular.reverse;
+
+  inline void set_freeze(bool freeze) {
+    parameters_.freeze = freeze;
   }
 
   inline bool frozen() const {
     return parameters_.freeze;
+  }
+
+
+  inline void ToggleReverse() {
+    parameters_.granular.reverse = !parameters_.granular.reverse;
   }
 
   inline bool reversed() const {
@@ -114,13 +120,29 @@ class GranularProcessor {
   inline void set_silence(bool silence) {
     silence_ = silence;
   }
-  
+
   inline void set_bypass(bool bypass) {
     bypass_ = bypass;
   }
   
   inline bool bypass() const {
     return bypass_;
+  }
+
+  inline void set_mute_out(bool mute) {
+    mute_out_ = mute;
+  }
+
+  inline bool mute_out() const {
+    return mute_out_;
+  }
+
+  inline void set_mute_in(bool mute) {
+    mute_in_ = mute;
+  }
+
+  inline bool mute_in() const {
+    return mute_in_;
   }
   
   inline void set_playback_mode(PlaybackMode playback_mode) {
@@ -176,6 +198,11 @@ class GranularProcessor {
   bool silence_;
   bool bypass_;
   bool reset_buffers_;
+  bool mute_in_;
+  bool mute_out_;
+  float mute_in_fade_;
+  float mute_out_fade_;
+
   float freeze_lp_;
   float dry_wet_;
   

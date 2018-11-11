@@ -43,13 +43,16 @@ GranularProcessor processor;
 Codec codec;
 DebugPort debug_port;
 CvScaler cv_scaler;
-Meter meter;
+//Meter meter;
+Meter in_meter;
+Meter out_meter;
 Settings settings;
 Ui ui;
 
 // Pre-allocate big blocks in main memory and CCM. No malloc here.
 uint8_t block_mem[118784];
 uint8_t block_ccm[65536 - 128] __attribute__ ((section (".ccmdata")));
+//uint8_t block_ccm[65536 - 128] __attribute__ ((section (".ccmram")));
 
 int __errno;
 
@@ -87,8 +90,10 @@ void FillBuffer(Codec::Frame* input, Codec::Frame* output, size_t n) {
   TIC
 #endif  // PROFILE_INTERRUPT
   cv_scaler.Read(processor.mutable_parameters());
+  in_meter.Process(input, n); // Process input meter before processing (avoids mutes, etc.)
   processor.Process((ShortFrame*)input, (ShortFrame*)output, n);
-  meter.Process(processor.parameters().freeze ? output : input, n);
+  out_meter.Process(output, n);
+  //meter.Process(processor.parameters().freeze ? output : input, n);
 #ifdef PROFILE_INTERRUPT
   TOC
 #endif  // PROFILE_INTERRUPT
@@ -108,8 +113,10 @@ void Init() {
 
   settings.Init();
   cv_scaler.Init(settings.mutable_calibration_data());
-  meter.Init(32000);
-  ui.Init(&settings, &cv_scaler, &processor, &meter);
+  //meter.Init(32000);
+  in_meter.Init(32000);
+  out_meter.Init(32000);
+  ui.Init(&settings, &cv_scaler, &processor, &in_meter, &out_meter);
 
   bool master = !version.revised();
   if (!codec.Init(master, 32000)) {
@@ -125,6 +132,8 @@ void Init() {
     debug_port.Init();
 #endif  // PROFILE_INTERRUPT
   }
+
+
   sys.StartTimers();
 }
 

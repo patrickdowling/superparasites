@@ -87,7 +87,7 @@ class GranularSamplePlayer {
     int32_t num_available_grains = FillAvailableGrainsList();
     
     // Try to schedule new grains.
-    bool seed_trigger = parameters.trigger;
+    bool seed_trigger = parameters.capture;
     for (size_t t = 0; t < size; ++t) {
       grain_rate_phasor_ += 1.0f;
       bool seed_probabilistic = Random::GetFloat() < p

@@ -34,7 +34,7 @@ namespace clouds {
   
 void Adc::Init() {
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC, ENABLE);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA | RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOB, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
   
   DMA_InitTypeDef dma_init;
@@ -43,15 +43,18 @@ void Adc::Init() {
   GPIO_InitTypeDef gpio_init;
   
   gpio_init.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
-  gpio_init.GPIO_Pin |= GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
+  gpio_init.GPIO_Pin |= GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_7;
   gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
   gpio_init.GPIO_Mode = GPIO_Mode_AN;
   GPIO_Init(GPIOA, &gpio_init);
   
-  gpio_init.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
-  gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  gpio_init.GPIO_Mode = GPIO_Mode_AN;
+  gpio_init.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2;
+  gpio_init.GPIO_Pin |= GPIO_Pin_4; // Added for VCA Control Level follower.
   GPIO_Init(GPIOC, &gpio_init);
+
+  gpio_init.GPIO_Pin = GPIO_Pin_0;
+  GPIO_Init(GPIOB, &gpio_init);
+
 
   // Use DMA to automatically copy ADC data register to values_ buffer.
   dma_init.DMA_Channel = DMA_Channel_0;
@@ -87,7 +90,7 @@ void Adc::Init() {
   adc_init.ADC_NbrOfConversion = ADC_CHANNEL_LAST;
   ADC_Init(ADC1, &adc_init);
   
-  // 168M / 2 / 8 / (10 x (480 + 20)) = 2.1kHz.
+  /*// 168M / 2 / 8 / (10 x (480 + 20)) = 2.1kHz.
   ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 1, ADC_SampleTime_480Cycles);
   ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 2, ADC_SampleTime_480Cycles); 
   ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 3, ADC_SampleTime_480Cycles); 
@@ -98,7 +101,36 @@ void Adc::Init() {
   ADC_RegularChannelConfig(ADC1, ADC_Channel_5, 8, ADC_SampleTime_480Cycles); 
   ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 9, ADC_SampleTime_480Cycles);
   ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 10, ADC_SampleTime_480Cycles); 
-  
+  */
+  // 168M / 2 / 8 / (10 x (480 + 20)) = 2.1kHz.
+  /* Buchla Clouds */
+  /*
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_480Cycles);   //position CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 2, ADC_SampleTime_480Cycles);   //density CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 3, ADC_SampleTime_480Cycles);  //grain size POT
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_11, 4, ADC_SampleTime_480Cycles);  //grain size CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 5, ADC_SampleTime_480Cycles);   //pitch CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_5, 6, ADC_SampleTime_480Cycles);   //spread CV 
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 7, ADC_SampleTime_480Cycles);   //feedback CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_7, 8, ADC_SampleTime_480Cycles);   //reverb CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_4, 9, ADC_SampleTime_480Cycles);   //balance CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 10, ADC_SampleTime_480Cycles);  //texture CV
+  */
+  /* Supercell */
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_480Cycles);   //position CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_3, 2, ADC_SampleTime_480Cycles);   //density CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_11, 3, ADC_SampleTime_480Cycles);  //grain size POT
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_1, 4, ADC_SampleTime_480Cycles);  //grain size CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_2, 5, ADC_SampleTime_480Cycles);   //pitch CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_7, 6, ADC_SampleTime_480Cycles);   //spread CV 
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 7, ADC_SampleTime_480Cycles);   //feedback CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_12, 8, ADC_SampleTime_480Cycles);   //reverb CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_8, 9, ADC_SampleTime_480Cycles);   //balance CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_5, 10, ADC_SampleTime_480Cycles);  //texture CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 11, ADC_SampleTime_480Cycles);  //voct CV
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_14, 12, ADC_SampleTime_480Cycles); // outputlevel
+
+
   ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
   ADC_Cmd(ADC1, ENABLE);
   ADC_DMACmd(ADC1, ENABLE);

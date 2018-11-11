@@ -24,46 +24,55 @@
 //
 // -----------------------------------------------------------------------------
 //
-// Parameters of the granular effect.
+// Driver for ADC2 - used for scanning pots.
 
-#ifndef CLOUDS_DSP_PARAMETERS_H_
-#define CLOUDS_DSP_PARAMETERS_H_
+#ifndef ELEMENTS_DRIVERS_POTS_ADC_H_
+#define ELEMENTS_DRIVERS_POTS_ADC_H_
 
 #include "stmlib/stmlib.h"
 
 namespace clouds {
 
-struct Parameters {
-  float position;
-  float size;
-  float pitch;
-  float density;
-  float texture;
-  float dry_wet;
-  float stereo_spread;
-  float feedback;
-  float reverb;
-  
-  bool freeze;
-  bool capture;
-  bool gate;
-  
-  struct Granular {
-    float overlap;
-    float window_shape;
-    float stereo_spread;
-    bool use_deterministic_seed;
-    bool reverse;
-  } granular;
-  
-  struct Spectral {
-    float quantization;
-    float refresh_rate;
-    float phase_randomization;
-    float warp;
-  } spectral;
+enum PotsChannel {
+  ADC_POSITION_POTENTIOMETER,
+  ADC_PITCH_POTENTIOMETER,
+  ADC_DENSITY_POTENTIOMETER,
+  ADC_TEXTURE_POTENTIOMETER,
+  ADC_BALANCE_POTENTIOMETER, //DRY_WET
+  ADC_SPREAD_POTENTIOMETER,
+  ADC_FEEDBACK_POTENTIOMETER,
+  ADC_REVERB_POTENTIOMETER,
+  ADC_CHANNEL_POTENTIOMETER_LAST
 };
 
-}  // namespace clouds
+class Pots_Adc {
+ public:
+  Pots_Adc() { }
+  ~Pots_Adc() { }
+  
+  void Init();
+  void DeInit();
+  void Scan();
+  
+  inline uint8_t last_read() const { return last_read_; }
+  
+  inline uint16_t value(uint8_t index) const { return values_[index]; }
+  inline float float_value(uint8_t channel) const {
+    return static_cast<float>(values_[channel]) / 65536.0f;
+  }
 
-#endif  // CLOUDS_DSP_PARAMETERS_H_
+ private:
+  static uint8_t addresses_[ADC_CHANNEL_POTENTIOMETER_LAST];
+  
+  uint8_t index_;
+  uint8_t last_read_;
+  uint16_t values_[ADC_CHANNEL_POTENTIOMETER_LAST];
+  
+  bool state_;
+  
+  DISALLOW_COPY_AND_ASSIGN(Pots_Adc);
+};
+
+}  // namespace elements
+
+#endif  // ELEMENTS_DRIVERS_POTS_ADC_H_

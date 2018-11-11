@@ -97,7 +97,7 @@ class WSOLASamplePlayer {
       tap_delay_counter_ = 0;
       synchronized_ = false;
     }
-    if (parameters.trigger && !parameters.freeze) {
+    if (parameters.capture && !parameters.freeze) {
       if(tap_delay_counter_ > 128) {
         synchronized_ = true;
         tap_delay_ = tap_delay_counter_;

@@ -43,7 +43,7 @@ class GateInput {
   void Init();
   void Read();
   inline bool freeze() const { return freeze_; }
-  inline bool trigger() const { return trigger_; }
+  inline bool capture() const { return capture_; }
   
   inline bool freeze_rising_edge() const {
     return freeze_ && !previous_freeze_;
@@ -51,18 +51,18 @@ class GateInput {
   inline bool freeze_falling_edge() const {
     return !freeze_ && previous_freeze_;
   }
-  inline bool trigger_rising_edge() const {
-    return trigger_ && !previous_trigger_;
+  inline bool capture_rising_edge() const {
+    return capture_ && !previous_capture_;
   }
   inline bool gate() const {
-    return trigger_;
+    return capture_;
   }
   
  private:
   bool previous_freeze_;
-  bool previous_trigger_;
+  bool previous_capture_;
   bool freeze_;
-  bool trigger_;
+  bool capture_;
   
   DISALLOW_COPY_AND_ASSIGN(GateInput);
 };

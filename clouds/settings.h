@@ -43,9 +43,9 @@ struct CalibrationData {
 
 struct State {
   uint8_t quality;
-  uint8_t blend_parameter;
+  //uint8_t blend_parameter;
   uint8_t playback_mode;
-  uint8_t blend_value[4];
+  //uint8_t blend_value[4];
   uint8_t padding;
 };
 

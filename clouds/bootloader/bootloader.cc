@@ -120,6 +120,7 @@ volatile UiState ui_state;
 void UpdateLeds() {
   leds.Clear();
   leds.set_freeze(true);
+  leds.PaintBar(lut_db[meter.peak() >> 7]);
   switch (ui_state) {
     case UI_STATE_WAITING:
       leds.set_freeze(system_clock.milliseconds() & 128);
@@ -127,22 +128,26 @@ void UpdateLeds() {
 
     case UI_STATE_RECEIVING:
       leds.set_freeze(system_clock.milliseconds() & 32);
-      leds.PaintBar(lut_db[meter.peak() >> 7]);
+      //leds.PaintBar(lut_db[meter.peak() >> 7], lut_db[meter.peak() >> 7], 0, 0);
       break;
     
     case UI_STATE_ERROR:
       {
         bool on = system_clock.milliseconds() & 256;
-        for (uint8_t i = 0; i < 4; ++i) {
-          leds.set_status(i, on ? 255 : 0, 0);
+        for (uint8_t i = 0; i < 16; ++i) {
+            if (i > 7) {
+                leds.set_status(i, on ? 255 : 0);
+            }
         }
       }
       break;
       
     case UI_STATE_WRITING:
       {
-        for (uint8_t i = 0; i < 4; ++i) {
-          leds.set_status(i, 0, 255);
+        for (uint8_t i = 0; i < 16; ++i) {
+            if (i > 7) {
+                leds.set_status(i, 255);
+            }
         }
       }
       break;
@@ -153,7 +158,7 @@ void UpdateLeds() {
 void SysTick_Handler() {
   system_clock.Tick();
   switches.Debounce();
-  if (switches.released(2)) {
+  if (switches.released(3)) {
     switch_released = true;
   }
   UpdateLeds();
@@ -245,7 +250,9 @@ int main(void) {
   InitializeReception();
   Init();
 
-  bool exit_updater = !switches.pressed_immediate(2);
+  bool exit_updater = switches.pressed_immediate(3);
+  //bool exit_updater = false;
+  //exit_updater = false;
   
   while (!exit_updater) {
     bool error = false;

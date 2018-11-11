@@ -28,6 +28,8 @@ F_CPU          = 168000000L
 SYSCLOCK       = SYSCLK_FREQ_168MHz
 FAMILY         = f4xx
 # USB            = enabled
+MCU            = STM32F427_437xx
+LINKER_SCRIPT  = clouds/linker_scripts/stm32f427x_flash_application_large.ld
 
 APPLICATION_LARGE = TRUE
 BOOTLOADER        = clouds_bootloader

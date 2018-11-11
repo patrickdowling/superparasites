@@ -61,6 +61,10 @@ void GranularProcessor::Init(
   
   previous_playback_mode_ = PLAYBACK_MODE_LAST;
   reset_buffers_ = true;
+  mute_in_ = false;
+  mute_out_ = false;
+  mute_in_fade_ = 0.0f;
+  mute_out_fade_ = 0.0f;
   dry_wet_ = 0.0f;
 }
 
@@ -176,7 +180,7 @@ void GranularProcessor::ProcessGranular(
           0.0f, // feedback;
           0.0f, // reverb;
           0.0f, // freeze;
-          parameters_.trigger, // trigger;
+          parameters_.capture, // trigger;
           0.0f // gate;
         };
 
@@ -234,7 +238,7 @@ void GranularProcessor::ProcessGranular(
 
       resonestor_.set_pitch(parameters_.pitch);
       resonestor_.set_chord(parameters_.size);
-      resonestor_.set_trigger(parameters_.trigger);
+      resonestor_.set_trigger(parameters_.capture);
       resonestor_.set_burst_damp(parameters_.position);
       resonestor_.set_burst_comb((1.0f - parameters_.position));
       resonestor_.set_burst_duration((1.0f - parameters_.position));
@@ -294,6 +298,19 @@ void GranularProcessor::Process(
   }
   
   // Convert input buffers to float, and mixdown for mono processing.
+  // SUPERCELL Handle Mute In separately
+  // TODO[pld] These loops look inefficient, we should be able to avoid unnecesary float/short conversions
+  float mute_level_in;
+  for (size_t i = 0; i < size; i++) {
+    if (mute_out_) {
+        mute_level_in = 0.0f;
+    } else {
+        mute_level_in = mute_in_ ? 0.0f : 1.0f;
+    }
+    mute_in_fade_ += 0.01f * (mute_level_in - mute_in_fade_);
+    input[i].l = input[i].l * mute_in_fade_;
+    input[i].r = input[i].r * mute_in_fade_;
+  }
   for (size_t i = 0; i < size; ++i) {
     in_[i].l = static_cast<float>(input[i].l) / 32768.0f;
     in_[i].r = static_cast<float>(input[i].r) / 32768.0f;
@@ -397,6 +414,24 @@ void GranularProcessor::Process(
     hp_filter_[1].set(hp_filter_[0]);
     hp_filter_[1].Process<FILTER_MODE_HIGH_PASS>(
         &out_[0].r, &out_[0].r, size, 2);
+  }
+
+  // SUPERCELL Added Pre-Reverb Muting.
+  float mute_level_out;
+  for (size_t i = 0; i < size; i++) {
+      if (mute_out_) {
+        //mute_level_in = 0.0f;
+        mute_level_out = 0.0f;
+      } else {
+        mute_level_out = 1.0f;
+        //mute_level_in = mute_in_ ? 0.0f : 1.0f;
+      }
+      mute_out_fade_ += 0.01f * (mute_level_out - mute_out_fade_);
+      //mute_in_fade_ += 0.01f * (mute_level_in - mute_in_fade_);
+      out_[i].l = out_[i].l * mute_out_fade_;
+      out_[i].r = out_[i].r * mute_out_fade_;
+      //input[i].l = input[i].l * mute_in_fade_;
+      //input[i].r = input[i].r * mute_in_fade_;
   }
   
   // This is what is fed back. Reverb is not fed back.

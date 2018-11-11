@@ -28,6 +28,8 @@ F_CPU          = 168000000L
 SYSCLOCK       = SYSCLK_FREQ_168MHz
 FAMILY         = f4xx
 # USB            = enabled
+MCU            = STM32F427_437xx
+LINKER_SCRIPT  = clouds/linker_scripts/stm32f427x_flash.ld
 
 # Preferred upload command
 UPLOAD_COMMAND  = upload_jtag_erase_first

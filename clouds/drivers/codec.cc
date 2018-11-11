@@ -78,7 +78,6 @@
 #define AUDIO_I2S_DMA_FLAG_FE          DMA_FLAG_FEIF4
 #define AUDIO_I2S_DMA_FLAG_TE          DMA_FLAG_TEIF4
 #define AUDIO_I2S_DMA_FLAG_DME         DMA_FLAG_DMEIF4
-
 #define AUDIO_I2S_EXT_DMA_STREAM       DMA1_Stream3
 #define AUDIO_I2S_EXT_DMA_DREG         CODEC_I2S_EXT_ADDRESS
 #define AUDIO_I2S_EXT_DMA_CHANNEL      DMA_Channel_3
@@ -201,15 +200,15 @@ bool Codec::InitializeGPIO() {
   gpio_init.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(CODEC_I2S_GPIO, &gpio_init);
   
-  gpio_init.GPIO_Pin = CODEC_I2S_MCK_PIN; 
-  GPIO_Init(CODEC_I2S_MCK_GPIO, &gpio_init);
+  //gpio_init.GPIO_Pin = CODEC_I2S_MCK_PIN; 
+  //GPIO_Init(CODEC_I2S_MCK_GPIO, &gpio_init);
   
   // Connect pins to I2S peripheral.
   GPIO_PinAFConfig(CODEC_I2S_GPIO, CODEC_I2S_WS_PINSRC, CODEC_I2S_GPIO_AF);  
   GPIO_PinAFConfig(CODEC_I2S_GPIO, CODEC_I2S_SCK_PINSRC, CODEC_I2S_GPIO_AF);
   GPIO_PinAFConfig(CODEC_I2S_GPIO, CODEC_I2S_SDO_PINSRC, CODEC_I2S_GPIO_AF);
   GPIO_PinAFConfig(CODEC_I2S_GPIO, CODEC_I2S_SDI_PINSRC, CODEC_I2S_GPIO_AF);
-  GPIO_PinAFConfig(CODEC_I2S_MCK_GPIO, CODEC_I2S_MCK_PINSRC, CODEC_I2S_GPIO_AF); 
+  //GPIO_PinAFConfig(CODEC_I2S_MCK_GPIO, CODEC_I2S_MCK_PINSRC, CODEC_I2S_GPIO_AF); 
   return true;
 }
 
@@ -240,19 +239,37 @@ bool Codec::InitializeAudioInterface(
   RCC_I2SCLKConfig(RCC_I2S2CLKSource_PLLI2S);
   
   // The following values have been computed for a 8Mhz external crystal!
+  // FOR STM32F427 RCC_PLLI2SConfig has three arguments. (additional Q divisor fixed at /2);
   RCC_PLLI2SCmd(DISABLE);
   if (sample_rate == 48000) {
     // 47.992kHz
+    #ifdef STM32F427_437xx
+    RCC_PLLI2SConfig(258, 2, 3);
+    #else
     RCC_PLLI2SConfig(258, 3);
+    #endif
+
   } else if (sample_rate == 44100) {
     // 44.11kHz
+    #ifdef STM32F427_437xx
+    RCC_PLLI2SConfig(271, 2, 6);
+    #else
     RCC_PLLI2SConfig(271, 6);
+    #endif
   } else if (sample_rate == 32000) {
     // 32.003kHz
+    #ifdef STM32F427_437xx
+    RCC_PLLI2SConfig(426, 2, 4);
+    #else
     RCC_PLLI2SConfig(426, 4);
+    #endif
   } else if (sample_rate == 96000) {
     // 95.95 kHz
+    #ifdef STM32F427_437xx
+    RCC_PLLI2SConfig(393, 2, 4);
+    #else
     RCC_PLLI2SConfig(393, 4);
+    #endif
   } else {
     // Unsupported sample rate!
     return false;

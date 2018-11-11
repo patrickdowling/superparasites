@@ -25,7 +25,9 @@
 // -----------------------------------------------------------------------------
 //
 // Driver for the gate inputs.
-
+// B10 + SW5 == CAPTURE -> PB4 button, SW5 is analogue sch
+// B11 == FREEZE -> PC4
+ 
 #include "clouds/drivers/gate_input.h"
 
 #include <algorithm>
@@ -35,26 +37,28 @@ namespace clouds {
 using namespace std;
 
 void GateInput::Init() {
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-  
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
   GPIO_InitTypeDef gpio_init;
-  gpio_init.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+  gpio_init.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 ;
   gpio_init.GPIO_Mode = GPIO_Mode_IN;
   gpio_init.GPIO_OType = GPIO_OType_PP;
   gpio_init.GPIO_Speed = GPIO_Speed_25MHz;
   gpio_init.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(GPIOB, &gpio_init);
+  GPIO_Init(GPIOE, &gpio_init);
+
+
   freeze_ = false;
-  trigger_ = false;
+  capture_ = false;
   previous_freeze_ = false;
-  previous_trigger_ = false;
+  previous_capture_ = false;
 }
 
 void GateInput::Read() {
   previous_freeze_ = freeze_;
-  previous_trigger_ = trigger_;
-  freeze_ = !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_7);
-  trigger_ = !GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_6);
+  previous_capture_ = capture_;
+  capture_ = !GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_14);
+  freeze_ = !GPIO_ReadInputDataBit(GPIOE, GPIO_Pin_13);
+  
 }
 
 }  // namespace clouds
