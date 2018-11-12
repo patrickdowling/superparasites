@@ -100,7 +100,7 @@ class CvScaler {
   static const int8_t kAdcLatency = 5;
   
   Adc adc_;
-  Pots_Adc pots_adc_;
+  PotsAdc pots_adc_;
   GateInput gate_input_;
   CalibrationData* calibration_data_;
   bool capture_button_flag_;

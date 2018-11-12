@@ -33,7 +33,7 @@
 namespace clouds {
 
 /* static */
-uint8_t Pots_Adc::addresses_[ADC_CHANNEL_POTENTIOMETER_LAST] = {
+uint8_t PotsAdc::addresses_[ADC_CHANNEL_POTENTIOMETER_LAST] = {
   
   4, //position pot
   6, //pitch pot
@@ -73,7 +73,7 @@ uint8_t Pots_Adc::addresses_[ADC_CHANNEL_POTENTIOMETER_LAST] = {
   18,  // POT_SPACE_ATTENUVERTER
 };*/
 
-void Pots_Adc::Init() {
+void PotsAdc::Init() {
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOE, ENABLE);
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, ENABLE);
   
@@ -130,11 +130,11 @@ void Pots_Adc::Init() {
   Scan();
 }
 
-void Pots_Adc::DeInit() {
+void PotsAdc::DeInit() {
   ADC_DeInit();
 }
 
-void Pots_Adc::Scan() {
+void PotsAdc::Scan() {
   if (state_) {
     // Read the value from the previous conversion.
     values_[index_] = ADC2->DR;

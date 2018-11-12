@@ -45,10 +45,10 @@ enum PotsChannel {
   ADC_CHANNEL_POTENTIOMETER_LAST
 };
 
-class Pots_Adc {
+class PotsAdc {
  public:
-  Pots_Adc() { }
-  ~Pots_Adc() { }
+  PotsAdc() { }
+  ~PotsAdc() { }
   
   void Init();
   void DeInit();
@@ -70,7 +70,7 @@ class Pots_Adc {
   
   bool state_;
   
-  DISALLOW_COPY_AND_ASSIGN(Pots_Adc);
+  DISALLOW_COPY_AND_ASSIGN(PotsAdc);
 };
 
 }  // namespace elements
