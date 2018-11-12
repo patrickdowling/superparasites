@@ -50,6 +50,10 @@ PACKAGES       = clouds \
 		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = clouds/resources
 
+ifeq ($(PROFILE_INTERRUPT),TRUE)
+	PROJECT_CONFIGURATION += -DPROFILE_INTERRUPT
+endif
+
 include stmlib/makefile.inc
 
 # Rule for building the firmware update file
