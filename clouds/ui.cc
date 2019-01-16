@@ -140,10 +140,10 @@ void Ui::Poll() {
   // This needs to happen even if the button has been held for a while
   // a second release event doesn't seem to get thrown if the button is held
   // for a while (which is ideal for every other action).
-  if (switches_.released(SWITCH_CAPTURE)) {
-        tracking_noise_ctrl_ = false;
-        dac_.SetNoiseFreq(noise_freq_);
-        SaveState(); 
+  if (switches_.released(SWITCH_CAPTURE) && tracking_noise_ctrl_) {
+    tracking_noise_ctrl_ = false;
+    dac_.SetNoiseFreq(noise_freq_);
+    SaveState();
   }
   if (tracking_noise_ctrl_) {
         noise_freq_ = cv_scaler_->pan_pot();
