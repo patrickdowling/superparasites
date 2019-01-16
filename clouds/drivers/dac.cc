@@ -1,7 +1,11 @@
 #include "clouds/drivers/dac.h"
 #include <stm32f4xx_conf.h>
+#include <math.h>
 
 namespace clouds {
+
+const float nse_rate_logmax = logf(12.0f);
+const float nse_rate_logmin = logf(1170.0f);
 
 void Dac::Init() 
 {
@@ -68,6 +72,23 @@ void Dac::StopNoise()
     GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
     GPIO_Init(GPIOA, &GPIO_InitStruct);
     GPIO_WriteBit(GPIOA, GPIO_Pin_4, static_cast<BitAction>(0));
+}
+
+void Dac::SetNoiseFreq(float period)
+{
+    //uint32_t ps = static_cast<uint32_t>((1.0f - period) * 192.0f) + 16;
+    //uint32_t ps = static_cast<uint32_t>((1.0f - period) * 1170.0f) + 12; // linear scale 1000ms to 10ms
+    float temp = expf(period * (nse_rate_logmax - nse_rate_logmin) + nse_rate_logmin);
+    uint32_t ps = static_cast<uint32_t>(temp);
+    //StopNoise();
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct;
+    TIM_TimeBaseStructInit(&TIM_TimeBaseStruct);
+    TIM_TimeBaseStruct.TIM_Period=0xffff;
+    TIM_TimeBaseStruct.TIM_Prescaler=ps;
+    TIM_TimeBaseStruct.TIM_ClockDivision=2;
+    TIM_TimeBaseStruct.TIM_CounterMode=TIM_CounterMode_Up;
+    TIM_TimeBaseInit(TIM6, &TIM_TimeBaseStruct);
+    //StartNoise();
 }
 
 }

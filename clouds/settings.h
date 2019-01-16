@@ -46,6 +46,7 @@ struct State {
   //uint8_t blend_parameter;
   uint8_t playback_mode;
   //uint8_t blend_value[4];
+  float random_rate;
   uint8_t padding;
 };
 

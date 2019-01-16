@@ -96,6 +96,10 @@ class CvScaler {
     //return output_level_ < 0.5f ? (1.0f - (output_level_ * 0.667f)) * 2.6667f : 0.0f;
   }
 
+  inline float pan_pot() const {
+    return smoothed_adc_value_[ADC_CHANNEL_LAST + ADC_SPREAD_POTENTIOMETER];
+  }
+
  private:
   static const int8_t kAdcLatency = 5;
   

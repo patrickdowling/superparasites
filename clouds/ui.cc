@@ -59,21 +59,36 @@ void Ui::Init(
   processor_ = processor;
   inmeter_ = inmeter;
   outmeter_ = outmeter;
-  mode_ = UI_MODE_SPLASH;
+  if (!switches_.pressed_immediate(SWITCH_CAPTURE)) {
+    mode_ = UI_MODE_CALIBRATION_1;
+  } else {
+    mode_ = UI_MODE_SPLASH;
+  }
 
   dac_.Init(); 
+  //dac_.SetNoiseFreq(0.99f);
   const State& state = settings_->state();
-  
+  blink_ = 0; 
+  fade_ = 0;
+  skip_first_cal_press_ = true;
+  // Alt menu indicators
+  save_alt_menu_ = false;
+  mode_alt_menu_ = false;
+  save_menu_time_ = 0;
+  mode_menu_time_ = 0;
   // Sanitize saved settings.
   processor_->set_quality(state.quality & 3);
   processor_->set_playback_mode(
       static_cast<PlaybackMode>(state.playback_mode % PLAYBACK_MODE_LAST));
+  noise_freq_ = state.random_rate;
+  dac_.SetNoiseFreq(noise_freq_);
 }
 
 void Ui::SaveState() {
   State* state = settings_->mutable_state();
   state->quality = processor_->quality();
   state->playback_mode = processor_->playback_mode();
+  state->random_rate = noise_freq_;
   settings_->Save();
 }
 
@@ -109,15 +124,48 @@ void Ui::Poll() {
       press_time_[i] = 0;
     }
   }
+  // Individual Timeouts for the save/mode alt menus
+  if (save_alt_menu_ && system_clock.milliseconds() - save_menu_time_ > 5000) {
+    save_alt_menu_ = false;
+    load_save_location_ = last_load_save_location_;
+  }
+  if (mode_alt_menu_ && system_clock.milliseconds() - mode_menu_time_ > 5000) {
+    mode_alt_menu_ = false;
+  }
+  // Rate Adjustment of Aux Random -- value updated on release
+  if (switches_.pressed(SWITCH_CAPTURE) && fabsf(cv_scaler_->pan_pot() - press_pan_pos_) > 0.05f) {
+        //noise_freq_ = cv_scaler_->pan_pot();
+        tracking_noise_ctrl_ = true;
+  }
+  // This needs to happen even if the button has been held for a while
+  // a second release event doesn't seem to get thrown if the button is held
+  // for a while (which is ideal for every other action).
+  if (switches_.released(SWITCH_CAPTURE)) {
+        tracking_noise_ctrl_ = false;
+        dac_.SetNoiseFreq(noise_freq_);
+        SaveState(); 
+  }
+  if (tracking_noise_ctrl_) {
+        noise_freq_ = cv_scaler_->pan_pot();
+  }
+
+  // Added for resetting animations
+  blink_ += 1;
+  fade_ += 1;
   PaintLeds();
 }
 
 void Ui::PaintLeds() {
   leds_.Clear();
   uint32_t clock = system_clock.milliseconds();
+  // legacy blink and fade
   bool blink = (clock & 127) > 64;
   bool flash = (clock & 511) < 16;
   uint8_t fade = (clock >> 1);
+  // resettable blink and fade
+  blink = (blink_ & 127) > 64;
+  //fade = fade_ % 511;
+  fade = (fade_ >> 1);
   fade = static_cast<uint16_t>(fade) * fade >> 8;
   switch (mode_) {
     case UI_MODE_SPLASH:
@@ -143,10 +191,9 @@ void Ui::PaintLeds() {
             processor_->mute_in(), \
             processor_->mute_out() \
             );
-          //leds_.PaintBar(lut_db[inmeter_->peak() >> 7], lut_db[outmeter_->peak() >> 7], processor_->mute_in(), processor_->mute_out());
           uint8_t bright;
           for (uint8_t i = 0; i < 4; i++) {
-            if (mode_ != UI_MODE_PLAYBACK_MODE) {
+            if (!mode_alt_menu_) {
                 bright = i == processor_->quality() ? 255 : 0;
                 int32_t changed_time = clock - quality_changed_time_;
                 if (bright == 255) {
@@ -166,7 +213,7 @@ void Ui::PaintLeds() {
                 leds_.set_status(15-i, i == mode ? 0 : fade);
               }
             }
-            if (mode_ == UI_MODE_SAVE) {
+            if (save_alt_menu_) {
                 bright = i == load_save_location_ ? fade : 0;
             } else {
                 bright = i == load_save_location_ ? 255 : 0;
@@ -211,15 +258,16 @@ void Ui::PaintLeds() {
   if (processor_->reversed()) {
     freeze ^= flash;
   }
-  leds_.set_freeze(freeze);
+  // Testing Edit Function 
+  if (tracking_noise_ctrl_) {
+    leds_.set_freeze(blink);
+  } else {
+    leds_.set_freeze(freeze);
+  }
+  //leds_.set_freeze(processor_->frozen());
   if (processor_->bypass()) {
-    //leds_.PaintBar(lut_db[inmeter_->peak() >> 7], lut_db[outmeter_->peak() >> 7]);
-    //float output = static_cast<float>(outmeter_->peak()) * cv_scaler_->output_level();
-    //int32_t out_db = lut_db[static_cast<int32_t>(output) >> 7];
-    //int32_t out_db = lut_db[static_cast<int32_t>(output) >> 7];
     int32_t output = static_cast<int32_t>(cv_scaler_->output_level() * 65535.0f);
     leds_.PaintBar(lut_db[inmeter_->peak() >> 7], output, processor_->mute_in(), processor_->mute_out());
-    //leds_.PaintBar(lut_db[inmeter_->peak() >> 7], lut_db[outmeter_->peak() >> 7], processor_->mute_in(), processor_->mute_out());
     leds_.set_freeze(true);
   }
   
@@ -231,10 +279,10 @@ void Ui::FlushEvents() {
 }
 
 void Ui::OnSwitchPressed(const Event& e) {
-  if (e.control_id == SWITCH_FREEZE) {
-    processor_->ToggleFreeze();
-  } else if (e.control_id == SWITCH_CAPTURE) {
-    cv_scaler_->set_capture_flag();
+  if (e.control_id == SWITCH_CAPTURE) {
+    cv_scaler_->set_capture_flag(); 
+    // Take note of pan position
+    press_pan_pos_ = cv_scaler_->pan_pot();
   }
 }
 
@@ -255,74 +303,60 @@ void Ui::CalibrateC3() {
 }
 
 void Ui::OnSecretHandshake() {
-  mode_ = UI_MODE_PLAYBACK_MODE;
+  //mode_ = UI_MODE_PLAYBACK_MODE;
+  mode_alt_menu_ = true;
+  mode_menu_time_ = system_clock.milliseconds();
+  fade_ = 0;
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
   switch (e.control_id) {
     case SWITCH_FREEZE:
-      if (e.data >= kLongPressDuration) {
+      if (e.data >= kVeryLongPressDuration) {
+      } else if (e.data >= kLongPressDuration) {
         processor_->ToggleReverse();
+      } else {
+        processor_->ToggleFreeze();
       }
       break;
     case SWITCH_CAPTURE:
-      //cv_scaler_->set_capture_flag();
       if (e.data >= kLongPressDuration) {
-        //mode_ = UI_MODE_CALIBRATION_1;
+        //mode_ = UI_MODE_CALIBRATION_1; // now checked in Init()
       } else if (mode_ == UI_MODE_CALIBRATION_1) {
-        CalibrateC1();
+        if (!skip_first_cal_press_) {
+            CalibrateC1();
+        } else {
+            skip_first_cal_press_ = false;
+        }
       } else if (mode_ == UI_MODE_CALIBRATION_2) {
         CalibrateC3();
       }
       break;
 
     case SWITCH_MODE:
-      if (switches_.pressed(SWITCH_CAPTURE)) {
-        mode_ = UI_MODE_CALIBRATION_1;
-      } else if (e.data >= kVeryLongPressDuration) {
+      if (e.data >= kVeryLongPressDuration) {
       } else if (e.data > kLongPressDuration) {
       } else if (mode_ == UI_MODE_VU_METER || mode_ == UI_MODE_QUALITY) {
-        processor_->set_quality((processor_->quality() + 1) & 3);
-        quality_changed_time_ = system_clock.milliseconds();
-        SaveState();
+        if (mode_alt_menu_) {
+            uint8_t mode = (processor_->playback_mode() + 1) % PLAYBACK_MODE_LAST;
+            mode_menu_time_ = system_clock.milliseconds();
+            processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
+            SaveState();
+        } else {
+            processor_->set_quality((processor_->quality() + 1) & 3);
+            quality_changed_time_ = system_clock.milliseconds();
+            blink_ = 0;
+            SaveState();
+        }
       } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
-        uint8_t mode = processor_->playback_mode() + 1;
-          processor_->set_playback_mode(
-              static_cast<PlaybackMode>(mode % PLAYBACK_MODE_LAST));
-        SaveState();
+      // left here in case the new menu_ members are broken
       }
       break;
     case SWITCH_WRITE:
-      /*
-       * Before Re-implementing the selectable write location
       if (e.data >= kLongPressDuration) {
-        // Get pointers on data chunks to save.
-        PersistentBlock blocks[4];
-        size_t num_blocks = 0;
-        
-        mode_ = UI_MODE_SAVING;
-        // Silence the processor during the long erase/write.
-        processor_->set_silence(true);
-        system_clock.Delay(5);
-        processor_->PreparePersistentData();
-        processor_->GetPersistentData(blocks, &num_blocks);
-        settings_->SaveSampleMemory(load_save_location_, blocks, num_blocks);
-        processor_->set_silence(false);
-        //load_save_location_ = (load_save_location_ + 1) & 3;
-        mode_ = UI_MODE_VU_METER;
-      } else {
-        load_save_location_ = (load_save_location_ + 1) & 3;
-        processor_->LoadPersistentData(settings_->sample_flash_data(
-            load_save_location_));
-        //load_save_location_ = (load_save_location_ + 1) & 3;
-      }
-      */
-      /*
-       * After Re-Implementing the selectable write location.
-       */
-      if (e.data >= kLongPressDuration) {
-        if (mode_ == UI_MODE_SAVE) {
+        if (save_alt_menu_) {
             mode_ = UI_MODE_VU_METER; // Return to main UI
+            save_alt_menu_ = false;
             PersistentBlock blocks[4];
             size_t num_blocks = 0;
             // Perform the save operation to the currently selected location
@@ -338,39 +372,25 @@ void Ui::OnSwitchReleased(const Event& e) {
                 load_save_location_));
             // Update Persistent Bank Selection
             last_load_save_location_ = load_save_location_;
-
-            //load_save_location_ = (load_save_location_ + 1) & 3;
-            //mode_ = UI_MODE_VU_METER; // Return to main UI
         } else {
             // Enter UI_MODE_SAVE
-            mode_ = UI_MODE_SAVE;
+            save_alt_menu_ = true;
+            save_menu_time_ = system_clock.milliseconds();
+            fade_ = 0;
             // Set Persistent Bank Selection
             last_load_save_location_ = load_save_location_;
         }
       } else {
-        /*
-        if (mode_ == UI_MODE_SAVE || switches_.pressed(SWITCH_CAPTURE)) {
-            // Advance to the next location 
-            if (!switches_.pressed(SWITCH_CAPTURE)) {
-                load_save_location_ = (load_save_location_ + 1) & 3;
-            }
-            processor_->LoadPersistentData(settings_->sample_flash_data(
-                load_save_location_));
-        } else {
-            // Inc mem location and load buffer 
-            load_save_location_ = (load_save_location_ + 1) & 3;
-            //processor_->LoadPersistentData(settings_->sample_flash_data(load_save_location_));
-            //load_save_location_ = (load_save_location_ + 1) & 3;
-        }
-        */
         if (switches_.pressed(SWITCH_CAPTURE)) {
             processor_->LoadPersistentData(settings_->sample_flash_data(
                 load_save_location_));
         } else {
             load_save_location_ = (load_save_location_ + 1) & 3;
-            if (mode_ != UI_MODE_SAVE) {
+            if (!save_alt_menu_) {
                 processor_->LoadPersistentData(settings_->sample_flash_data(
                     load_save_location_));
+            } else {
+                save_menu_time_ = system_clock.milliseconds();
             }
         }
       }
@@ -413,7 +433,7 @@ void Ui::DoEvents() {
         OnSwitchPressed(e);
       } else {
         if (e.data >= kLongPressDuration &&
-            e.control_id == SWITCH_MODE) {// &&
+            e.control_id == SWITCH_MODE) {// && 
           OnSecretHandshake();
         } else {
           OnSwitchReleased(e);
@@ -427,26 +447,16 @@ void Ui::DoEvents() {
     mode_ = UI_MODE_VU_METER;
   }
   
-  if (queue_.idle_time() > 3000) {
+  if (queue_.idle_time() > 5000) {
     queue_.Touch();
-    /*
     if (mode_ == UI_MODE_BLENDING || mode_ == UI_MODE_QUALITY ||
-        mode_ == UI_MODE_PLAYBACK_MODE || mode_ == UI_MODE_SAVE ||
+        mode_ == UI_MODE_PLAYBACK_MODE || 
         mode_ == UI_MODE_LOAD || mode_ == UI_MODE_BLEND_METER ||
-        mode_ == UI_MODE_SPLASH) {
-      mode_ = UI_MODE_VU_METER;
-    }
-    */
-    if (mode_ == UI_MODE_BLENDING || mode_ == UI_MODE_QUALITY ||
-        mode_ == UI_MODE_PLAYBACK_MODE ||
-        mode_ == UI_MODE_LOAD || mode_ == UI_MODE_BLEND_METER ||
-        mode_ == UI_MODE_SPLASH) {
-      mode_ = UI_MODE_VU_METER;
-    } else if (mode_ == UI_MODE_SAVE) {
-        // Restore last load save if no save occurred.
-        load_save_location_ = last_load_save_location_;
+        mode_ == UI_MODE_SPLASH || mode_ == UI_MODE_SAVE) {
         mode_ = UI_MODE_VU_METER;
-    }
+        mode_alt_menu_ = false;
+        save_alt_menu_ = false;
+    } 
   }
 }
 

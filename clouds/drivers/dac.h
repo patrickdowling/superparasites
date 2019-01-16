@@ -14,6 +14,7 @@ class Dac {
         void DeInit();
         void StartNoise();
         void StopNoise();
+        void SetNoiseFreq(float period);
 
         inline bool is_generating_noise() {
             return generating_noise_;

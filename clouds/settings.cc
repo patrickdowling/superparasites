@@ -47,6 +47,7 @@ void Settings::Init() {
     data_.state.quality = 0;
     //data_.state.blend_parameter = 0;
     data_.state.playback_mode = PLAYBACK_MODE_GRANULAR;
+    data_.state.random_rate = 0.5f;
     //data_.state.blend_value[0] = 255;
     //data_.state.blend_value[1] = 128;
     //data_.state.blend_value[2] = 0;

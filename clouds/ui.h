@@ -123,15 +123,25 @@ class Ui {
   uint32_t long_press_time_[kNumSwitches];
   uint32_t quality_changed_time_;
   UiMode mode_;
+
+  uint32_t blink_;
+  uint32_t fade_;
+  bool skip_first_cal_press_;
   
   GranularProcessor* processor_;
   Meter* inmeter_;
   Meter* outmeter_;
-  
+  // Additional Data for UI behavior,
+  //   and additional edit functions.
   uint8_t load_save_location_;
   uint8_t last_load_save_location_;
-  uint16_t ignore_releases_;
-  
+  float press_pan_pos_;
+  float noise_freq_;
+  bool tracking_noise_ctrl_;
+  bool save_alt_menu_;
+  bool mode_alt_menu_;
+  uint32_t save_menu_time_;
+  uint32_t mode_menu_time_;
   DISALLOW_COPY_AND_ASSIGN(Ui);
 };
 
