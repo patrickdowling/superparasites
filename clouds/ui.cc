@@ -81,7 +81,12 @@ void Ui::Init(
   processor_->set_playback_mode(
       static_cast<PlaybackMode>(state.playback_mode % PLAYBACK_MODE_LAST));
   noise_freq_ = state.random_rate;
+  noise_state_ = state.random_state;
   dac_.SetNoiseFreq(noise_freq_);
+  if (noise_state_)
+    dac_.StartNoise();
+  else
+    dac_.StopNoise();
 }
 
 void Ui::SaveState() {
@@ -89,6 +94,7 @@ void Ui::SaveState() {
   state->quality = processor_->quality();
   state->playback_mode = processor_->playback_mode();
   state->random_rate = noise_freq_;
+  state->random_state = dac_.is_generating_noise();
   settings_->Save();
 }
 
@@ -408,6 +414,7 @@ void Ui::OnSwitchReleased(const Event& e) {
                     } else {
                         dac_.StartNoise();
                     }
+                    SaveState();
                 }
             }
         }

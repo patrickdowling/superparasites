@@ -137,6 +137,7 @@ class Ui {
   uint8_t last_load_save_location_;
   float press_pan_pos_;
   float noise_freq_;
+  bool noise_state_;
   bool tracking_noise_ctrl_;
   bool save_alt_menu_;
   bool mode_alt_menu_;
