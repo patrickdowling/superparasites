@@ -44,6 +44,15 @@ SECTIONS
     *(.glue_7t)
     KEEP (*(.init))
     KEEP (*(.fini))
+
+     . = ALIGN(4);
+    __init_array_start = .;
+    /* NOTE current stmlib startup doesn't call __libc_init_array so this isn't needed */
+    /*KEEP(*(.init_array))      /* C++ constructors */
+    KEEP(*(.ctors))           /* and vtable init */
+    __init_array_end = .;
+
+     . = ALIGN(16); 
     . = ALIGN(16);
      _etext = .;
      _sidata = _etext;

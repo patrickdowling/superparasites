@@ -1,6 +1,7 @@
-// Copyright 2014 Olivier Gillet.
+// Copyright 2019 Patrick Dowling
 //
-// Author: Olivier Gillet (ol.gillet@gmail.com)
+// Author: Patrick Dowling (pld@gurkenkiste.com)
+// Based on code existing in clouds/dsp/pvoc/...
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,59 +23,32 @@
 // 
 // See http://creativecommons.org/licenses/MIT/ for more information.
 //
-// -----------------------------------------------------------------------------
-//
-// Parameters of the granular effect.
 
-#ifndef CLOUDS_DSP_PARAMETERS_H_
-#define CLOUDS_DSP_PARAMETERS_H_
+#ifndef CLOUDS_DSP_PVOC_MODIFIER_H_
+#define CLOUDS_DSP_PVOC_MODIFIER_H_
 
 #include "stmlib/stmlib.h"
 
+#include "clouds/dsp/pvoc/stft.h"
+
 namespace clouds {
 
-struct Parameters {
-  float position;
-  float size;
-  float pitch;
-  float density;
-  float texture;
-  float dry_wet;
-  float stereo_spread;
-  float feedback;
-  float reverb;
-  
-  bool freeze;
-  bool capture;
-  bool gate;
-  
-  struct Granular {
-    float overlap;
-    float window_shape;
-    float stereo_spread;
-    bool use_deterministic_seed;
-    bool reverse;
-  } granular;
+struct Parameters;
 
-  struct Spectral {
-    float quantization;
-    float refresh_rate;
-    float phase_randomization;
-    float warp;
-  } spectral;
+class Modifier {
+public:
+  Modifier() { }
+  virtual ~Modifier() { }
 
-  struct Kammerl {
-    float probability;
-    float pitch_mode;
-    float clock_divider;
-    float distortion;
-    float slice_selection;
-    float slice_modulation;
-    float size_modulation;
-    float pitch;
-  } kammerl;
+  virtual uint32_t num_textures() const = 0;
+  virtual uint32_t texture_size(size_t texture_size) const = 0;
+
+  virtual void Init(float* buffer, int32_t fft_size, int32_t num_textures,
+                    float sample_rate_hz, FFT* fft) = 0;
+
+  virtual void Process(const Parameters& parameters, float* fft_out, float* ifft_in, bool trigger) = 0;
 };
 
-}  // namespace clouds
+} // clouds
 
-#endif  // CLOUDS_DSP_PARAMETERS_H_
+#endif // CLOUDS_DSP_PVOC_MODIFIER_H_

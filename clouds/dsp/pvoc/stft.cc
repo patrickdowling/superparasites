@@ -31,7 +31,8 @@
 #include <algorithm>
 
 #include "clouds/dsp/parameters.h"
-#include "clouds/dsp/pvoc/spectral_coulds_transformation.h"
+#include "clouds/dsp/pvoc/modifier.h"
+#include "clouds/resources.h"
 #include "stmlib/dsp/dsp.h"
 
 namespace clouds {

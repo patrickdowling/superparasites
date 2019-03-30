@@ -42,6 +42,7 @@
 namespace clouds {
 
 struct Parameters;
+class Modifier;
 
 const size_t kMaxFftSize = 4096;
 #ifdef USE_ARM_FFT
@@ -49,8 +50,6 @@ const size_t kMaxFftSize = 4096;
 #else
   typedef stmlib::ShyFFT<float, kMaxFftSize, stmlib::RotationPhasor> FFT;
 #endif  // USE_ARM_FFT
-
-typedef class SpectralCloudsTransformation Modifier;
 
 class STFT {
  public:

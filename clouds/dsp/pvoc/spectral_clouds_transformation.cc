@@ -26,7 +26,7 @@
 //
 // Transformations applied to a single STFT slice.
 
-#include "clouds/dsp/pvoc/spectral_coulds_transformation.h"
+#include "clouds/dsp/pvoc/spectral_clouds_transformation.h"
 
 #include <algorithm>
 #include <cmath>

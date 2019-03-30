@@ -57,6 +57,8 @@ void GranularProcessor::Init(
   src_down_.Init();
   src_up_.Init();
 
+  phase_vocoder_.Init();
+
   ResetFilters();
 
   previous_playback_mode_ = PLAYBACK_MODE_LAST;
@@ -82,7 +84,8 @@ void GranularProcessor::ProcessGranular(
     size_t size) {
   // At the exception of the spectral mode, all modes require the incoming
   // audio signal to be written to the recording buffer.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+      playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR) {
     const float* input_samples = &input[0].l;
     const bool play = !parameters_.freeze ||
@@ -142,9 +145,8 @@ void GranularProcessor::ProcessGranular(
       }
       break;
 
-    case PLAYBACK_MODE_SPECTRAL_CLOUD:
+    case PLAYBACK_MODE_SPECTRAL:
       {
-#ifndef ENABLE_SPECTRAL_CLOUD
         parameters_.spectral.quantization = parameters_.texture;
         parameters_.spectral.refresh_rate = 0.01f + 0.99f * parameters_.density;
         float warp = parameters_.size - 0.5f;
@@ -155,7 +157,12 @@ void GranularProcessor::ProcessGranular(
         randomization -= 0.05f;
         CONSTRAIN(randomization, 0.0f, 1.0f);
         parameters_.spectral.phase_randomization = randomization;
-#endif
+        phase_vocoder_.Process(parameters_, input, output, size);
+      }
+      break;
+
+    case PLAYBACK_MODE_SPECTRAL_CLOUD:
+      {
         phase_vocoder_.Process(parameters_, input, output, size);
 
         if (num_channels_ == 1) {
@@ -402,10 +409,11 @@ void GranularProcessor::Process(
   }
 
   // Diffusion and pitch-shifting post-processings.
-  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
+  if (playback_mode_ != PLAYBACK_MODE_SPECTRAL &&
+      playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD &&
       playback_mode_ != PLAYBACK_MODE_OLIVERB &&
       playback_mode_ != PLAYBACK_MODE_RESONESTOR &&
-      playback_mode_!= PLAYBACK_MODE_KAMMERL) {
+      playback_mode_ != PLAYBACK_MODE_KAMMERL) {
     float texture = parameters_.texture;
     float diffusion = playback_mode_ == PLAYBACK_MODE_GRANULAR
         ? texture > 0.75f ? (texture - 0.75f) * 4.0f : 0.0f
@@ -419,16 +427,22 @@ void GranularProcessor::Process(
       || (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD)) {
     pitch_shifter_.set_ratio(SemitonesToRatio(parameters_.pitch));
     pitch_shifter_.set_size(parameters_.size);
-    float x = parameters_.pitch;
-    const float limit = 0.7f;
-    const float slew = 0.4f;
-    float wet =
-      x < -limit ? 1.0f :
-      x < -limit + slew ? 1.0f - (x + limit) / slew:
-      x < limit - slew ? 0.0f :
-      x < limit ? 1.0f + (x - limit) / slew:
-      1.0f;
-    pitch_shifter_.set_dry_wet(wet);
+    if (PLAYBACK_MODE_SPECTRAL_CLOUD != playback_mode_) {
+      // parasites
+      float x = parameters_.pitch;
+      const float limit = 0.7f;
+      const float slew = 0.4f;
+      float wet =
+        x < -limit ? 1.0f :
+        x < -limit + slew ? 1.0f - (x + limit) / slew:
+        x < limit - slew ? 0.0f :
+        x < limit ? 1.0f + (x - limit) / slew:
+        1.0f;
+      pitch_shifter_.set_dry_wet(wet);
+    } else {
+      // beat repeat
+      pitch_shifter_.set_dry_wet(0.f);
+    }
     pitch_shifter_.Process(out_, size);
   }
 
@@ -533,14 +547,18 @@ void GranularProcessor::PreparePersistentData() {
   persistent_state_.write_head[1] = low_fidelity_ ?
       buffer_8_[1].head() : buffer_16_[1].head();
   persistent_state_.quality = quality();
-  persistent_state_.spectral = playback_mode() == PLAYBACK_MODE_SPECTRAL_CLOUD;
+  if (playback_mode_ == PLAYBACK_MODE_SPECTRAL ||
+      playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD)
+    persistent_state_.spectral = playback_mode_;
+  else
+    persistent_state_.spectral = 0;
 }
 
 void GranularProcessor::GetPersistentData(
       PersistentBlock* block, size_t *num_blocks) {
   PersistentBlock* first_block = block;
 
-  block->tag = FourCC<'s', 't', 'a', 't'>::value;
+  block->tag = FourCC<'S', 't', 'a', 't'>::value; // NOTE modified for Überclouds ('S' vs 's')
   block->data = &persistent_state_;
   block->size = sizeof(PersistentState);
   ++block;
@@ -578,11 +596,14 @@ bool GranularProcessor::LoadPersistentData(const uint32_t* data) {
 
     if (i == 0) {
       // We now know from which mode the data was saved.
-      bool currently_spectral = playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD;
-      bool requires_spectral = persistent_state_.spectral;
+      uint8_t currently_spectral =
+          playback_mode_ == PLAYBACK_MODE_SPECTRAL ||
+          playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD
+          ? playback_mode_ : 0;
+      uint8_t requires_spectral = persistent_state_.spectral;
       if (currently_spectral ^ requires_spectral) {
         set_playback_mode(requires_spectral
-            ? PLAYBACK_MODE_SPECTRAL_CLOUD
+            ? static_cast<PlaybackMode>(requires_spectral)
             : PLAYBACK_MODE_GRANULAR);
       }
       set_quality(persistent_state_.quality);
@@ -610,8 +631,10 @@ bool GranularProcessor::LoadPersistentData(const uint32_t* data) {
 
 void GranularProcessor::Prepare() {
   bool playback_mode_changed = previous_playback_mode_ != playback_mode_;
-  bool benign_change = previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD
+  bool benign_change = playback_mode_ != PLAYBACK_MODE_SPECTRAL
+    && previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL
     && playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD
+    && previous_playback_mode_ != PLAYBACK_MODE_SPECTRAL_CLOUD
     && playback_mode_ != PLAYBACK_MODE_RESONESTOR
     && previous_playback_mode_ != PLAYBACK_MODE_RESONESTOR
     && playback_mode_ != PLAYBACK_MODE_OLIVERB
@@ -672,8 +695,15 @@ void GranularProcessor::Prepare() {
         &correlator_data[correlator_block_size]);
     pitch_shifter_.Init((uint16_t*)correlator_data);
 
-    if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
+    if (playback_mode_ == PLAYBACK_MODE_SPECTRAL) {
       phase_vocoder_.Init(
+          PhaseVocoder::TRANSFORMATION_TYPE_FRAME,
+          buffer, buffer_size,
+          lut_sine_window_4096, 4096,
+          num_channels_, resolution(), sr);
+    } else if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
+      phase_vocoder_.Init(
+          PhaseVocoder::TRANSFORMATION_TYPE_SPECTRAL_CLOUD,
           buffer, buffer_size,
           lut_sine_window_4096, 4096,
           num_channels_, resolution(), sr);
@@ -705,7 +735,8 @@ void GranularProcessor::Prepare() {
     previous_playback_mode_ = playback_mode_;
   }
 
-  if (playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
+  if (playback_mode_ == PLAYBACK_MODE_SPECTRAL ||
+      playback_mode_ == PLAYBACK_MODE_SPECTRAL_CLOUD) {
     phase_vocoder_.Buffer();
   } else if (playback_mode_ == PLAYBACK_MODE_STRETCH ||
              playback_mode_ == PLAYBACK_MODE_OLIVERB) {

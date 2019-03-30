@@ -55,6 +55,7 @@ uint8_t block_ccm[65536 - 128] __attribute__ ((section (".ccmdata")));
 //uint8_t block_ccm[65536 - 128] __attribute__ ((section (".ccmram")));
 
 int __errno;
+void operator delete(void * p) { }
 
 // Default interrupt handlers.
 extern "C" {
@@ -67,6 +68,7 @@ void UsageFault_Handler() { while (1); }
 void SVC_Handler() { }
 void DebugMon_Handler() { }
 void PendSV_Handler() { }
+void __cxa_pure_virtual() { while (1); }
 
 }
 

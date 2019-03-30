@@ -53,6 +53,8 @@ RESOURCES      = clouds/resources
 ifeq ($(PROFILE_INTERRUPT),TRUE)
 	PROJECT_CONFIGURATION += -DPROFILE_INTERRUPT
 endif
+# This saves some space, but might have unknown side effects?
+PROJECT_CONFIGURATION += --specs=nano.specs
 
 include stmlib/makefile.inc
 

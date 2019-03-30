@@ -35,7 +35,8 @@
 
 #include "clouds/dsp/frame.h"
 #include "clouds/dsp/pvoc/stft.h"
-#include "clouds/dsp/pvoc/spectral_coulds_transformation.h"
+#include "clouds/dsp/pvoc/spectral_clouds_transformation.h"
+#include "clouds/dsp/pvoc/frame_transformation.h"
 
 namespace clouds {
 
@@ -45,8 +46,16 @@ class PhaseVocoder {
  public:
   PhaseVocoder() { }
   ~PhaseVocoder() { }
+
+  void Init();
+
+  enum TransformationType {
+    TRANSFORMATION_TYPE_FRAME,
+    TRANSFORMATION_TYPE_SPECTRAL_CLOUD
+  };
   
   void Init(
+      TransformationType transformation_type,
       void** buffer, size_t* buffer_size,
       const float* large_window_lut, size_t largest_fft_size,
       int32_t num_channels,
@@ -64,10 +73,11 @@ class PhaseVocoder {
   FFT fft_;
   
   STFT stft_[2];
+  FrameTransformation frame_transformation_[2];
   SpectralCloudsTransformation spectral_clouds_transformation_[2];
 
   int32_t num_channels_;
-  
+
   DISALLOW_COPY_AND_ASSIGN(PhaseVocoder);
 };
 
