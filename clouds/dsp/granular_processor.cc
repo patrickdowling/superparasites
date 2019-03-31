@@ -441,7 +441,7 @@ void GranularProcessor::Process(
       pitch_shifter_.set_dry_wet(wet);
     } else {
       // beat repeat
-      pitch_shifter_.set_dry_wet(0.f);
+      pitch_shifter_.set_dry_wet(1.f);
     }
     pitch_shifter_.Process(out_, size);
   }
