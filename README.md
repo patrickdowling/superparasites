@@ -1,28 +1,20 @@
-Mutable Instruments' Eurorack Modules.
+Port of Clouds/Parasites/Beat Repeat to Grayscale Supercell/Microcell platform.
 
-* Braids: Macro-oscillator.
-* Branches: Dual Bernoulli gate.
-* Clouds: Texture synthesizer.
-* Edges: Quad chiptune digital oscillator.
-* Elements: Modal synthesizer.
-* Frames: Keyframer/mixer.
-* Grids: Topographic drum sequencer.
-* Links: Utility module - buffer, mixer.
-* Peaks: Dual trigger converter.
-* Rings: Resonator.
-* Ripples: Liquid 2-pole BP, 2-pole LP and 4-pole LP filter.
-* Shades: Triple attenuverter.
-* Shelves: EQ filter.
-* Streams: Dual dynamics gate.
-* Tides: Tidal modulator.
-* Volts: +5V power module.
-* Warps: Meta-modulator.
-* Yarns: MIDI interface.
+Note that this version has platform-specific drivers and a custom linker script and is **not** compatible with other hardware versions of Clouds.
 
-License
+It is based off the [Parasites codebase](https://github.com/mqtthiqs/parasites) and merges the two modes from [Beat Repeat](https://github.com/jkammerl/eurorack) for a total of eight modes:
+- Granular
+- Pitch shifter/time stretch
+- Looping delay
+- Spectral madness
+- Oliverb
+- Resonestor
+- Beat Repeat
+- Spectral clouds
+
+As far as possible, the commit history has been preserved, for better for worse...
+
+
+##License
 =======
-
-Code (AVR projects): GPL3.0.
 Code (STM32F projects): MIT license.
-Hardware: cc-by-sa-3.0
-By: Olivier Gillet (olivier@mutable-instruments.net)
