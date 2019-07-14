@@ -37,8 +37,18 @@ BOOTLOADER        = supercell_bootloader
 # Preferred upload command
 UPLOAD_COMMAND  = upload_combo_jtag_erase_first
 
+VARIANT ?= SUPERCELL
+ifeq ($(VARIANT),MICROCELL)
+	TARGET = microcell
+	PROJECT_CONFIGURATION += -DMICROCELL
+else ifeq ($(VARIANT),SUPERCELL)
+	TARGET = supercell
+	PROJECT_CONFIGURATION += -DSUPERCELL
+else
+	TARGET = $(error Unknown variant '$(VARIANT)')
+endif
+
 # Packages to build
-TARGET         = supercell
 PACKAGES       = supercell \
 		supercell/drivers \
 		supercell/dsp \

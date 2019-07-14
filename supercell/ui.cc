@@ -449,7 +449,7 @@ void Ui::DoEvents() {
     }
   }
   
-  if (queue_.idle_time() > 1000 && mode_ == UI_MODE_PANIC) {
+  if (queue_.idle_time() > 2000 && mode_ == UI_MODE_PANIC) {
     queue_.Touch();
     mode_ = UI_MODE_VU_METER;
   }

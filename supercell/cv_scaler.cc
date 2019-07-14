@@ -35,6 +35,12 @@
 
 #include "supercell/resources.h"
 
+#ifdef MICROCELL
+# define CV_FLIP true
+#else
+# define CV_FLIP false
+#endif
+
 namespace clouds {
 
 using namespace std;
@@ -42,26 +48,26 @@ using namespace std;
 /* static */
 CvTransformation CvScaler::transformations_[ADC_CHANNELS_TOTAL] = {
   // ADC_POSITION_CV,
-  { false, true, 0.05f },
+  { CV_FLIP, true, 0.05f },
   // ADC_DENSITY_CV,
-  { false, true, 0.01f },
+  { CV_FLIP, true, 0.01f },
   // ADC_SIZE_GRAIN_POTENTIOMETER,
   { false, false, 0.01f },
   // ADC_SIZE_GRAIN_CV,
-  { false, true, 0.1f },
+  { CV_FLIP, true, 0.1f },
   // ADC_PITCH_CV,
   //{ true, true, 1.00f },
-  { false, true, 0.90f },
+  { CV_FLIP, true, 0.90f },
   // ADC_SPREAD_CV,
-  { false, true, 0.2f },
+  { CV_FLIP, true, 0.2f },
   // ADC_FEEDBACK_CV,
-  { false, true, 0.2f },
+  { CV_FLIP, true, 0.2f },
   // ADC_REVERB_CV,
-  { false, true, 0.2f },
+  { CV_FLIP, true, 0.2f },
   // ADC_BALANCE_CV,
-  { false, true, 0.2f },
+  { CV_FLIP, true, 0.2f },
   // ADC_TEXTURE_CV,
-  { false, true, 0.01f },
+  { CV_FLIP, true, 0.01f },
   // ADC_CV_VOCT,
   { false, false, 1.00f },
   // ADC_VCA_OUT_LEVEL
