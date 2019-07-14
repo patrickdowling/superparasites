@@ -46,3 +46,5 @@ build
 *_beta.brd
 *_BETA.brd
 audio_samples/
+
+*.swp
