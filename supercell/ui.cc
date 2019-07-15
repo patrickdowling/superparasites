@@ -448,12 +448,13 @@ void Ui::DoEvents() {
       }
     }
   }
-  
-  if (queue_.idle_time() > 2000 && mode_ == UI_MODE_PANIC) {
+
+  if ((queue_.idle_time() > 2000 && mode_ == UI_MODE_SPLASH) ||
+      (queue_.idle_time() > 1000 && mode_ == UI_MODE_PANIC)) {
     queue_.Touch();
     mode_ = UI_MODE_VU_METER;
   }
-  
+
   if (queue_.idle_time() > 5000) {
     queue_.Touch();
     if (mode_ == UI_MODE_BLENDING || mode_ == UI_MODE_QUALITY ||
