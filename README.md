@@ -1,4 +1,4 @@
-Port of Clouds/Parasites/Beat Repeat to Grayscale Supercell/Microcell platform.
+Port of Clouds/Parasites/Beat Repeat to Grayscale [Supercell](https://grayscale.info/supercell/) and [Microcell](https://grayscale.info/microcell/) platforms.
 
 Note that this version has platform-specific drivers and a custom linker script and is **not** compatible with other hardware versions of Clouds.
 
@@ -19,7 +19,7 @@ Since there is a small hardware difference (inverted pots) there are two possibl
 - To build for Supercell hardware, use `make -f supercell/makefile VARIANT=SUPERCELL ...`. The resulting files are in `build/supercell/`.
 - To build for Microcell hardware, use `make -f supercell/makefile VARIANT=MICROCELL ...`. The resulting files are in `build/microcell/`.
 
-This doesn't change anything for the bootloader (1), which should be shared (famous last words...)
+This doesn't change anything for the bootloader (1), which should be common to both(famous last words...)
 
 At the risk of repeating myself: This code is not compatible with other hardware versions of Clouds!
 
@@ -32,5 +32,4 @@ At the risk of repeating myself: This code is not compatible with other hardware
 - The custom linker script adds sections for relevant C++ features.
 
 ## License
-=======
 Code (STM32F projects): MIT license.
