@@ -3,4 +3,4 @@
 	url = https://github.com/pichenettes/stm-audio-bootloader.git
 [submodule "stmlib"]
 	path = stmlib
-	url = git@github.com:mqtthiqs/stmlib.git
+	url = https://github.com/mqtthiqs/stmlib.git
