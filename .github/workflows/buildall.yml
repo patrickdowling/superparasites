@@ -1,0 +1,54 @@
+name: Build all hex and wav
+
+on:
+  push:
+    branches:
+      - master
+      - docker
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+
+    - name: docker login
+      uses: docker/login-action@v1
+      env:
+        GITHUB_USER: ${{ github.actor }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        registry: ghcr.io
+        username: $GITHUB_USER
+        password: ${{ secrets.PAT }}
+
+    - run: docker pull ghcr.io/patrickdowling/supercell:latest
+
+    - name: Build bootloader
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/build ghcr.io/patrickdowling/supercell:latest make -f supercell/bootloader/makefile hex
+
+    - name: Build MICROCELL
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/build ghcr.io/patrickdowling/supercell:latest make -f supercell/makefile VARIANT=MICROCELL clean
+        docker run --rm -v ${{ github.workspace }}:/build ghcr.io/patrickdowling/supercell:latest make -f supercell/makefile VARIANT=MICROCELL wav hex
+
+    - name: Build SUPERCELL
+      run: |
+        docker run --rm -v ${{ github.workspace }}:/build ghcr.io/patrickdowling/supercell:latest make -f supercell/makefile VARIANT=SUPERCELL clean
+        docker run --rm -v ${{ github.workspace }}:/build ghcr.io/patrickdowling/supercell:latest make -f supercell/makefile VARIANT=SUPERCELL wav hex
+
+    - name: Copy artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: superparasites-${{github.sha}}
+        path: |
+          ./build/supercell_bootloader/*.hex
+          ./build/microcell/*.hex
+          ./build/microcell/*.wav
+          ./build/supercell/*.hex
+          ./build/supercell/*.wav
